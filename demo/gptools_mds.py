@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 plt.ion()
 #plt.close('all')
 
+shot = 1120808024
+
 electrons = MDSplus.Tree('electrons', shot)
 N_Te_TS = electrons.getNode(r'\electrons::top.yag_new.results.profiles:te_rz')
 
