@@ -54,7 +54,7 @@ R_ETS = electrons.getNode(r'yag.results.param:R').data() * scipy.ones_like(Z_ETS
 t_grid, Z_grid = scipy.meshgrid(t_Te_ETS, Z_ETS)
 t_grid, R_grid = scipy.meshgrid(t_Te_ETS, R_ETS)
 
-R_mid_ETS = efit_tree.rz2rmid(R_grid, Z_grid, t_grid)
+R_mid_ETS = efit_tree.rz2rmid(R_grid, Z_grid, t_grid, each_t=False)
 
 # Mean magnetic axis:
 R_mag_mean = scipy.mean(R_mag)
