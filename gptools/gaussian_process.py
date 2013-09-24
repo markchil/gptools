@@ -533,7 +533,7 @@ class GaussianProcess(object):
         
         out, fx, its, imode, smode = scipy.optimize.fmin_slsqp(
             self.update_hyperparameters,
-            scipy.concatenate((self.k.free_params)),
+            scipy.concatenate((self.k.free_params, self.noise_k.free_params)),
             full_output=True,
             eqcons=eqcons,
             ieqcons=ieqcons,
