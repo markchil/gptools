@@ -33,7 +33,7 @@ t_grid, Z_grid = scipy.meshgrid(t_Te_TS, Z_CTS)
 t_grid, R_grid = scipy.meshgrid(t_Te_TS, R_CTS)
 
 efit_tree = eqtools.CModEFITTree(shot)
-R_mid_CTS = efit_tree.rz2rmid(R_grid, Z_grid, t_grid)
+R_mid_CTS = efit_tree.rz2rmid(R_grid, Z_grid, t_grid, each_t=False)
 
 R_mag = efit_tree.getMagR()
 t_EFIT = efit_tree.getTimeBase()
