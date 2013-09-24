@@ -455,7 +455,7 @@ class GaussianProcess(object):
                           % (method, res.status, res.message),
                           RuntimeWarning)
     
-    def _wrap_fmin_slsqp(opt_kwargs):
+    def _wrap_fmin_slsqp(self, opt_kwargs):
         """Wrapper for :py:func:`fmin_slsqp` to allow it to be called with :py:func:`minimize`-like syntax.
         
         This is included to enable the code to run with :py:mod:`scipy` versions
