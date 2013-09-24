@@ -1,0 +1,488 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>gptools.utils &mdash; gptools 0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="gptools 0.0 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">gptools 0.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for gptools.utils</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2013 Mark Chilenski</span>
+<span class="c"># This program is distributed under the terms of the GNU General Purpose License (GPL).</span>
+<span class="c"># Refer to http://www.gnu.org/licenses/gpl.txt</span>
+<span class="c"># </span>
+<span class="c"># This program is free software: you can redistribute it and/or modify</span>
+<span class="c"># it under the terms of the GNU General Public License as published by</span>
+<span class="c"># the Free Software Foundation, either version 3 of the License, or</span>
+<span class="c"># (at your option) any later version.</span>
+<span class="c"># </span>
+<span class="c"># This program is distributed in the hope that it will be useful,</span>
+<span class="c"># but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c"># MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
+<span class="c"># GNU General Public License for more details.</span>
+<span class="c"># </span>
+<span class="c"># You should have received a copy of the GNU General Public License</span>
+<span class="c"># along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.</span>
+
+<span class="sd">&quot;&quot;&quot;Provides convenient utilities for working with the classes and results from :py:mod:`gptools`.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
+
+<span class="kn">from</span> <span class="nn">.gaussian_process</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">.error_handling</span> <span class="kn">import</span> <span class="n">GPArgumentError</span>
+
+<span class="kn">import</span> <span class="nn">multiprocessing</span>
+<span class="kn">import</span> <span class="nn">scipy</span>
+<span class="kn">import</span> <span class="nn">scipy.special</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">matplotlib.widgets</span> <span class="kn">as</span> <span class="nn">mplw</span>
+<span class="kn">import</span> <span class="nn">matplotlib.gridspec</span> <span class="kn">as</span> <span class="nn">mplgs</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+
+<div class="viewcode-block" id="parallel_compute_ll_matrix"><a class="viewcode-back" href="../../gptools.html#gptools.utils.parallel_compute_ll_matrix">[docs]</a><span class="k">def</span> <span class="nf">parallel_compute_ll_matrix</span><span class="p">(</span><span class="n">gp</span><span class="p">,</span> <span class="n">bounds</span><span class="p">,</span> <span class="n">num_pts</span><span class="p">,</span> <span class="n">num_proc</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compute matrix of the log likelihood over the parameter space in parallel.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    bounds : 2-tuple or list of 2-tuples with length equal to the number of free parameters</span>
+<span class="sd">        Bounds on the range to use for each of the parameters. If a single</span>
+<span class="sd">        2-tuple is given, it will be used for each of the parameters.</span>
+<span class="sd">    num_pts : int or list of ints with length equal to the number of free parameters</span>
+<span class="sd">        The number of points to use for each parameters. If a single int is</span>
+<span class="sd">        given, it will be used for each of the parameters.</span>
+<span class="sd">    num_proc : Positive int or None, optional</span>
+<span class="sd">        Number of processes to run the parallel computation with. If set to</span>
+<span class="sd">        None, ALL available cores are used. Default is None (use all available</span>
+<span class="sd">        cores).</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ll_vals : :py:class:`Array`</span>
+<span class="sd">        The log likelihood for each of the parameter possibilities.</span>
+<span class="sd">    param_vals : list of :py:class:`Array`</span>
+<span class="sd">        The parameter values used.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">num_proc</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">num_proc</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span>
+    
+    <span class="n">present_free_params</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">gp</span><span class="o">.</span><span class="n">k</span><span class="o">.</span><span class="n">free_params</span><span class="p">,</span> <span class="n">gp</span><span class="o">.</span><span class="n">noise_k</span><span class="o">.</span><span class="n">free_params</span><span class="p">))</span>
+    
+    <span class="n">bounds</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">scipy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">bounds</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">bounds</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Argument bounds must have shape (n, 2)!&quot;</span><span class="p">)</span>
+    <span class="c"># If bounds is a single tuple, repeat it for each free parameter:</span>
+    <span class="k">if</span> <span class="n">bounds</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">bounds</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">bounds</span><span class="p">,</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">present_free_params</span><span class="p">),</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="c"># If num_pts is a single value, use it for all of the parameters:</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="nb">iter</span><span class="p">(</span><span class="n">num_pts</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+        <span class="n">num_pts</span> <span class="o">=</span> <span class="n">num_pts</span> <span class="o">*</span> <span class="n">scipy</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">bounds</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">num_pts</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">num_pts</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">num_pts</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">present_free_params</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Length of num_pts must match the number of free parameters of kernel!&quot;</span><span class="p">)</span>
+    
+    <span class="c"># Form arrays to evaluate parameters over:</span>
+    <span class="n">param_vals</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">present_free_params</span><span class="p">)):</span>
+        <span class="n">param_vals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">scipy</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">bounds</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">bounds</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">num_pts</span><span class="p">[</span><span class="n">k</span><span class="p">]))</span>
+    
+    <span class="n">pv_cases</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">gp_cases</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">num_pts_cases</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">param_vals</span><span class="p">[</span><span class="mi">0</span><span class="p">])):</span>
+        <span class="n">specific_param_vals</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">param_vals</span><span class="p">)</span>
+        <span class="n">specific_param_vals</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">param_vals</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">k</span><span class="p">]</span>
+        <span class="n">pv_cases</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">specific_param_vals</span><span class="p">)</span>
+        
+        <span class="n">gp_cases</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">GaussianProcess</span><span class="p">(</span><span class="n">gp</span><span class="o">.</span><span class="n">k</span><span class="p">,</span> <span class="n">noise_k</span><span class="o">=</span><span class="n">gp</span><span class="o">.</span><span class="n">noise_k</span><span class="p">))</span>
+        <span class="n">gp_cases</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">add_data</span><span class="p">(</span><span class="n">gp</span><span class="o">.</span><span class="n">X</span><span class="p">,</span> <span class="n">gp</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">err_y</span><span class="o">=</span><span class="n">gp</span><span class="o">.</span><span class="n">err_y</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="n">gp</span><span class="o">.</span><span class="n">n</span><span class="p">)</span>
+        
+        <span class="n">num_pts_cases</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">num_pts</span><span class="p">)</span>
+    
+    <span class="n">pool</span> <span class="o">=</span>  <span class="n">multiprocessing</span><span class="o">.</span><span class="n">Pool</span><span class="p">(</span><span class="n">processes</span><span class="o">=</span><span class="n">num_proc</span><span class="p">)</span>
+    <span class="n">vals</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span>
+        <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span>
+            <span class="n">_compute_ll_matrix_wrapper</span><span class="p">,</span>
+            <span class="nb">zip</span><span class="p">(</span><span class="n">gp_cases</span><span class="p">,</span> <span class="n">pv_cases</span><span class="p">,</span> <span class="n">num_pts_cases</span><span class="p">)</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">pool</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    
+    <span class="k">return</span> <span class="p">(</span><span class="n">vals</span><span class="p">,</span> <span class="n">param_vals</span><span class="p">)</span>
+    </div>
+<span class="k">def</span> <span class="nf">_compute_ll_matrix_wrapper</span><span class="p">(</span><span class="n">gppv</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Helper wrapper function to enable use of multiprocessing.map.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    gppv : 3-tuple</span>
+<span class="sd">        (`gp`, `param_vals`, `num_pts`)</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    vals : :py:class:`Array`</span>
+<span class="sd">        Log likelihood evaluated at the parameters specified in `param_vals`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">gppv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">_compute_ll_matrix</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">gppv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">gppv</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+
+<div class="viewcode-block" id="slice_plot"><a class="viewcode-back" href="../../gptools.html#gptools.utils.slice_plot">[docs]</a><span class="k">def</span> <span class="nf">slice_plot</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Constructs a plot that lets you look at slices through a multidimensional array.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    vals : :py:class:`Array`, (`M`, `N`, `P`, ...)</span>
+<span class="sd">        Multidimensional array to visualize.</span>
+<span class="sd">    x_vals_1 : :py:class:`Array`, (`M`,)</span>
+<span class="sd">        Values along the first dimension.</span>
+<span class="sd">    x_vals_2 : :py:class:`Array`, (`N`,)</span>
+<span class="sd">        Values along the second dimension.</span>
+<span class="sd">    x_vals_3 : :py:class:`Array`, (`P`,)</span>
+<span class="sd">        Values along the third dimension.</span>
+<span class="sd">        </span>
+<span class="sd">        **...and so on. At least four arguments must be provided.**</span>
+<span class="sd">    </span>
+<span class="sd">    names : list of strings, optional</span>
+<span class="sd">        Names for each of the parameters at hand. If None, sequential numerical</span>
+<span class="sd">        identifiers will be used. Length must be equal to the number of</span>
+<span class="sd">        dimensions of `vals`. Default is None.</span>
+<span class="sd">    n : Positive int, optional</span>
+<span class="sd">        Number of contours to plot. Default is 100.</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">        f : :py:class:`Figure`</span>
+<span class="sd">            The Matplotlib figure instance created.</span>
+<span class="sd">    </span>
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">        GPArgumentError</span>
+<span class="sd">            If the number of arguments is less than 4.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;names&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;n&#39;</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+    <span class="n">num_axes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="n">num_axes</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">GPArgumentError</span><span class="p">(</span><span class="s">&quot;Must pass at least four arguments to slice_plot!&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">num_axes</span> <span class="o">!=</span> <span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">ndim</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">GPArgumentError</span><span class="p">(</span><span class="s">&quot;Number of dimensions of the first argument &quot;</span>
+                              <span class="s">&quot;must match the number of additional arguments &quot;</span>
+                              <span class="s">&quot;provided!&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">names</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">num_axes</span><span class="p">)]</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+    <span class="n">height_ratios</span> <span class="o">=</span> <span class="p">[</span><span class="mi">8</span><span class="p">]</span>
+    <span class="n">height_ratios</span> <span class="o">+=</span> <span class="p">(</span><span class="n">num_axes</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">gs</span> <span class="o">=</span> <span class="n">mplgs</span><span class="o">.</span><span class="n">GridSpec</span><span class="p">(</span><span class="n">num_axes</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">height_ratios</span><span class="o">=</span><span class="n">height_ratios</span><span class="p">,</span> <span class="n">width_ratios</span><span class="o">=</span><span class="p">[</span><span class="mi">8</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+    
+    <span class="n">a_main</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="n">gs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+    <span class="n">a_cbar</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="n">gs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+    <span class="n">a_sliders</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">num_axes</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
+        <span class="n">a_sliders</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="n">gs</span><span class="p">[</span><span class="n">idx</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]))</span>
+    
+    <span class="n">title</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s">&quot;&quot;</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="n">val</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update the slice shown.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">a_main</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="n">a_cbar</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="n">idxs</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">slider</span><span class="o">.</span><span class="n">val</span><span class="p">)</span> <span class="k">for</span> <span class="n">slider</span> <span class="ow">in</span> <span class="n">sliders</span><span class="p">]</span>
+        <span class="n">vals</span> <span class="o">=</span> <span class="p">[</span><span class="n">args</span><span class="p">[</span><span class="n">k</span> <span class="o">+</span> <span class="mi">3</span><span class="p">][</span><span class="n">idxs</span><span class="p">[</span><span class="n">k</span><span class="p">]]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">num_axes</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)]</span>
+        <span class="n">descriptions</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">chain</span><span class="o">.</span><span class="n">from_iterable</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">izip</span><span class="p">(</span><span class="n">names</span><span class="p">[</span><span class="mi">2</span><span class="p">:],</span> <span class="n">vals</span><span class="p">)))</span>
+        <span class="n">fmt</span> <span class="o">=</span> <span class="s">&quot;Slice&quot;</span> <span class="o">+</span> <span class="p">(</span><span class="n">num_axes</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="s">&quot;, </span><span class="si">%s</span><span class="s">: </span><span class="si">%f</span><span class="s">&quot;</span>
+        <span class="n">title</span><span class="o">.</span><span class="n">set_text</span><span class="p">(</span><span class="n">fmt</span> <span class="o">%</span> <span class="n">descriptions</span><span class="p">)</span>
+        
+        <span class="n">a_main</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="n">names</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">a_main</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="n">names</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">cs</span> <span class="o">=</span> <span class="n">a_main</span><span class="o">.</span><span class="n">contour</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">args</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">scipy</span><span class="o">.</span><span class="n">s_</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">+</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">idxs</span><span class="p">)]</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(),</span> <span class="n">n</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">vmax</span><span class="o">=</span><span class="n">args</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
+        <span class="n">cbar</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">cs</span><span class="p">,</span> <span class="n">cax</span><span class="o">=</span><span class="n">a_cbar</span><span class="p">)</span>
+        <span class="n">cbar</span><span class="o">.</span><span class="n">set_label</span><span class="p">(</span><span class="s">&quot;LL&quot;</span><span class="p">)</span>
+        
+        <span class="n">f</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+    
+    <span class="n">idxs_0</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_axes</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">sliders</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">num_axes</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
+        <span class="n">sliders</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mplw</span><span class="o">.</span><span class="n">Slider</span><span class="p">(</span><span class="n">a_sliders</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span>
+                                   <span class="s">&#39;</span><span class="si">%s</span><span class="s"> index&#39;</span> <span class="o">%</span> <span class="n">names</span><span class="p">[</span><span class="n">idx</span> <span class="o">+</span> <span class="mi">2</span><span class="p">],</span>
+                                   <span class="mi">0</span><span class="p">,</span>
+                                   <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="n">idx</span> <span class="o">+</span> <span class="mi">3</span><span class="p">])</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span>
+                                   <span class="n">valinit</span><span class="o">=</span><span class="n">idxs_0</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span>
+                                   <span class="n">valfmt</span><span class="o">=</span><span class="s">&#39;</span><span class="si">%d</span><span class="s">&#39;</span><span class="p">))</span>
+        <span class="n">sliders</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">on_changed</span><span class="p">(</span><span class="n">update</span><span class="p">)</span>
+    
+    <span class="n">update</span><span class="p">(</span><span class="n">idxs_0</span><span class="p">)</span>
+    
+    <span class="n">f</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">mpl_connect</span><span class="p">(</span><span class="s">&#39;key_press_event&#39;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">evt</span><span class="p">:</span> <span class="n">arrow_respond</span><span class="p">(</span><span class="n">sliders</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">evt</span><span class="p">))</span>
+    
+    <span class="k">return</span> <span class="n">f</span>
+</div>
+<div class="viewcode-block" id="arrow_respond"><a class="viewcode-back" href="../../gptools.html#gptools.utils.arrow_respond">[docs]</a><span class="k">def</span> <span class="nf">arrow_respond</span><span class="p">(</span><span class="n">slider</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Event handler for arrow key events in plot windows.</span>
+<span class="sd">    </span>
+<span class="sd">    Pass the slider object to update as a masked argument using a lambda function::</span>
+<span class="sd">        </span>
+<span class="sd">        lambda evt: arrow_respond(my_slider, evt)</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    slider : Slider instance associated with this handler.</span>
+<span class="sd">    event : Event to be handled.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span> <span class="o">==</span> <span class="s">&#39;right&#39;</span><span class="p">:</span>
+        <span class="n">slider</span><span class="o">.</span><span class="n">set_val</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">slider</span><span class="o">.</span><span class="n">val</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">slider</span><span class="o">.</span><span class="n">valmax</span><span class="p">))</span>
+    <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">key</span> <span class="o">==</span> <span class="s">&#39;left&#39;</span><span class="p">:</span>
+        <span class="n">slider</span><span class="o">.</span><span class="n">set_val</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">slider</span><span class="o">.</span><span class="n">val</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">slider</span><span class="o">.</span><span class="n">valmin</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="incomplete_bell_poly"><a class="viewcode-back" href="../../gptools.html#gptools.utils.incomplete_bell_poly">[docs]</a><span class="k">def</span> <span class="nf">incomplete_bell_poly</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+    <span class="sd">r&quot;&quot;&quot;Recursive evaluation of the incomplete Bell polynomial :math:`B_{n, k}(x)`.</span>
+<span class="sd">    </span>
+<span class="sd">    Evaluates the incomplete Bell polynomial :math:`B_{n, k}(x_1, x_2, \dots, x_{n-k+1})`,</span>
+<span class="sd">    also known as the partial Bell polynomial or the Bell polynomial of the</span>
+<span class="sd">    second kind. This polynomial is useful in the evaluation of (the univariate)</span>
+<span class="sd">    Faa di Bruno&#39;s formula which generalizes the chain rule to higher order</span>
+<span class="sd">    derivatives.</span>
+<span class="sd">    </span>
+<span class="sd">    The implementation here is based on the implementation in:</span>
+<span class="sd">    :py:func:`sympy.functions.combinatorial.numbers.bell._bell_incomplete_poly`</span>
+<span class="sd">    Following that function&#39;s documentation, the polynomial is computed</span>
+<span class="sd">    according to the recurrence formula:</span>
+<span class="sd">    </span>
+<span class="sd">    .. math::</span>
+<span class="sd">        </span>
+<span class="sd">        B_{n, k}(x_1, x_2, \dots, x_{n-k+1}) = \sum_{m=1}^{n-k+1}x_m\binom{n-1}{m-1}B_{n-m, k-1}(x_1, x_2, \dots, x_{n-m-k})</span>
+<span class="sd">        </span>
+<span class="sd">    | The end cases are:</span>
+<span class="sd">    | :math:`B_{0, 0} = 1`</span>
+<span class="sd">    | :math:`B_{n, 0} = 0` for :math:`n \ge 1`</span>
+<span class="sd">    | :math:`B_{0, k} = 0` for :math:`k \ge 1`</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n : scalar int</span>
+<span class="sd">        The first subscript of the polynomial.</span>
+<span class="sd">    k : scalar int</span>
+<span class="sd">        The second subscript of the polynomial.</span>
+<span class="sd">    x : :py:class:`Array` of floats, (`p`, `n` - `k` + 1)</span>
+<span class="sd">        `p` sets of `n` - `k` + 1 points to use as the arguments to</span>
+<span class="sd">        :math:`B_{n,k}`. The second dimension can be longer than</span>
+<span class="sd">        required, in which case the extra entries are silently ignored</span>
+<span class="sd">        (this facilitates recursion without needing to subset the array `x`).</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    result : :py:class:`Array`, (`p`,)</span>
+<span class="sd">        Incomplete Bell polynomial evaluated at the desired values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">k</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">scipy</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">k</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">n</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">scipy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">k</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">scipy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n</span> <span class="o">-</span> <span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">result</span> <span class="o">+=</span> <span class="n">x</span><span class="p">[:,</span> <span class="n">m</span><span class="p">]</span> <span class="o">*</span> <span class="n">scipy</span><span class="o">.</span><span class="n">special</span><span class="o">.</span><span class="n">binom</span><span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span> <span class="o">*</span> <span class="n">incomplete_bell_poly</span><span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="p">(</span><span class="n">m</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="n">k</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span>
+</div>
+<div class="viewcode-block" id="generate_set_partition_strings"><a class="viewcode-back" href="../../gptools.html#gptools.utils.generate_set_partition_strings">[docs]</a><span class="k">def</span> <span class="nf">generate_set_partition_strings</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generate the restricted growth strings for all of the partitions of an `n`-member set.</span>
+<span class="sd">    </span>
+<span class="sd">    Uses Algorithm H from page 416 of volume 4A of Knuth&#39;s `The Art of Computer</span>
+<span class="sd">    Programming`. Returns the partitions in lexicographical order.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n : scalar int, non-negative</span>
+<span class="sd">        Number of (unique) elements in the set to be partitioned.</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    partitions : list of :py:class:`Array`</span>
+<span class="sd">        List has a number of elements equal to the `n`-th Bell number (i.e.,</span>
+<span class="sd">        the number of partitions for a set of size `n`). Each element has</span>
+<span class="sd">        length `n`, the elements of which are the restricted growth strings</span>
+<span class="sd">        describing the partitions of the set. The strings are returned in</span>
+<span class="sd">        lexicographic order.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># Handle edge cases:</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="k">elif</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">scipy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">])]</span>
+    
+    <span class="n">partitions</span> <span class="o">=</span> <span class="p">[]</span>
+    
+    <span class="c"># Step 1: Initialize</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+    
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="c"># Step 2: Visit</span>
+        <span class="n">partitions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">a</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">b</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="c"># Step 4: Find j. j is the index of the first element from the end</span>
+            <span class="c"># for which a != b, with the exception of the last element.</span>
+            <span class="n">j</span> <span class="o">=</span> <span class="p">(</span><span class="n">a</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">b</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="c"># Step 5: Increase a_j (or terminate):</span>
+            <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">a</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="c"># Step 6: Zero out a_{j+1} to a_n:</span>
+                <span class="n">b</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">b</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">==</span> <span class="n">b</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>
+                <span class="n">a</span><span class="p">[</span><span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:]</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">b</span><span class="p">[</span><span class="n">j</span> <span class="o">+</span> <span class="mi">1</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">b</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># Step 3: Increase a_n:</span>
+            <span class="n">a</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+    
+    <span class="k">return</span> <span class="n">partitions</span>
+</div>
+<div class="viewcode-block" id="generate_set_partitions"><a class="viewcode-back" href="../../gptools.html#gptools.utils.generate_set_partitions">[docs]</a><span class="k">def</span> <span class="nf">generate_set_partitions</span><span class="p">(</span><span class="n">set_</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generate all of the partitions of a set.</span>
+<span class="sd">    </span>
+<span class="sd">    This is a helper function that utilizes the restricted growth strings from</span>
+<span class="sd">    :py:func:`generate_set_partition_strings`. The partitions are returned in</span>
+<span class="sd">    lexicographic order.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    set_ : :py:class:`Array` or other Array-like, (`m`,)</span>
+<span class="sd">        The set to find the partitions of.</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    partitions : list of lists of :py:class:`Array`</span>
+<span class="sd">        The number of elements in the outer list is equal to the number of</span>
+<span class="sd">        partitions, which is the len(`m`)^th Bell number. Each of the inner lists</span>
+<span class="sd">        corresponds to a single possible partition. The length of an inner list</span>
+<span class="sd">        is therefore equal to the number of blocks. Each of the arrays in an</span>
+<span class="sd">        inner list is hence a block.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">set_</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">set_</span><span class="p">)</span>
+    <span class="n">strings</span> <span class="o">=</span> <span class="n">generate_set_partition_strings</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">set_</span><span class="p">))</span>
+    <span class="n">partitions</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">string</span> <span class="ow">in</span> <span class="n">strings</span><span class="p">:</span>
+        <span class="n">blocks</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">block_num</span> <span class="ow">in</span> <span class="n">scipy</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">string</span><span class="p">):</span>
+            <span class="n">blocks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">set_</span><span class="p">[</span><span class="n">string</span> <span class="o">==</span> <span class="n">block_num</span><span class="p">])</span>
+        <span class="n">partitions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">blocks</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">partitions</span>
+</div>
+<div class="viewcode-block" id="unique_rows"><a class="viewcode-back" href="../../gptools.html#gptools.utils.unique_rows">[docs]</a><span class="k">def</span> <span class="nf">unique_rows</span><span class="p">(</span><span class="n">arr</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns a copy of arr with duplicate rows removed.</span>
+<span class="sd">    </span>
+<span class="sd">    From Stackoverflow &quot;Find unique rows in numpy.array.&quot;</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    arr : :py:class:`Array`, (`m`, `n`). The array to find the unique rows of.</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    unique : :py:class:`Array`, (`p`, `n`) where `p` &lt;= `m`</span>
+<span class="sd">        The array `arr` with duplicate rows removed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span>
+        <span class="n">scipy</span><span class="o">.</span><span class="n">dtype</span><span class="p">((</span><span class="n">scipy</span><span class="o">.</span><span class="n">void</span><span class="p">,</span> <span class="n">arr</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">itemsize</span> <span class="o">*</span> <span class="n">arr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="p">)</span>
+    <span class="n">dum</span><span class="p">,</span> <span class="n">idx</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">return_index</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">arr</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">gptools 0.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Mark Chilenski.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

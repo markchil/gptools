@@ -1,0 +1,1056 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>gptools Package &mdash; gptools 0.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="gptools 0.0 documentation" href="index.html" />
+    <link rel="next" title="kernel Package" href="gptools.kernel.html" />
+    <link rel="prev" title="gptools: Gaussian process regression with support for arbitrary derivatives" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="gptools.kernel.html" title="kernel Package"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="gptools: Gaussian process regression with support for arbitrary derivatives"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">gptools 0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="gptools-package">
+<h1>gptools Package<a class="headerlink" href="#gptools-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="id1">
+<h2><tt class="xref py py-mod docutils literal"><span class="pre">gptools</span></tt> Package<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-gptools.__init__"></span><p><tt class="xref py py-mod docutils literal"><span class="pre">gptools</span></tt> - Gaussian process regression with support for arbitrary derivatives</p>
+</div>
+<div class="section" id="module-gptools.error_handling">
+<span id="error-handling-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">error_handling</span></tt> Module<a class="headerlink" href="#module-gptools.error_handling" title="Permalink to this headline">¶</a></h2>
+<p>Contains exceptions specific to the <tt class="xref py py-mod docutils literal"><span class="pre">gptools</span></tt> package.</p>
+<dl class="exception">
+<dt id="gptools.error_handling.GPArgumentError">
+<em class="property">exception </em><tt class="descclassname">gptools.error_handling.</tt><tt class="descname">GPArgumentError</tt><a class="reference internal" href="_modules/gptools/error_handling.html#GPArgumentError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.error_handling.GPArgumentError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">exceptions.Exception</span></tt></p>
+<p>Exception class raised when an incorrect combination of keyword arguments is given.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-gptools.gaussian_process">
+<span id="gaussian-process-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">gaussian_process</span></tt> Module<a class="headerlink" href="#module-gptools.gaussian_process" title="Permalink to this headline">¶</a></h2>
+<p>Provides the base <a class="reference internal" href="#gptools.gaussian_process.GaussianProcess" title="gptools.gaussian_process.GaussianProcess"><tt class="xref py py-class docutils literal"><span class="pre">GaussianProcess</span></tt></a> class.</p>
+<dl class="class">
+<dt id="gptools.gaussian_process.GaussianProcess">
+<em class="property">class </em><tt class="descclassname">gptools.gaussian_process.</tt><tt class="descname">GaussianProcess</tt><big>(</big><em>k</em>, <em>noise_k=None</em>, <em>X=None</em>, <em>y=None</em>, <em>err_y=0</em><big>)</big><a class="reference internal" href="_modules/gptools/gaussian_process.html#GaussianProcess"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.gaussian_process.GaussianProcess" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>Gaussian process.</p>
+<p>If called with one argument, an untrained Gaussian process is
+constructed and training data must be added with the <a class="reference internal" href="#gptools.gaussian_process.GaussianProcess.add_data" title="gptools.gaussian_process.GaussianProcess.add_data"><tt class="xref py py-meth docutils literal"><span class="pre">add_data()</span></tt></a> method.
+If called with the optional keywords, the values given are used as the
+training data. It is always possible to add additional training data
+with <a class="reference internal" href="#gptools.gaussian_process.GaussianProcess.add_data" title="gptools.gaussian_process.GaussianProcess.add_data"><tt class="xref py py-meth docutils literal"><span class="pre">add_data()</span></tt></a>.</p>
+<p>Note that the attributes have no write protection, but you should always
+add data with <a class="reference internal" href="#gptools.gaussian_process.GaussianProcess.add_data" title="gptools.gaussian_process.GaussianProcess.add_data"><tt class="xref py py-meth docutils literal"><span class="pre">add_data()</span></tt></a> to ensure internal consistency.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>k</strong> : <a class="reference internal" href="gptools.kernel.html#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt></a> instance</p>
+<blockquote>
+<div><p>Kernel instance corresponding to the desired noise-free
+covariance kernel of the Gaussian process. The noise is handled
+separately either through specification of <cite>err_y</cite>, or in a
+separate kernel. This allows noise-free predictions when needed.</p>
+</div></blockquote>
+<p><strong>noise_k</strong> : <a class="reference internal" href="gptools.kernel.html#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt></a> instance</p>
+<blockquote>
+<div><p>Kernel instance corresponding to the noise portion of the
+desired covariance kernel of the Gaussian process. Note that you
+DO NOT need to specify this if the extent of the noise you want
+to represent is contained in <cite>err_y</cite> (or if your data are
+noiseless). Default value is None, which results in the
+<a class="reference internal" href="gptools.kernel.html#gptools.kernel.noise.ZeroKernel" title="gptools.kernel.noise.ZeroKernel"><tt class="xref py py-class docutils literal"><span class="pre">ZeroKernel</span></tt></a> (noise specified elsewhere
+or not present).</p>
+</div></blockquote>
+<p><strong>NOTE</strong> :</p>
+<blockquote>
+<div><p>The following are all passed to <a class="reference internal" href="#gptools.gaussian_process.GaussianProcess.add_data" title="gptools.gaussian_process.GaussianProcess.add_data"><tt class="xref py py-meth docutils literal"><span class="pre">add_data()</span></tt></a>, refer to its docstring.</p>
+</div></blockquote>
+<p><strong>X</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>), optional</p>
+<blockquote>
+<div><p><cite>M</cite> training input values of dimension <cite>N</cite>. Default value is None (no
+training data).</p>
+</div></blockquote>
+<p><strong>y</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt> or other Array-like, (<cite>M</cite>,), optional</p>
+<blockquote>
+<div><p><cite>M</cite> training target values. Default value is None (no training data).</p>
+</div></blockquote>
+<p><strong>err_y</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt> or other Array-like, (<cite>M</cite>,), optional</p>
+<blockquote>
+<div><p>Error (given as standard deviation) in the <cite>M</cite> training target values.
+Default value is 0 (noiseless observations).</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises :</th><td class="field-body"><p class="first"><strong>GPArgumentError</strong> :</p>
+<blockquote>
+<div><p>Gave <cite>X</cite> but not <cite>y</cite> (or vice versa).</p>
+</div></blockquote>
+<p><strong>ValueError</strong> :</p>
+<blockquote class="last">
+<div><p>Training data rejected by <a class="reference internal" href="#gptools.gaussian_process.GaussianProcess.add_data" title="gptools.gaussian_process.GaussianProcess.add_data"><tt class="xref py py-meth docutils literal"><span class="pre">add_data()</span></tt></a>.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition-see-also admonition seealso">
+<p class="first admonition-title">See also</p>
+<dl class="last docutils">
+<dt><a class="reference internal" href="#gptools.gaussian_process.GaussianProcess.add_data" title="gptools.gaussian_process.GaussianProcess.add_data"><tt class="xref py py-obj docutils literal"><span class="pre">add_data</span></tt></a></dt>
+<dd>Used to process <cite>X</cite>, <cite>y</cite>, <cite>err_y</cite> and to add data to the process.</dd>
+</dl>
+</div>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="6%" />
+<col width="23%" />
+<col width="71%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>k</td>
+<td><a class="reference internal" href="gptools.kernel.html#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt></a> instance</td>
+<td>The non-noise portion of the covariance kernel.</td>
+</tr>
+<tr class="row-even"><td>noise_k</td>
+<td><a class="reference internal" href="gptools.kernel.html#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt></a> instance</td>
+<td>The noise portion of the covariance kernel.</td>
+</tr>
+<tr class="row-odd"><td>X</td>
+<td><tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt>, (<cite>M</cite>, <cite>N</cite>)</td>
+<td>The <cite>M</cite> training input values, each of which is of dimension <cite>N</cite>.</td>
+</tr>
+<tr class="row-even"><td>y</td>
+<td><tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,)</td>
+<td>The <cite>M</cite> training target values.</td>
+</tr>
+<tr class="row-odd"><td>err_y</td>
+<td><tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,)</td>
+<td>The error in the <cite>M</cite> training input values.</td>
+</tr>
+<tr class="row-even"><td>n</td>
+<td><tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt>, (<cite>M</cite>, <cite>N</cite>)</td>
+<td>The orders of derivatives that each of the M training points represent, indicating the order of derivative with respect to each of the <cite>N</cite> dimensions.</td>
+</tr>
+<tr class="row-odd"><td>K_up_to_date</td>
+<td>bool</td>
+<td>True if no data have been added since the last time the internal state was updated with a call to <a class="reference internal" href="#gptools.gaussian_process.GaussianProcess.compute_K_L_alpha_ll" title="gptools.gaussian_process.GaussianProcess.compute_K_L_alpha_ll"><tt class="xref py py-meth docutils literal"><span class="pre">compute_K_L_alpha_ll()</span></tt></a>.</td>
+</tr>
+<tr class="row-even"><td>K</td>
+<td><tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt>, (<cite>M</cite>, <cite>M</cite>)</td>
+<td>Covariance matrix between all of the training inputs.</td>
+</tr>
+<tr class="row-odd"><td>noise_K</td>
+<td><tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt>, (<cite>M</cite>, <cite>M</cite>)</td>
+<td>Noise portion of the covariance matrix between all of the training inputs. Only includes the noise from <tt class="xref py py-attr docutils literal"><span class="pre">noise_k</span></tt>, not from <tt class="xref py py-attr docutils literal"><span class="pre">err_y</span></tt>.</td>
+</tr>
+<tr class="row-even"><td>L</td>
+<td><tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt>, (<cite>M</cite>, <cite>M</cite>)</td>
+<td>Cholesky decomposition of the combined covariance matrix between all of the training inputs.</td>
+</tr>
+<tr class="row-odd"><td>alpha</td>
+<td><tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt>, (<cite>M</cite>, 1)</td>
+<td>Solution to <img class="math" src="_images/math/d988f25fabbe6e8d7295e0b08ae4a3c48a89004e.png" alt="K\alpha=y"/>.</td>
+</tr>
+<tr class="row-even"><td>ll</td>
+<td>float</td>
+<td>Log-likelihood of the data given the model.</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="gptools.gaussian_process.GaussianProcess.num_dim">
+<tt class="descname">num_dim</tt><a class="reference internal" href="_modules/gptools/gaussian_process.html#GaussianProcess.num_dim"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.gaussian_process.GaussianProcess.num_dim" title="Permalink to this definition">¶</a></dt>
+<dd><p>The number of dimensions of the input data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>num_dim: int</strong> :</p>
+<blockquote class="last">
+<div><p>The number of dimensions of the input data as defined in the kernel.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="gptools.gaussian_process.GaussianProcess.add_data">
+<tt class="descname">add_data</tt><big>(</big><em>X</em>, <em>y</em>, <em>err_y=0</em>, <em>n=0</em><big>)</big><a class="reference internal" href="_modules/gptools/gaussian_process.html#GaussianProcess.add_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.gaussian_process.GaussianProcess.add_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add data to the training data set of the GaussianProcess instance.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>X</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<blockquote>
+<div><p><cite>M</cite> training input values of dimension <cite>N</cite>.</p>
+</div></blockquote>
+<p><strong>y</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt> or other Array-like, (<cite>M</cite>,)</p>
+<blockquote>
+<div><p><cite>M</cite> training target values.</p>
+</div></blockquote>
+<p><strong>err_y</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt> or other Array-like (<cite>M</cite>,) or scalar float, optional</p>
+<blockquote>
+<div><p>Non-negative values only. Error given as standard deviation) in the
+<cite>M</cite> training target values. If <cite>err_y</cite> is a scalar, the data set is
+taken to be homoscedastic (constant error). Otherwise, the length
+of <cite>err_y</cite> must equal the length of <cite>y</cite>. Default value is 0
+(noiseless observations).</p>
+</div></blockquote>
+<p><strong>n</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like (<cite>M</cite>, <cite>N</cite>) or scalar float, optional</p>
+<blockquote>
+<div><p>Non-negative integer values only. Degree of derivative for each
+training target. If <cite>n</cite> is a scalar it is taken to be the value for
+all points in <cite>y</cite>. Otherwise, the length of n must equal the length
+of <cite>y</cite>. Default value is 0 (observation of target value). If
+non-integer values are passed, they will be silently rounded.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises :</th><td class="field-body"><p class="first"><strong>ValueError</strong> :</p>
+<blockquote class="last">
+<div><p>Bad shapes for any of the inputs, negative values for <cite>err_y</cite> or <cite>n</cite>.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="gptools.gaussian_process.GaussianProcess.compute_Kij">
+<tt class="descname">compute_Kij</tt><big>(</big><em>Xi</em>, <em>Xj</em>, <em>ni</em>, <em>nj</em>, <em>noise=False</em>, <em>hyper_deriv=None</em><big>)</big><a class="reference internal" href="_modules/gptools/gaussian_process.html#GaussianProcess.compute_Kij"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.gaussian_process.GaussianProcess.compute_Kij" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute covariance matrix between datasets <cite>Xi</cite> and <cite>Xj</cite>.</p>
+<p>Specify the orders of derivatives at each location with the <cite>ni</cite>, <cite>nj</cite>
+arrays. The <cite>include_noise</cite> flag is passed to the covariance kernel to
+indicate whether noise is to be included (i.e., for evaluation of
+<img class="math" src="_images/math/f49377a915206cf8e5956a4c388e1ca70c048f57.png" alt="K+\sigma I"/> versus <img class="math" src="_images/math/a6b81ac9039f9854754a5a0ccb8f93d66b4e3fec.png" alt="K_*"/>).</p>
+<p>If <cite>Xj</cite> is None, the symmetric matrix <img class="math" src="_images/math/c440ab49d1eecb2a30a497bb59468065541125f8.png" alt="K(X, X)"/> is formed.</p>
+<p>Note that type and dimension checking is NOT performed, as it is assumed
+the data are from inside the instance and have hence been sanitized by
+<a class="reference internal" href="#gptools.gaussian_process.GaussianProcess.add_data" title="gptools.gaussian_process.GaussianProcess.add_data"><tt class="xref py py-meth docutils literal"><span class="pre">add_data()</span></tt></a>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>Xi</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt>, (<cite>M</cite>, <cite>N</cite>)</p>
+<blockquote>
+<div><p><cite>M</cite> input values of dimension <cite>N</cite>.</p>
+</div></blockquote>
+<p><strong>Xj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt>, (<cite>P</cite>, <cite>N</cite>)</p>
+<blockquote>
+<div><p><cite>P</cite> input values of dimension <cite>N</cite>.</p>
+</div></blockquote>
+<p><strong>ni</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,), non-negative integers</p>
+<blockquote>
+<div><p><cite>M</cite> derivative orders with respect to the <cite>Xi</cite> coordinates.</p>
+</div></blockquote>
+<p><strong>nj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>P</cite>,), non-negative integers</p>
+<blockquote>
+<div><p><cite>P</cite> derivative orders with respect to the <cite>Xj</cite> coordinates.</p>
+</div></blockquote>
+<p><strong>noise</strong> : bool, optional</p>
+<blockquote>
+<div><p>If True, uses the noise kernel, otherwise uses the regular kernel.
+Default is False (use regular kernel).</p>
+</div></blockquote>
+<p><strong>hyper_deriv</strong> : None or non-negative int</p>
+<blockquote>
+<div><p>Index of the hyperparameter to compute the first derivative with
+respect to. If None, no derivatives are taken. Default is None (no
+hyperparameter derivatives).</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>Kij</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt>, (<cite>M</cite>, <cite>P</cite>)</p>
+<blockquote class="last">
+<div><p>Covariance matrix between <cite>Xi</cite> and <cite>Xj</cite>.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="gptools.gaussian_process.GaussianProcess.compute_K_L_alpha_ll">
+<tt class="descname">compute_K_L_alpha_ll</tt><big>(</big><em>diag_factor=100.0</em><big>)</big><a class="reference internal" href="_modules/gptools/gaussian_process.html#GaussianProcess.compute_K_L_alpha_ll"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.gaussian_process.GaussianProcess.compute_K_L_alpha_ll" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute <cite>K</cite>, <cite>L</cite>, <cite>alpha</cite> and log-likelihood according to the first part of Algorithm 2.1 in R&amp;W.</p>
+<p>Computes <cite>K</cite> and the noise portion of <cite>K</cite> using <a class="reference internal" href="#gptools.gaussian_process.GaussianProcess.compute_Kij" title="gptools.gaussian_process.GaussianProcess.compute_Kij"><tt class="xref py py-meth docutils literal"><span class="pre">compute_Kij()</span></tt></a>,
+computes <cite>L</cite> using <tt class="xref py py-func docutils literal"><span class="pre">scipy.linalg.cholesky()</span></tt>, then computes
+<cite>alpha</cite> as <cite>L.T\(L\y)</cite>.</p>
+<p>Only does the computation if <tt class="xref py py-attr docutils literal"><span class="pre">K_up_to_date</span></tt> is False &#8211;
+otherwise leaves the existing values.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>diag_factor</strong> : float, optional</p>
+<blockquote class="last">
+<div><p>Factor of <tt class="xref py py-attr docutils literal"><span class="pre">sys.float_info.epsilon</span></tt> which is added to
+the diagonal of the total <cite>K</cite> matrix to improve the stability of
+the Cholesky decomposition. If you are having issues, try increasing
+this by a factor of 10 at a time. Default is 1e2.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="gptools.gaussian_process.GaussianProcess.update_hyperparameters">
+<tt class="descname">update_hyperparameters</tt><big>(</big><em>new_params</em>, <em>return_jacobian=False</em><big>)</big><a class="reference internal" href="_modules/gptools/gaussian_process.html#GaussianProcess.update_hyperparameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.gaussian_process.GaussianProcess.update_hyperparameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the kernel&#8217;s hyperparameters to the new parameters.</p>
+<p>This will call <a class="reference internal" href="#gptools.gaussian_process.GaussianProcess.compute_K_L_alpha_ll" title="gptools.gaussian_process.GaussianProcess.compute_K_L_alpha_ll"><tt class="xref py py-meth docutils literal"><span class="pre">compute_K_L_alpha_ll()</span></tt></a> to update the state
+accordingly.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>new_params</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt> or other Array-like, length dictated by kernel</p>
+<blockquote>
+<div><p>New parameters to use.</p>
+</div></blockquote>
+<p><strong>return_jacobian</strong> : bool, optional</p>
+<blockquote>
+<div><p>If True, the return is (<cite>ll</cite>, <cite>jac</cite>). Otherwise, return is <cite>ll</cite>
+only and the execution is faster. Default is False (do not
+compute Jacobian).</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>-1*ll</strong> : float</p>
+<blockquote>
+<div><p>The updated log likelihood.</p>
+</div></blockquote>
+<p><strong>-1*jac</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, length equal to the number of parameters</p>
+<blockquote class="last">
+<div><p>The derivative of <cite>ll</cite> with respect to each of the parameters, in
+order. Only computed and returned if <cite>return_jacobian</cite> is True.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="gptools.gaussian_process.GaussianProcess.optimize_hyperparameters">
+<tt class="descname">optimize_hyperparameters</tt><big>(</big><em>method='SLSQP'</em>, <em>opt_kwargs={}</em>, <em>verbose=False</em><big>)</big><a class="reference internal" href="_modules/gptools/gaussian_process.html#GaussianProcess.optimize_hyperparameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.gaussian_process.GaussianProcess.optimize_hyperparameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optimize the hyperparameters by maximizing the log likelihood.</p>
+<p>Leaves the <a class="reference internal" href="#gptools.gaussian_process.GaussianProcess" title="gptools.gaussian_process.GaussianProcess"><tt class="xref py py-class docutils literal"><span class="pre">GaussianProcess</span></tt></a> instance in the optimized state.</p>
+<p>If <tt class="xref py py-func docutils literal"><span class="pre">scipy.optimize.minimize()</span></tt> is not available (i.e., if your
+<tt class="xref py py-mod docutils literal"><span class="pre">scipy</span></tt> version is older than 0.11.0) then <tt class="xref py py-func docutils literal"><span class="pre">fmin_slsqp()</span></tt>
+is used independent of what you set for the <cite>method</cite> keyword.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>method</strong> : str, optional</p>
+<blockquote>
+<div><p>The method to pass to <tt class="xref py py-func docutils literal"><span class="pre">scipy.optimize.minimize()</span></tt>.
+Refer to that function&#8217;s docstring for valid options. Default
+is &#8216;SLSQP&#8217;. See note above about behavior with older versions of
+<tt class="xref py py-mod docutils literal"><span class="pre">scipy</span></tt>.</p>
+</div></blockquote>
+<p><strong>opt_kwargs</strong> : dict, optional</p>
+<blockquote>
+<div><p>Dictionary of extra keywords to pass to
+<tt class="xref py py-func docutils literal"><span class="pre">scipy.optimize.minimize()</span></tt>. Refer to that function&#8217;s docstring for
+valid options. Note that if you use <cite>jac</cite> = True (i.e., optimization
+function returns Jacobian) you should also set <cite>args</cite> = (True,) to
+tell <a class="reference internal" href="#gptools.gaussian_process.GaussianProcess.update_hyperparameters" title="gptools.gaussian_process.GaussianProcess.update_hyperparameters"><tt class="xref py py-meth docutils literal"><span class="pre">update_hyperparameters()</span></tt></a> to compute and return the
+Jacobian. Default is: {}.</p>
+</div></blockquote>
+<p><strong>verbose</strong> : bool, optional</p>
+<blockquote class="last">
+<div><p>Whether or not the output should be verbose. If
+True, the entire <tt class="xref py py-class docutils literal"><span class="pre">Result</span></tt> object from
+<tt class="xref py py-func docutils literal"><span class="pre">scipy.optimize.minimize()</span></tt> is printed. If False, status
+information is only printed if the <cite>success</cite> flag from
+<tt class="xref py py-func docutils literal"><span class="pre">minimize()</span></tt> is False. Default is False.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="gptools.gaussian_process.GaussianProcess.predict">
+<tt class="descname">predict</tt><big>(</big><em>Xstar</em>, <em>n=0</em>, <em>noise=False</em>, <em>return_cov=True</em><big>)</big><a class="reference internal" href="_modules/gptools/gaussian_process.html#GaussianProcess.predict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.gaussian_process.GaussianProcess.predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Predict the mean and covariance at the inputs <cite>Xstar</cite>.</p>
+<p>The order of the derivative is given by <cite>n</cite>. The keyword <cite>noise</cite> sets
+whether or not noise is included in the prediction.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>Xstar</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<blockquote>
+<div><p><cite>M</cite> test input values of dimension <cite>N</cite>.</p>
+</div></blockquote>
+<p><strong>n</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>) or scalar, non-negative int, optional</p>
+<blockquote>
+<div><p>Order of derivative to predict (0 is the base quantity). If <cite>n</cite> is
+scalar, the value is used for all points in <cite>Xstar</cite>. If non-integer
+values are passed, they will be silently rounded. Default is 0
+(return base quantity).</p>
+</div></blockquote>
+<p><strong>noise</strong> : bool, optional</p>
+<blockquote>
+<div><p>Whether or not noise should be included in the covariance. Default
+is False (no noise in covariance).</p>
+</div></blockquote>
+<p><strong>return_cov</strong> : bool, optional</p>
+<blockquote>
+<div><p>Set to True to compute and return the covariance matrix for the
+predictions, False to skip this step. Default is True (return tuple
+of (<cite>mean</cite>, <cite>cov</cite>)).</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>mean</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,)</p>
+<blockquote>
+<div><p>Predicted GP mean.</p>
+</div></blockquote>
+<p><strong>covariance</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt>, (<cite>M</cite>, <cite>M</cite>)</p>
+<blockquote>
+<div><p>Predicted covariance matrix, only returned if <cite>return_cov</cite> is True.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises :</th><td class="field-body"><p class="first"><strong>ValueError</strong> :</p>
+<blockquote class="last">
+<div><p>If <cite>n</cite> is not consistent with the shape of <cite>Xstar</cite> or is not entirely
+composed of non-negative integers.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="gptools.gaussian_process.GaussianProcess.compute_ll_matrix">
+<tt class="descname">compute_ll_matrix</tt><big>(</big><em>bounds</em>, <em>num_pts</em><big>)</big><a class="reference internal" href="_modules/gptools/gaussian_process.html#GaussianProcess.compute_ll_matrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.gaussian_process.GaussianProcess.compute_ll_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the log likelihood over the (free) parameter space.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>bounds</strong> : 2-tuple or list of 2-tuples with length equal to the number of free parameters</p>
+<blockquote>
+<div><p>Bounds on the range to use for each of the parameters. If a single
+2-tuple is given, it will be used for each of the parameters.</p>
+</div></blockquote>
+<p><strong>num_pts</strong> : int or list of ints with length equal to the number of free parameters</p>
+<blockquote>
+<div><p>If a single int is given, it will be used for each of the parameters.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>ll_vals</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt></p>
+<blockquote class="last">
+<div><blockquote>
+<div><p>The log likelihood for each of the parameter possibilities.</p>
+</div></blockquote>
+<dl class="docutils">
+<dt>param_vals <span class="classifier-delimiter">:</span> <span class="classifier">List of <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt></span></dt>
+<dd><p class="first last">The parameter values used.</p>
+</dd>
+</dl>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="gptools.gaussian_process.GaussianProcess.draw_sample">
+<tt class="descname">draw_sample</tt><big>(</big><em>Xstar</em>, <em>n=0</em>, <em>noise=False</em>, <em>num_samp=1</em>, <em>rand_vars=None</em>, <em>rand_type='standard normal'</em>, <em>diag_factor=1000.0</em><big>)</big><a class="reference internal" href="_modules/gptools/gaussian_process.html#GaussianProcess.draw_sample"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.gaussian_process.GaussianProcess.draw_sample" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw a sample evaluated at the given points <cite>Xstar</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>Xstar</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<blockquote>
+<div><p><cite>M</cite> test input values of dimension <cite>N</cite>.</p>
+</div></blockquote>
+<p><strong>n</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>) or scalar, non-negative int, optional</p>
+<blockquote>
+<div><p>Derivative order to evaluate at. Default is 0 (evaluate value).</p>
+</div></blockquote>
+<p><strong>noise</strong> : bool, optional</p>
+<blockquote>
+<div><p>Whether or not to include the noise components of the kernel in the
+sample. Default is False (no noise in samples).</p>
+</div></blockquote>
+<p><strong>num_samp</strong> : Positive int, optional</p>
+<blockquote>
+<div><p>Number of samples to draw. Default is 1. Cannot be used in
+conjunction with <cite>rand_vars</cite>: If you pass both <cite>num_samp</cite> and
+<cite>rand_vars</cite>, <cite>num_samp</cite> will be silently ignored.</p>
+</div></blockquote>
+<p><strong>rand_vars</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like (<cite>M</cite>, <cite>P</cite>), optional</p>
+<blockquote>
+<div><p>Vector of random variables <img class="math" src="_images/math/9ad99798ec4c38e165cf517cb9e02b1c9e824103.png" alt="u"/> to use in constructing the
+sample <img class="math" src="_images/math/b339c4c45440f4de3adc6c7b8f87571841bed3c0.png" alt="y_* = f_* + Lu"/>, where <img class="math" src="_images/math/2be7268c95610c46b5939dc92d48f8a5eea456ab.png" alt="K=LL^T"/>. If None,
+values will be produced using <tt class="xref py py-func docutils literal"><span class="pre">numpy.random.multivariate_normal()</span></tt>.
+This allows you to use pseudo/quasi random numbers generated by
+an external routine. Default is None (use <tt class="xref py py-func docutils literal"><span class="pre">multivariate_normal()</span></tt>
+directly).</p>
+</div></blockquote>
+<p><strong>rand_type</strong> : {&#8216;standard normal&#8217;, &#8216;uniform&#8217;}, optional</p>
+<blockquote>
+<div><p>Type of distribution the inputs are given with.</p>
+<blockquote>
+<div><ul class="simple">
+<li>&#8216;standard normal&#8217;: Standard (<cite>mu</cite> = 0, <cite>sigma</cite> = 1) normal
+distribution (this is the default)</li>
+<li>&#8216;uniform&#8217;: Uniform distribution on [0, 1). In this case
+the required Gaussian variables are produced with inversion.</li>
+</ul>
+</div></blockquote>
+</div></blockquote>
+<p><strong>diag_factor</strong> : float, optional</p>
+<blockquote>
+<div><p>Number (times machine epsilon) added to the diagonal of the
+covariance matrix prior to computing its Cholesky decomposition.
+This is necessary as sometimes the decomposition will fail because,
+to machine precision, the matrix appears to not be positive definite.
+If you are getting errors from <tt class="xref py py-func docutils literal"><span class="pre">scipy.linalg.cholesky()</span></tt>, try increasing
+this an order of magnitude at a time. This parameter only has an
+effect when using rand_vars. Default value is 1e3.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>samples</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt> (<cite>M</cite>, <cite>P</cite>) or (<cite>M</cite>, <cite>num_samp</cite>)</p>
+<blockquote class="last">
+<div><p>Samples evaluated at the <cite>M</cite> points.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gptools.gaussian_process.Constraint">
+<em class="property">class </em><tt class="descclassname">gptools.gaussian_process.</tt><tt class="descname">Constraint</tt><big>(</big><em>gp</em>, <em>boundary_val=0.0</em>, <em>n=0</em>, <em>loc='min'</em>, <em>type_='gt'</em>, <em>bounds=None</em><big>)</big><a class="reference internal" href="_modules/gptools/gaussian_process.html#Constraint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.gaussian_process.Constraint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>Implements an inequality constraint on the value of the mean or its derivatives.</p>
+<p>Provides a callable such as can be passed to SLSQP or COBYLA to implement
+the constraint when using <tt class="xref py py-func docutils literal"><span class="pre">scipy.optimize.minimize()</span></tt>.</p>
+<p>The function defaults implement a constraint that forces the mean value to
+be positive everywhere.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>gp</strong> : <a class="reference internal" href="#gptools.gaussian_process.GaussianProcess" title="gptools.gaussian_process.GaussianProcess"><tt class="xref py py-class docutils literal"><span class="pre">GaussianProcess</span></tt></a></p>
+<blockquote>
+<div><p>The <a class="reference internal" href="#gptools.gaussian_process.GaussianProcess" title="gptools.gaussian_process.GaussianProcess"><tt class="xref py py-class docutils literal"><span class="pre">GaussianProcess</span></tt></a> instance to create the constraint on.</p>
+</div></blockquote>
+<p><strong>boundary_val</strong> : float, optional</p>
+<blockquote>
+<div><p>Boundary value for the constraint. For <cite>type_</cite> = &#8216;gt&#8217;, this is the lower
+bound, for <cite>type_</cite> = &#8216;lt&#8217;, this is the upper bound. Default is 0.0.</p>
+</div></blockquote>
+<p><strong>n</strong> : non-negative int, optional</p>
+<blockquote>
+<div><p>Derivative order to evaluate. Default is 0 (value of the mean). Note
+that non-int values are silently cast to int.</p>
+</div></blockquote>
+<p><strong>loc</strong> : {&#8216;min&#8217;, &#8216;max&#8217;}, float or Array-like of float (<cite>num_dim</cite>,), optional</p>
+<blockquote>
+<div><p>Which extreme of the mean to use, or location to evaluate at.</p>
+<ul class="simple">
+<li>If &#8216;min&#8217;, the minimum of the mean (optionally over <cite>bounds</cite>) is used.</li>
+<li>If &#8216;max&#8217;, the maximum of the mean (optionally over <cite>bounds</cite>) is used.</li>
+<li>If a float (valid for <cite>num_dim</cite> = 1 only) or Array of float, the mean
+is evaluated at the given X value.</li>
+</ul>
+<p>Default is &#8216;min&#8217; (use function minimum).</p>
+</div></blockquote>
+<p><strong>type_</strong> : {&#8216;gt&#8217;, &#8216;lt&#8217;}, optional</p>
+<blockquote>
+<div><p>What type of inequality constraint to implement.</p>
+<ul class="simple">
+<li>If &#8216;gt&#8217;, a greater-than-or-equals constraint is used.</li>
+<li>If &#8216;lt&#8217;, a less-than-or-equals constraint is used.</li>
+</ul>
+<p>Default is &#8216;gt&#8217; (greater-than-or-equals).</p>
+</div></blockquote>
+<p><strong>bounds</strong> : 2-tuple of float or 2-tuple Array-like of float (<cite>num_dim</cite>,) or None, optional</p>
+<blockquote>
+<div><p>Bounds to use when <cite>loc</cite> is &#8216;min&#8217; or &#8216;max&#8217;.</p>
+<ul class="simple">
+<li>If None, the bounds are taken to be the extremes of the training data.
+For multivariate data, &#8220;extremes&#8221; essentially means the smallest
+hypercube oriented parallel to the axes that encapsulates all of the
+training inputs. (I.e., <tt class="docutils literal"><span class="pre">(gp.X.min(axis=0),</span> <span class="pre">gp.X.max(axis=0))</span></tt>)</li>
+<li>If <cite>bounds</cite> is a 2-tuple, then this is used as (<cite>lower</cite>, <cite>upper</cite>)
+where lower` and <cite>upper</cite> are Array-like with dimensions (<cite>num_dim</cite>,).</li>
+<li>If <cite>num_dim</cite> is 1 then <cite>lower</cite> and <cite>upper</cite> can be scalar floats.</li>
+</ul>
+<p>Default is None (use extreme values of training data).</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises :</th><td class="field-body"><p class="first"><strong>TypeError</strong> :</p>
+<blockquote>
+<div><p>If <cite>gp</cite> is not an instance of <a class="reference internal" href="#gptools.gaussian_process.GaussianProcess" title="gptools.gaussian_process.GaussianProcess"><tt class="xref py py-class docutils literal"><span class="pre">GaussianProcess</span></tt></a>.</p>
+</div></blockquote>
+<p><strong>ValueError</strong> :</p>
+<blockquote>
+<div><p>If <cite>n</cite> is negative.</p>
+</div></blockquote>
+<p><strong>ValueError</strong> :</p>
+<blockquote>
+<div><p>If <cite>loc</cite> is not &#8216;min&#8217;, &#8216;max&#8217; or an Array-like of the correct dimensions.</p>
+</div></blockquote>
+<p><strong>ValueError</strong> :</p>
+<blockquote>
+<div><p>If <cite>type_</cite> is not &#8216;gt&#8217; or &#8216;lt&#8217;.</p>
+</div></blockquote>
+<p><strong>ValueError</strong> :</p>
+<blockquote class="last">
+<div><p>If <cite>bounds</cite> is not None or length 2 or if the elements of bounds don&#8217;t
+have the right dimensions.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="gptools.gaussian_process.Constraint.__call__">
+<tt class="descname">__call__</tt><big>(</big><em>params</em><big>)</big><a class="reference internal" href="_modules/gptools/gaussian_process.html#Constraint.__call__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.gaussian_process.Constraint.__call__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a non-negative number if the constraint is satisfied.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>params</strong> : Array-like, length dictated by kernel</p>
+<blockquote>
+<div><p>New parameters to use.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>val</strong> : float</p>
+<blockquote class="last">
+<div><p>Value of the constraint. <tt class="xref py py-class docutils literal"><span class="pre">minimize</span></tt> will attempt to keep
+this non-negative.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-gptools.utils">
+<span id="utils-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">utils</span></tt> Module<a class="headerlink" href="#module-gptools.utils" title="Permalink to this headline">¶</a></h2>
+<p>Provides convenient utilities for working with the classes and results from <tt class="xref py py-mod docutils literal"><span class="pre">gptools</span></tt>.</p>
+<dl class="function">
+<dt id="gptools.utils.parallel_compute_ll_matrix">
+<tt class="descclassname">gptools.utils.</tt><tt class="descname">parallel_compute_ll_matrix</tt><big>(</big><em>gp</em>, <em>bounds</em>, <em>num_pts</em>, <em>num_proc=None</em><big>)</big><a class="reference internal" href="_modules/gptools/utils.html#parallel_compute_ll_matrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.utils.parallel_compute_ll_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute matrix of the log likelihood over the parameter space in parallel.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>bounds</strong> : 2-tuple or list of 2-tuples with length equal to the number of free parameters</p>
+<blockquote>
+<div><p>Bounds on the range to use for each of the parameters. If a single
+2-tuple is given, it will be used for each of the parameters.</p>
+</div></blockquote>
+<p><strong>num_pts</strong> : int or list of ints with length equal to the number of free parameters</p>
+<blockquote>
+<div><p>The number of points to use for each parameters. If a single int is
+given, it will be used for each of the parameters.</p>
+</div></blockquote>
+<p><strong>num_proc</strong> : Positive int or None, optional</p>
+<blockquote>
+<div><p>Number of processes to run the parallel computation with. If set to
+None, ALL available cores are used. Default is None (use all available
+cores).</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>ll_vals</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt></p>
+<blockquote>
+<div><p>The log likelihood for each of the parameter possibilities.</p>
+</div></blockquote>
+<p><strong>param_vals</strong> : list of <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt></p>
+<blockquote class="last">
+<div><p>The parameter values used.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="gptools.utils.slice_plot">
+<tt class="descclassname">gptools.utils.</tt><tt class="descname">slice_plot</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/gptools/utils.html#slice_plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.utils.slice_plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Constructs a plot that lets you look at slices through a multidimensional array.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>vals</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>, <cite>N</cite>, <cite>P</cite>, ...)</p>
+<blockquote>
+<div><p>Multidimensional array to visualize.</p>
+</div></blockquote>
+<p><strong>x_vals_1</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,)</p>
+<blockquote>
+<div><p>Values along the first dimension.</p>
+</div></blockquote>
+<p><strong>x_vals_2</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>N</cite>,)</p>
+<blockquote>
+<div><p>Values along the second dimension.</p>
+</div></blockquote>
+<p><strong>x_vals_3</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>P</cite>,)</p>
+<blockquote>
+<div><p>Values along the third dimension.</p>
+<p><strong>...and so on. At least four arguments must be provided.</strong></p>
+</div></blockquote>
+<p><strong>names</strong> : list of strings, optional</p>
+<blockquote>
+<div><p>Names for each of the parameters at hand. If None, sequential numerical
+identifiers will be used. Length must be equal to the number of
+dimensions of <cite>vals</cite>. Default is None.</p>
+</div></blockquote>
+<p><strong>n</strong> : Positive int, optional</p>
+<blockquote>
+<div><p>Number of contours to plot. Default is 100.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>f</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Figure</span></tt></p>
+<blockquote>
+<div><p>The Matplotlib figure instance created.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises :</th><td class="field-body"><p class="first"><strong>GPArgumentError</strong> :</p>
+<blockquote class="last">
+<div><p>If the number of arguments is less than 4.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="gptools.utils.arrow_respond">
+<tt class="descclassname">gptools.utils.</tt><tt class="descname">arrow_respond</tt><big>(</big><em>slider</em>, <em>event</em><big>)</big><a class="reference internal" href="_modules/gptools/utils.html#arrow_respond"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.utils.arrow_respond" title="Permalink to this definition">¶</a></dt>
+<dd><p>Event handler for arrow key events in plot windows.</p>
+<p>Pass the slider object to update as a masked argument using a lambda function:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">lambda</span> <span class="n">evt</span><span class="p">:</span> <span class="n">arrow_respond</span><span class="p">(</span><span class="n">my_slider</span><span class="p">,</span> <span class="n">evt</span><span class="p">)</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>slider</strong> : Slider instance associated with this handler.</p>
+<p class="last"><strong>event</strong> : Event to be handled.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="gptools.utils.incomplete_bell_poly">
+<tt class="descclassname">gptools.utils.</tt><tt class="descname">incomplete_bell_poly</tt><big>(</big><em>n</em>, <em>k</em>, <em>x</em><big>)</big><a class="reference internal" href="_modules/gptools/utils.html#incomplete_bell_poly"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.utils.incomplete_bell_poly" title="Permalink to this definition">¶</a></dt>
+<dd><p>Recursive evaluation of the incomplete Bell polynomial <img class="math" src="_images/math/3e4706baa604e1794d41d43400ba7708395a055b.png" alt="B_{n, k}(x)"/>.</p>
+<p>Evaluates the incomplete Bell polynomial <img class="math" src="_images/math/15c0e5b01b2bdc6a5ed2eea279f4c2f2b7cfd70b.png" alt="B_{n, k}(x_1, x_2, \dots, x_{n-k+1})"/>,
+also known as the partial Bell polynomial or the Bell polynomial of the
+second kind. This polynomial is useful in the evaluation of (the univariate)
+Faa di Bruno&#8217;s formula which generalizes the chain rule to higher order
+derivatives.</p>
+<p>The implementation here is based on the implementation in:
+<tt class="xref py py-func docutils literal"><span class="pre">sympy.functions.combinatorial.numbers.bell._bell_incomplete_poly()</span></tt>
+Following that function&#8217;s documentation, the polynomial is computed
+according to the recurrence formula:</p>
+<div class="math">
+<p><img src="_images/math/e186cdff23ad92dbe25521fcb875ef7618df6284.png" alt="B_{n, k}(x_1, x_2, \dots, x_{n-k+1}) = \sum_{m=1}^{n-k+1}x_m\binom{n-1}{m-1}B_{n-m, k-1}(x_1, x_2, \dots, x_{n-m-k})"/></p>
+</div><div class="line-block">
+<div class="line">The end cases are:</div>
+<div class="line"><img class="math" src="_images/math/57ff4ac903860e9b65cecd0a4d38e725be98ec86.png" alt="B_{0, 0} = 1"/></div>
+<div class="line"><img class="math" src="_images/math/0024155eabfcd1190d07f9520b42da07cc573f98.png" alt="B_{n, 0} = 0"/> for <img class="math" src="_images/math/897470a282b6b85fa5221eacd41369b9a157f491.png" alt="n \ge 1"/></div>
+<div class="line"><img class="math" src="_images/math/7198c11f22989d15f71fc60acc87c66017ea5e94.png" alt="B_{0, k} = 0"/> for <img class="math" src="_images/math/172e6dadffd9800e796f3f96a1e24ce2a1840f3a.png" alt="k \ge 1"/></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>n</strong> : scalar int</p>
+<blockquote>
+<div><p>The first subscript of the polynomial.</p>
+</div></blockquote>
+<p><strong>k</strong> : scalar int</p>
+<blockquote>
+<div><p>The second subscript of the polynomial.</p>
+</div></blockquote>
+<p><strong>x</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt> of floats, (<cite>p</cite>, <cite>n</cite> - <cite>k</cite> + 1)</p>
+<blockquote>
+<div><p><cite>p</cite> sets of <cite>n</cite> - <cite>k</cite> + 1 points to use as the arguments to
+<img class="math" src="_images/math/57a710d686452bd0ecc177300d3e523c300445a3.png" alt="B_{n,k}"/>. The second dimension can be longer than
+required, in which case the extra entries are silently ignored
+(this facilitates recursion without needing to subset the array <cite>x</cite>).</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>result</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>p</cite>,)</p>
+<blockquote class="last">
+<div><p>Incomplete Bell polynomial evaluated at the desired values.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="gptools.utils.generate_set_partition_strings">
+<tt class="descclassname">gptools.utils.</tt><tt class="descname">generate_set_partition_strings</tt><big>(</big><em>n</em><big>)</big><a class="reference internal" href="_modules/gptools/utils.html#generate_set_partition_strings"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.utils.generate_set_partition_strings" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate the restricted growth strings for all of the partitions of an <cite>n</cite>-member set.</p>
+<p>Uses Algorithm H from page 416 of volume 4A of Knuth&#8217;s <cite>The Art of Computer
+Programming</cite>. Returns the partitions in lexicographical order.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>n</strong> : scalar int, non-negative</p>
+<blockquote>
+<div><p>Number of (unique) elements in the set to be partitioned.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>partitions</strong> : list of <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt></p>
+<blockquote class="last">
+<div><p>List has a number of elements equal to the <cite>n</cite>-th Bell number (i.e.,
+the number of partitions for a set of size <cite>n</cite>). Each element has
+length <cite>n</cite>, the elements of which are the restricted growth strings
+describing the partitions of the set. The strings are returned in
+lexicographic order.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="gptools.utils.generate_set_partitions">
+<tt class="descclassname">gptools.utils.</tt><tt class="descname">generate_set_partitions</tt><big>(</big><em>set_</em><big>)</big><a class="reference internal" href="_modules/gptools/utils.html#generate_set_partitions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.utils.generate_set_partitions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate all of the partitions of a set.</p>
+<p>This is a helper function that utilizes the restricted growth strings from
+<a class="reference internal" href="#gptools.utils.generate_set_partition_strings" title="gptools.utils.generate_set_partition_strings"><tt class="xref py py-func docutils literal"><span class="pre">generate_set_partition_strings()</span></tt></a>. The partitions are returned in
+lexicographic order.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>set_</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt> or other Array-like, (<cite>m</cite>,)</p>
+<blockquote>
+<div><p>The set to find the partitions of.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>partitions</strong> : list of lists of <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt></p>
+<blockquote class="last">
+<div><p>The number of elements in the outer list is equal to the number of
+partitions, which is the len(<cite>m</cite>)^th Bell number. Each of the inner lists
+corresponds to a single possible partition. The length of an inner list
+is therefore equal to the number of blocks. Each of the arrays in an
+inner list is hence a block.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="gptools.utils.unique_rows">
+<tt class="descclassname">gptools.utils.</tt><tt class="descname">unique_rows</tt><big>(</big><em>arr</em><big>)</big><a class="reference internal" href="_modules/gptools/utils.html#unique_rows"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.utils.unique_rows" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a copy of arr with duplicate rows removed.</p>
+<p>From Stackoverflow &#8220;Find unique rows in numpy.array.&#8221;</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>arr</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>m</cite>, <cite>n</cite>). The array to find the unique rows of.</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>unique</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>p</cite>, <cite>n</cite>) where <cite>p</cite> &lt;= <cite>m</cite></p>
+<blockquote class="last">
+<div><p>The array <cite>arr</cite> with duplicate rows removed.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="gptools.kernel.html">kernel Package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="gptools.kernel.html#id1"><tt class="docutils literal"><span class="pre">kernel</span></tt> Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gptools.kernel.html#module-gptools.kernel.core"><tt class="docutils literal"><span class="pre">core</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gptools.kernel.html#module-gptools.kernel.gibbs"><tt class="docutils literal"><span class="pre">gibbs</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gptools.kernel.html#module-gptools.kernel.matern"><tt class="docutils literal"><span class="pre">matern</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gptools.kernel.html#module-gptools.kernel.noise"><tt class="docutils literal"><span class="pre">noise</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gptools.kernel.html#module-gptools.kernel.rational_quadratic"><tt class="docutils literal"><span class="pre">rational_quadratic</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gptools.kernel.html#module-gptools.kernel.squared_exponential"><tt class="docutils literal"><span class="pre">squared_exponential</span></tt> Module</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">gptools Package</a><ul>
+<li><a class="reference internal" href="#id1"><tt class="docutils literal"><span class="pre">gptools</span></tt> Package</a></li>
+<li><a class="reference internal" href="#module-gptools.error_handling"><tt class="docutils literal"><span class="pre">error_handling</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-gptools.gaussian_process"><tt class="docutils literal"><span class="pre">gaussian_process</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-gptools.utils"><tt class="docutils literal"><span class="pre">utils</span></tt> Module</a></li>
+<li><a class="reference internal" href="#subpackages">Subpackages</a><ul>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">gptools: Gaussian process regression with support for arbitrary derivatives</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="gptools.kernel.html"
+                        title="next chapter">kernel Package</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/gptools.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="gptools.kernel.html" title="kernel Package"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="gptools: Gaussian process regression with support for arbitrary derivatives"
+             >previous</a> |</li>
+        <li><a href="index.html">gptools 0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Mark Chilenski.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

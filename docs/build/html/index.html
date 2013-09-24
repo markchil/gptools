@@ -1,0 +1,173 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>gptools: Gaussian process regression with support for arbitrary derivatives &mdash; gptools 0.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="gptools 0.0 documentation" href="#" />
+    <link rel="next" title="gptools Package" href="gptools.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="gptools.html" title="gptools Package"
+             accesskey="N">next</a> |</li>
+        <li><a href="#">gptools 0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="gptools-gaussian-process-regression-with-support-for-arbitrary-derivatives">
+<h1>gptools: Gaussian process regression with support for arbitrary derivatives<a class="headerlink" href="#gptools-gaussian-process-regression-with-support-for-arbitrary-derivatives" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
+<p><tt class="xref py py-mod docutils literal"><span class="pre">gptools</span></tt> is a Python package that provides a convenient, powerful and extensible implementation of Gaussian process regression (GPR). Central to <tt class="xref py py-mod docutils literal"><span class="pre">gptool</span></tt>&#8216;s implementation is support for derivatives and their variances. A number of kernels are provided to allow many types of data to be fit:</p>
+<ul class="simple">
+<li><a class="reference internal" href="gptools.kernel.html#gptools.kernel.noise.DiagonalNoiseKernel" title="gptools.kernel.noise.DiagonalNoiseKernel"><tt class="xref py py-class docutils literal"><span class="pre">DiagonalNoiseKernel</span></tt></a> implements homoscedastic noise. The noise is tied to a specific derivative order. This allows you to, for instance, have noise on your observations but have noiseless derivative constraints, or to have different noise levels for observations and derivatives. Note that you can also specify potentially heteroscedastic noise explicitly when adding data to the process.</li>
+<li><a class="reference internal" href="gptools.kernel.html#gptools.kernel.squared_exponential.SquaredExponentialKernel" title="gptools.kernel.squared_exponential.SquaredExponentialKernel"><tt class="xref py py-class docutils literal"><span class="pre">SquaredExponentialKernel</span></tt></a> implements the SE kernel which is infinitely differentiable.</li>
+<li><a class="reference internal" href="gptools.kernel.html#gptools.kernel.matern.MaternKernel" title="gptools.kernel.matern.MaternKernel"><tt class="xref py py-class docutils literal"><span class="pre">MaternKernel</span></tt></a> implements the entire Matern class of covariance functions, which are characterized by a hyperparameter <img class="math" src="_images/math/d6a7ccf879c4a4fe694033606332cb83806db296.png" alt="\nu"/>. A process having the Matern kernel is only mean-square differentiable for derivative order <img class="math" src="_images/math/3f243899bc87ead4773f775f234b52af69f27836.png" alt="n&lt;\nu"/>.</li>
+<li><a class="reference internal" href="gptools.kernel.html#gptools.kernel.rational_quadratic.RationalQuadraticKernel" title="gptools.kernel.rational_quadratic.RationalQuadraticKernel"><tt class="xref py py-class docutils literal"><span class="pre">RationalQuadraticKernel</span></tt></a> implements the rational quadratic kernel, which is a scale mixture over SE kernels.</li>
+</ul>
+<p>In all cases, these kernels have been constructed in a way to allow inputs of arbitrary dimension. Each dimension has a length scale hyperparameter that can be separately optimized over or held fixed. Arbitrary derivatives with respect to each dimension can be taken, including computation of the covariance for those observations.</p>
+<p>Other kernels can be implemented by extending the <a class="reference internal" href="gptools.kernel.html#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt></a> class. Furthermore, kernels may be added or multiplied together to yield a new, valid kernel.</p>
+</div>
+<div class="section" id="contents">
+<h2>Contents<a class="headerlink" href="#contents" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="gptools.html">gptools Package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="gptools.html#id1"><tt class="docutils literal"><span class="pre">gptools</span></tt> Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gptools.html#module-gptools.error_handling"><tt class="docutils literal"><span class="pre">error_handling</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gptools.html#module-gptools.gaussian_process"><tt class="docutils literal"><span class="pre">gaussian_process</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gptools.html#module-gptools.utils"><tt class="docutils literal"><span class="pre">utils</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gptools.html#subpackages">Subpackages</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="gptools.kernel.html">kernel Package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="gptools.kernel.html#id1"><tt class="docutils literal"><span class="pre">kernel</span></tt> Package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="gptools.kernel.html#module-gptools.kernel.core"><tt class="docutils literal"><span class="pre">core</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="gptools.kernel.html#module-gptools.kernel.gibbs"><tt class="docutils literal"><span class="pre">gibbs</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="gptools.kernel.html#module-gptools.kernel.matern"><tt class="docutils literal"><span class="pre">matern</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="gptools.kernel.html#module-gptools.kernel.noise"><tt class="docutils literal"><span class="pre">noise</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="gptools.kernel.html#module-gptools.kernel.rational_quadratic"><tt class="docutils literal"><span class="pre">rational_quadratic</span></tt> Module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="gptools.kernel.html#module-gptools.kernel.squared_exponential"><tt class="docutils literal"><span class="pre">squared_exponential</span></tt> Module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><em>Index</em></a></li>
+<li><a class="reference internal" href="py-modindex.html"><em>Module Index</em></a></li>
+<li><a class="reference internal" href="search.html"><em>Search Page</em></a></li>
+</ul>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="#">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">gptools: Gaussian process regression with support for arbitrary derivatives</a><ul>
+<li><a class="reference internal" href="#overview">Overview</a></li>
+<li><a class="reference internal" href="#contents">Contents</a><ul>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+
+  <h4>Next topic</h4>
+  <p class="topless"><a href="gptools.html"
+                        title="next chapter">gptools Package</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/index.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="gptools.html" title="gptools Package"
+             >next</a> |</li>
+        <li><a href="#">gptools 0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Mark Chilenski.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

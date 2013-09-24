@@ -1,0 +1,395 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>gptools.kernel.matern &mdash; gptools 0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="gptools 0.0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../../../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">gptools 0.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for gptools.kernel.matern</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2013 Mark Chilenski</span>
+<span class="c"># This program is distributed under the terms of the GNU General Purpose License (GPL).</span>
+<span class="c"># Refer to http://www.gnu.org/licenses/gpl.txt</span>
+<span class="c"># </span>
+<span class="c"># This program is free software: you can redistribute it and/or modify</span>
+<span class="c"># it under the terms of the GNU General Public License as published by</span>
+<span class="c"># the Free Software Foundation, either version 3 of the License, or</span>
+<span class="c"># (at your option) any later version.</span>
+<span class="c"># </span>
+<span class="c"># This program is distributed in the hope that it will be useful,</span>
+<span class="c"># but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c"># MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
+<span class="c"># GNU General Public License for more details.</span>
+<span class="c"># </span>
+<span class="c"># You should have received a copy of the GNU General Public License</span>
+<span class="c"># along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.</span>
+
+<span class="sd">&quot;&quot;&quot;Provides the :py:class:`MaternKernel` class which implements the anisotropic Matern kernel.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
+
+<span class="kn">from</span> <span class="nn">.core</span> <span class="kn">import</span> <span class="n">ChainRuleKernel</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="kn">import</span> <span class="n">generate_set_partitions</span>
+
+<span class="kn">import</span> <span class="nn">scipy</span>
+<span class="kn">import</span> <span class="nn">scipy.special</span>
+<span class="kn">import</span> <span class="nn">mpmath</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<div class="viewcode-block" id="MaternKernel"><a class="viewcode-back" href="../../../gptools.kernel.html#gptools.kernel.matern.MaternKernel">[docs]</a><span class="k">class</span> <span class="nc">MaternKernel</span><span class="p">(</span><span class="n">ChainRuleKernel</span><span class="p">):</span>
+    <span class="sd">r&quot;&quot;&quot;Matern covariance kernel. Supports arbitrary derivatives. Treats order as a hyperparameter.</span>
+<span class="sd">    </span>
+<span class="sd">    The Matern kernel has the following hyperparameters, always referenced in</span>
+<span class="sd">    the order listed:</span>
+<span class="sd">    </span>
+<span class="sd">    = ===== ====================================</span>
+<span class="sd">    0 sigma prefactor</span>
+<span class="sd">    1 nu    order of kernel</span>
+<span class="sd">    2 l1    length scale for the first dimension</span>
+<span class="sd">    3 l2    ...and so on for all dimensions</span>
+<span class="sd">    = ===== ====================================</span>
+<span class="sd">    </span>
+<span class="sd">    The kernel is defined as:</span>
+<span class="sd">    </span>
+<span class="sd">    .. math::</span>
+<span class="sd">    </span>
+<span class="sd">        k_M = \sigma^2 \frac{2^{1-\nu}}{\Gamma(\nu)}</span>
+<span class="sd">        \left (\sqrt{2\nu} \sum_i\left (\frac{\tau_i^2}{l_i^2}\right )\right )^\nu</span>
+<span class="sd">        K_\nu\left(\sqrt{2\nu} \sum_i\left(\frac{\tau_i^2}{l_i^2}\right)\right)</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    num_dim : int</span>
+<span class="sd">        Number of dimensions of the input data. Must be consistent with the `X`</span>
+<span class="sd">        and `Xstar` values passed to the :py:class:`~gptools.gaussian_process.GaussianProcess`</span>
+<span class="sd">        you wish to use the covariance kernel with.</span>
+<span class="sd">    **kwargs</span>
+<span class="sd">        All keyword parameters are passed to :py:class:`~gptools.kernel.core.ChainRuleKernel`.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If `num_dim` is not a positive integer or the lengths of the input</span>
+<span class="sd">        vectors are inconsistent.</span>
+<span class="sd">    GPArgumentError</span>
+<span class="sd">        If `fixed_params` is passed but `initial_params` is not.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_dim</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">MaternKernel</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">num_dim</span><span class="p">,</span>
+                                           <span class="n">num_dim</span> <span class="o">+</span> <span class="mi">2</span><span class="p">,</span>
+                                           <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">_compute_k</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tau</span><span class="p">):</span>
+        <span class="sd">r&quot;&quot;&quot;Evaluate the kernel directly at the given values of `tau`.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        tau : :py:class:`Matrix`, (`M`, `N`)</span>
+<span class="sd">            `M` inputs with dimension `N`.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        k : :py:class:`Array`, (`M`,)</span>
+<span class="sd">            :math:`k(\tau)` (less the :math:`\sigma^2` prefactor).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">y</span><span class="p">,</span> <span class="n">r2l2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_y</span><span class="p">(</span><span class="n">tau</span><span class="p">,</span> <span class="n">return_r2l2</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="mf">2.0</span><span class="o">**</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">)</span> <span class="o">/</span> <span class="n">scipy</span><span class="o">.</span><span class="n">special</span><span class="o">.</span><span class="n">gamma</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">)</span> <span class="o">*</span> <span class="n">y</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span> <span class="o">*</span> <span class="n">scipy</span><span class="o">.</span><span class="n">special</span><span class="o">.</span><span class="n">kv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="n">k</span><span class="p">[</span><span class="n">r2l2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">k</span>
+    
+    <span class="k">def</span> <span class="nf">_compute_y</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="n">return_r2l2</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">r&quot;&quot;&quot;Covert tau to :math:`y=\sqrt{2\nu\sum_i(\tau_i^2/l_i^2)}`.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        tau : :py:class:`Matrix`, (`M`, `N`)</span>
+<span class="sd">            `M` inputs with dimension `N`.</span>
+<span class="sd">        return_r2l2 : bool, optional</span>
+<span class="sd">            Set to True to return a tuple of (`y`, `r2l2`). Default is False</span>
+<span class="sd">            (only return `y`).</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        y : :py:class:`Array`, (`M`,)</span>
+<span class="sd">            Inner argument of function.</span>
+<span class="sd">        r2l2 : :py:class:`Array`, (`M`,)</span>
+<span class="sd">            Anisotropically scaled distances. Only returned if `return_r2l2` is True.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">r2l2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_r2l2</span><span class="p">(</span><span class="n">tau</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">nu</span> <span class="o">*</span> <span class="n">r2l2</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">return_r2l2</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">r2l2</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">y</span>
+    
+    <span class="k">def</span> <span class="nf">_compute_y_wrapper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="sd">r&quot;&quot;&quot;Convert tau to :math:`y=\sqrt{2\nu\sum_i(\tau_i^2/l_i^2)}`.</span>
+<span class="sd">        </span>
+<span class="sd">        Takes `tau` as an argument list for compatibility with :py:func:`mpmath.diff`.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        tau[0] : scalar float</span>
+<span class="sd">            First element of `tau`.</span>
+<span class="sd">        tau[1] : And so on...</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        y : scalar float</span>
+<span class="sd">            Inner part of Matern kernel at the given `tau`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_y</span><span class="p">(</span><span class="n">scipy</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">scipy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)))</span>
+    
+    <span class="k">def</span> <span class="nf">_compute_dk_dy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+        <span class="sd">r&quot;&quot;&quot;Evaluate the derivative of the outer form of the Matern kernel.</span>
+<span class="sd">        </span>
+<span class="sd">        Uses the general Leibniz rule to compute the n-th derivative of:</span>
+<span class="sd">        </span>
+<span class="sd">        .. math::</span>
+<span class="sd">        </span>
+<span class="sd">            f(y) = \frac{2^{1-\nu}}{\Gamma(\nu)} y^\nu K_\nu(y)</span>
+<span class="sd">        </span>
+<span class="sd">        Notice that this is very poorly-behaved at :math:`x=0`. There, the</span>
+<span class="sd">        value is approximated using :py:func:`mpmath.diff` with the `singular`</span>
+<span class="sd">        keyword. This is rather slow, so if you require a fixed value of `nu`</span>
+<span class="sd">        you may wish to consider implementing the appropriate kernel separately.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        y : :py:class:`Array`, (`M`,)</span>
+<span class="sd">            `M` inputs to evaluate at.</span>
+<span class="sd">        n : non-negative scalar int.</span>
+<span class="sd">            Order of derivative to compute.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dk_dy : :py:class:`Array`, (`M`,)</span>
+<span class="sd">            Specified derivative at specified locations.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">dk_dy</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">non_zero_idxs</span> <span class="o">=</span> <span class="p">(</span><span class="n">y</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">dk_dy</span><span class="p">[</span><span class="n">non_zero_idxs</span><span class="p">]</span> <span class="o">+=</span> <span class="p">(</span><span class="n">scipy</span><span class="o">.</span><span class="n">special</span><span class="o">.</span><span class="n">binom</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span> <span class="o">*</span>
+                                     <span class="n">scipy</span><span class="o">.</span><span class="n">special</span><span class="o">.</span><span class="n">poch</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">k</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span> <span class="o">*</span>
+                                     <span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="n">non_zero_idxs</span><span class="p">])</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="n">k</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">)</span> <span class="o">*</span>
+                                     <span class="n">scipy</span><span class="o">.</span><span class="n">special</span><span class="o">.</span><span class="n">kvp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">,</span> <span class="n">y</span><span class="p">[</span><span class="n">non_zero_idxs</span><span class="p">],</span> <span class="n">n</span><span class="o">=</span><span class="n">n</span><span class="o">-</span><span class="n">k</span><span class="p">))</span>
+        
+        <span class="c"># Handle the cases near y=0.</span>
+        <span class="c"># Compute the appropriate value using mpmath&#39;s arbitrary precision</span>
+        <span class="c"># arithmetic. This is potentially slow, but seems to behave pretty</span>
+        <span class="c"># well. In cases where the value should be infinite, very large</span>
+        <span class="c"># (but still finite) floats are returned with the appropriate sign.</span>
+        
+        <span class="c"># TODO: These can probably be stored as they are computed if it</span>
+        <span class="c"># ends up being too slow.</span>
+        <span class="k">if</span> <span class="n">n</span> <span class="o">&gt;=</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;n &gt;= 2*nu can yield inaccurate results.&quot;</span><span class="p">,</span> <span class="ne">RuntimeWarning</span><span class="p">)</span>
+        
+        <span class="n">core_expr</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span> <span class="o">*</span> <span class="n">mpmath</span><span class="o">.</span><span class="n">besselk</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+        <span class="n">deriv</span> <span class="o">=</span> <span class="n">mpmath</span><span class="o">.</span><span class="n">chop</span><span class="p">(</span><span class="n">mpmath</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">core_expr</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="n">singular</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">dk_dy</span><span class="p">[</span><span class="o">~</span><span class="n">non_zero_idxs</span><span class="p">]</span> <span class="o">=</span> <span class="n">deriv</span>
+        
+        <span class="n">dk_dy</span> <span class="o">*=</span> <span class="mf">2.0</span><span class="o">**</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">scipy</span><span class="o">.</span><span class="n">special</span><span class="o">.</span><span class="n">gamma</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">))</span>
+        
+        <span class="k">return</span> <span class="n">dk_dy</span>  
+    
+    <span class="k">def</span> <span class="nf">_compute_dy_dtau</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">r2l2</span><span class="p">):</span>
+        <span class="sd">r&quot;&quot;&quot;Evaluate the derivative of the inner argument of the Matern kernel.</span>
+<span class="sd">        </span>
+<span class="sd">        Uses Faa di Bruno&#39;s formula to take the derivative of</span>
+<span class="sd">        </span>
+<span class="sd">        .. math::</span>
+<span class="sd">        </span>
+<span class="sd">            y = \sqrt{2 \nu \sum_i(\tau_i^2 / l_i^2)}</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        tau : :py:class:`Matrix`, (`M`, `N`)</span>
+<span class="sd">            `M` inputs with dimension `N`.</span>
+<span class="sd">        b : :py:class:`Array`, (`P`,)</span>
+<span class="sd">            Block specifying derivatives to be evaluated.</span>
+<span class="sd">        r2l2 : :py:class:`Array`, (`M`,)</span>
+<span class="sd">            Precomputed anisotropically scaled distance.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dy_dtau: :py:class:`Array`, (`M`,)</span>
+<span class="sd">            Specified derivative at specified locations.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">deriv_partitions</span> <span class="o">=</span> <span class="n">generate_set_partitions</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+        <span class="n">dy_dtau</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">r2l2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">non_zero_idxs</span> <span class="o">=</span> <span class="p">(</span><span class="n">r2l2</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">deriv_partitions</span><span class="p">:</span>
+            <span class="n">dy_dtau</span><span class="p">[</span><span class="n">non_zero_idxs</span><span class="p">]</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_dy_dtau_on_partition</span><span class="p">(</span><span class="n">tau</span><span class="p">[</span><span class="n">non_zero_idxs</span><span class="p">],</span> <span class="n">p</span><span class="p">,</span> <span class="n">r2l2</span><span class="p">[</span><span class="n">non_zero_idxs</span><span class="p">])</span>
+        
+        <span class="c"># Case at tau=0 is handled with mpmath for now.</span>
+        <span class="c"># TODO: This is painfully slow! Figure out how to do this analytically!</span>
+        <span class="n">derivs</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">tau</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">b</span><span class="p">:</span>
+            <span class="n">derivs</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">dy_dtau</span><span class="p">[</span><span class="o">~</span><span class="n">non_zero_idxs</span><span class="p">]</span> <span class="o">=</span> <span class="n">mpmath</span><span class="o">.</span><span class="n">chop</span><span class="p">(</span>
+            <span class="n">mpmath</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_compute_y_wrapper</span><span class="p">,</span>
+                <span class="n">scipy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">tau</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
+                <span class="n">n</span><span class="o">=</span><span class="n">derivs</span><span class="p">,</span>
+                <span class="n">singular</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                <span class="n">direction</span><span class="o">=</span><span class="mi">1</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">dy_dtau</span>
+    
+    <span class="k">def</span> <span class="nf">_compute_dy_dtau_on_partition</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">r2l2</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate the term inside the sum of Faa di Bruno&#39;s formula for the given partition.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        tau : :py:class:`Matrix`, (`M`, `N`)</span>
+<span class="sd">            `M` inputs with dimension `N`.</span>
+<span class="sd">        p : list of :py:class:`Array`</span>
+<span class="sd">            Each element is a block of the partition representing the derivative</span>
+<span class="sd">            orders to use.    </span>
+<span class="sd">        r2l2 : :py:class:`Array`, (`M`,)</span>
+<span class="sd">            Precomputed anisotropically scaled distance.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dy_dtau : :py:class:`Array`, (`M`,)</span>
+<span class="sd">            The specified derivatives over the given partition at the specified</span>
+<span class="sd">            locations.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+        <span class="n">dy_dtau</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">r2l2</span><span class="p">)</span>
+        <span class="n">dy_dtau</span> <span class="o">=</span> <span class="p">(</span><span class="n">scipy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">)</span> <span class="o">*</span>
+                   <span class="n">scipy</span><span class="o">.</span><span class="n">special</span><span class="o">.</span><span class="n">poch</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">n</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span> <span class="o">*</span>
+                   <span class="p">(</span><span class="n">r2l2</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="n">n</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">p</span><span class="p">:</span>
+            <span class="n">dy_dtau</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_dT_dtau</span><span class="p">(</span><span class="n">tau</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">dy_dtau</span>
+    
+    <span class="k">def</span> <span class="nf">_compute_dT_dtau</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+        <span class="sd">r&quot;&quot;&quot;Evaluate the derivative of the :math:`\tau^2` sum term.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">            tau : :py:class:`Matrix`, (`M`, `N`)</span>
+<span class="sd">                `M` inputs with dimension `N`.</span>
+<span class="sd">            b : :py:class:`Array`, (`P`,)</span>
+<span class="sd">                Block specifying derivatives to be evaluated.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dT_dtau : :py:class:`Array`, (`M`,)</span>
+<span class="sd">            Specified derivative at specified locations.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">unique_d</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+        <span class="c"># Derivatives of order 3 and up are zero, mixed derivatives are zero.</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">3</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">unique_d</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">scipy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">tau</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">tau_idx</span> <span class="o">=</span> <span class="n">unique_d</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">return</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">tau</span><span class="p">[:,</span> <span class="n">tau_idx</span><span class="p">]</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="mi">2</span> <span class="o">+</span> <span class="n">tau_idx</span><span class="p">])</span><span class="o">**</span><span class="mf">2.0</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c"># len(b) == 2 is the only other possibility here because of</span>
+                <span class="c"># the first test.</span>
+                <span class="k">return</span> <span class="mf">2.0</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="mi">2</span> <span class="o">+</span> <span class="n">tau_idx</span><span class="p">])</span><span class="o">**</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">scipy</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">tau</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    
+    <span class="nd">@property</span>
+<div class="viewcode-block" id="MaternKernel.nu"><a class="viewcode-back" href="../../../gptools.kernel.html#gptools.kernel.matern.MaternKernel.nu">[docs]</a>    <span class="k">def</span> <span class="nf">nu</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">r&quot;&quot;&quot;Returns the value of the order :math:`\nu`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../../../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">gptools 0.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Mark Chilenski.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

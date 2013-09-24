@@ -1,0 +1,1028 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>gptools.gaussian_process &mdash; gptools 0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="gptools 0.0 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">gptools 0.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for gptools.gaussian_process</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2013 Mark Chilenski</span>
+<span class="c"># This program is distributed under the terms of the GNU General Purpose License (GPL).</span>
+<span class="c"># Refer to http://www.gnu.org/licenses/gpl.txt</span>
+<span class="c"># </span>
+<span class="c"># This program is free software: you can redistribute it and/or modify</span>
+<span class="c"># it under the terms of the GNU General Public License as published by</span>
+<span class="c"># the Free Software Foundation, either version 3 of the License, or</span>
+<span class="c"># (at your option) any later version.</span>
+<span class="c"># </span>
+<span class="c"># This program is distributed in the hope that it will be useful,</span>
+<span class="c"># but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c"># MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
+<span class="c"># GNU General Public License for more details.</span>
+<span class="c"># </span>
+<span class="c"># You should have received a copy of the GNU General Public License</span>
+<span class="c"># along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.</span>
+
+<span class="sd">&quot;&quot;&quot;Provides the base :py:class:`GaussianProcess` class.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
+
+<span class="kn">from</span> <span class="nn">.error_handling</span> <span class="kn">import</span> <span class="n">GPArgumentError</span>
+<span class="kn">from</span> <span class="nn">.kernel</span> <span class="kn">import</span> <span class="n">Kernel</span><span class="p">,</span> <span class="n">ZeroKernel</span>
+
+<span class="kn">import</span> <span class="nn">scipy</span>
+<span class="kn">import</span> <span class="nn">scipy.linalg</span>
+<span class="kn">import</span> <span class="nn">scipy.optimize</span>
+<span class="kn">import</span> <span class="nn">scipy.stats</span>
+<span class="kn">import</span> <span class="nn">numpy.random</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">collections</span>
+
+<div class="viewcode-block" id="GaussianProcess"><a class="viewcode-back" href="../../gptools.html#gptools.gaussian_process.GaussianProcess">[docs]</a><span class="k">class</span> <span class="nc">GaussianProcess</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">r&quot;&quot;&quot;Gaussian process.</span>
+<span class="sd">    </span>
+<span class="sd">    If called with one argument, an untrained Gaussian process is</span>
+<span class="sd">    constructed and training data must be added with the :py:meth:`add_data` method.</span>
+<span class="sd">    If called with the optional keywords, the values given are used as the</span>
+<span class="sd">    training data. It is always possible to add additional training data</span>
+<span class="sd">    with :py:meth:`add_data`.</span>
+<span class="sd">    </span>
+<span class="sd">    Note that the attributes have no write protection, but you should always</span>
+<span class="sd">    add data with :py:meth:`add_data` to ensure internal consistency.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    k : :py:class:`~gptools.kernel.core.Kernel` instance</span>
+<span class="sd">        Kernel instance corresponding to the desired noise-free</span>
+<span class="sd">        covariance kernel of the Gaussian process. The noise is handled</span>
+<span class="sd">        separately either through specification of `err_y`, or in a</span>
+<span class="sd">        separate kernel. This allows noise-free predictions when needed.</span>
+<span class="sd">    </span>
+<span class="sd">    noise_k : :py:class:`~gptools.kernel.core.Kernel` instance</span>
+<span class="sd">        Kernel instance corresponding to the noise portion of the</span>
+<span class="sd">        desired covariance kernel of the Gaussian process. Note that you</span>
+<span class="sd">        DO NOT need to specify this if the extent of the noise you want</span>
+<span class="sd">        to represent is contained in `err_y` (or if your data are</span>
+<span class="sd">        noiseless). Default value is None, which results in the</span>
+<span class="sd">        :py:class:`~gptools.kernel.noise.ZeroKernel` (noise specified elsewhere</span>
+<span class="sd">        or not present).</span>
+<span class="sd">    </span>
+<span class="sd">    NOTE</span>
+<span class="sd">        The following are all passed to :py:meth:`add_data`, refer to its docstring.</span>
+<span class="sd">    </span>
+<span class="sd">    X : :py:class:`Matrix` or other Array-like, (`M`, `N`), optional</span>
+<span class="sd">        `M` training input values of dimension `N`. Default value is None (no</span>
+<span class="sd">        training data).</span>
+<span class="sd">        </span>
+<span class="sd">    y : :py:class:`Array` or other Array-like, (`M`,), optional</span>
+<span class="sd">        `M` training target values. Default value is None (no training data).</span>
+<span class="sd">        </span>
+<span class="sd">    err_y : :py:class:`Array` or other Array-like, (`M`,), optional</span>
+<span class="sd">        Error (given as standard deviation) in the `M` training target values.</span>
+<span class="sd">        Default value is 0 (noiseless observations).</span>
+<span class="sd">    </span>
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    k : :py:class:`~gptools.kernel.core.Kernel` instance</span>
+<span class="sd">        The non-noise portion of the covariance kernel.</span>
+<span class="sd">    noise_k : :py:class:`~gptools.kernel.core.Kernel` instance</span>
+<span class="sd">        The noise portion of the covariance kernel.</span>
+<span class="sd">    X : :py:class:`Matrix`, (`M`, `N`)</span>
+<span class="sd">        The `M` training input values, each of which is of dimension `N`.</span>
+<span class="sd">    y : :py:class:`Array`, (`M`,)</span>
+<span class="sd">        The `M` training target values.</span>
+<span class="sd">    err_y : :py:class:`Array`, (`M`,)</span>
+<span class="sd">        The error in the `M` training input values.</span>
+<span class="sd">    n : :py:class:`Matrix`, (`M`, `N`)</span>
+<span class="sd">        The orders of derivatives that each of the M training points represent, indicating the order of derivative with respect to each of the `N` dimensions.</span>
+<span class="sd">    K_up_to_date : bool</span>
+<span class="sd">        True if no data have been added since the last time the internal state was updated with a call to :py:meth:`compute_K_L_alpha_ll`.</span>
+<span class="sd">    K : :py:class:`Matrix`, (`M`, `M`)</span>
+<span class="sd">        Covariance matrix between all of the training inputs.</span>
+<span class="sd">    noise_K : :py:class:`Matrix`, (`M`, `M`)</span>
+<span class="sd">        Noise portion of the covariance matrix between all of the training inputs. Only includes the noise from :py:attr:`noise_k`, not from :py:attr:`err_y`.</span>
+<span class="sd">    L : :py:class:`Matrix`, (`M`, `M`)</span>
+<span class="sd">        Cholesky decomposition of the combined covariance matrix between all of the training inputs.</span>
+<span class="sd">    alpha : :py:class:`Matrix`, (`M`, 1)</span>
+<span class="sd">        Solution to :math:`K\alpha=y`.</span>
+<span class="sd">    ll : float</span>
+<span class="sd">        Log-likelihood of the data given the model.</span>
+<span class="sd">    </span>
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    GPArgumentError</span>
+<span class="sd">        Gave `X` but not `y` (or vice versa).</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        Training data rejected by :py:meth:`add_data`.</span>
+<span class="sd">    </span>
+<span class="sd">    See Also</span>
+<span class="sd">    --------</span>
+<span class="sd">    add_data : Used to process `X`, `y`, `err_y` and to add data to the process.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">noise_k</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">X</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">err_y</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">Kernel</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s">&quot;Argument k must be an instance of Kernel when &quot;</span>
+                            <span class="s">&quot;constructing GaussianProcess!&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">noise_k</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">noise_k</span> <span class="o">=</span> <span class="n">ZeroKernel</span><span class="p">(</span><span class="n">k</span><span class="o">.</span><span class="n">num_dim</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">noise_k</span><span class="p">,</span> <span class="n">Kernel</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s">&quot;Keyword noise_k must be an instance of Kernel &quot;</span>
+                                <span class="s">&quot;when constructing GaussianProcess!&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">k</span> <span class="o">=</span> <span class="n">k</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">noise_k</span> <span class="o">=</span> <span class="n">noise_k</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">X</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">err_y</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="n">X</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">y</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">GPArgumentError</span><span class="p">(</span><span class="s">&quot;Must pass both X and y when &quot;</span>
+                                      <span class="s">&quot;constructing GaussianProcess!&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">add_data</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">err_y</span><span class="o">=</span><span class="n">err_y</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">X</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">y</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">GPArgumentError</span><span class="p">(</span><span class="s">&quot;Must pass both X and y when constructing &quot;</span>
+                                  <span class="s">&quot;GaussianProcess!&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">K_up_to_date</span> <span class="o">=</span> <span class="bp">False</span>
+    
+    <span class="nd">@property</span>
+<div class="viewcode-block" id="GaussianProcess.num_dim"><a class="viewcode-back" href="../../gptools.html#gptools.gaussian_process.GaussianProcess.num_dim">[docs]</a>    <span class="k">def</span> <span class="nf">num_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;The number of dimensions of the input data.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        num_dim: int</span>
+<span class="sd">            The number of dimensions of the input data as defined in the kernel.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="o">.</span><span class="n">num_dim</span>
+    </div>
+<div class="viewcode-block" id="GaussianProcess.add_data"><a class="viewcode-back" href="../../gptools.html#gptools.gaussian_process.GaussianProcess.add_data">[docs]</a>    <span class="k">def</span> <span class="nf">add_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">err_y</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>   
+        <span class="sd">&quot;&quot;&quot;Add data to the training data set of the GaussianProcess instance.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : :py:class:`Matrix` or other Array-like, (`M`, `N`)</span>
+<span class="sd">            `M` training input values of dimension `N`.</span>
+<span class="sd">        y : :py:class:`Array` or other Array-like, (`M`,)</span>
+<span class="sd">            `M` training target values.</span>
+<span class="sd">        err_y : :py:class:`Array` or other Array-like (`M`,) or scalar float, optional</span>
+<span class="sd">            Non-negative values only. Error given as standard deviation) in the</span>
+<span class="sd">            `M` training target values. If `err_y` is a scalar, the data set is</span>
+<span class="sd">            taken to be homoscedastic (constant error). Otherwise, the length</span>
+<span class="sd">            of `err_y` must equal the length of `y`. Default value is 0</span>
+<span class="sd">            (noiseless observations).</span>
+<span class="sd">        n : :py:class:`Matrix` or other Array-like (`M`, `N`) or scalar float, optional</span>
+<span class="sd">            Non-negative integer values only. Degree of derivative for each</span>
+<span class="sd">            training target. If `n` is a scalar it is taken to be the value for</span>
+<span class="sd">            all points in `y`. Otherwise, the length of n must equal the length</span>
+<span class="sd">            of `y`. Default value is 0 (observation of target value). If</span>
+<span class="sd">            non-integer values are passed, they will be silently rounded.</span>
+<span class="sd">        </span>
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            Bad shapes for any of the inputs, negative values for `err_y` or `n`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Verify y has only one non-trivial dimension:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="nb">iter</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">y</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Training targets y must have only one &quot;</span>
+                                 <span class="s">&quot;dimension with length greater than one! Shape &quot;</span>
+                                 <span class="s">&quot;of y given is </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">,))</span>
+        
+        <span class="c"># Handle scalar error or verify shape of array error matches shape of y:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="nb">iter</span><span class="p">(</span><span class="n">err_y</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="n">err_y</span> <span class="o">=</span> <span class="n">err_y</span> <span class="o">*</span> <span class="n">scipy</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">err_y</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">err_y</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">err_y</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;When using array-like err_y, shape must match &quot;</span>
+                                 <span class="s">&quot;shape of y! Shape of err_y given is </span><span class="si">%s</span><span class="s">, shape &quot;</span>
+                                 <span class="s">&quot;of y given is </span><span class="si">%s</span><span class="s">.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">err_y</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">err_y</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;All elements of err_y must be non-negative!&quot;</span><span class="p">)</span>
+        
+        <span class="c"># Handle scalar derivative orders or verify shape of array derivative</span>
+        <span class="c"># orders matches shape of y:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="nb">iter</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="n">n</span> <span class="o">*</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asmatrix</span><span class="p">(</span><span class="n">scipy</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_dim</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asmatrix</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+            <span class="c"># Correct single-dimension inputs:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_dim</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">n</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">n</span> <span class="o">=</span> <span class="n">n</span><span class="o">.</span><span class="n">T</span>
+            <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_dim</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;When using array-like n, shape must be &quot;</span>
+                                 <span class="s">&quot;(len(y), k.num_dim)! Shape of n given is </span><span class="si">%s</span><span class="s">, &quot;</span>
+                                 <span class="s">&quot;shape of y given is </span><span class="si">%s</span><span class="s"> and num_dim=</span><span class="si">%d</span><span class="s">.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_dim</span><span class="p">))</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">n</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;All elements of n must be non-negative integers!&quot;</span><span class="p">)</span>
+        
+        <span class="c"># Handle scalar training input or convert array input into matrix.</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asmatrix</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="c"># Correct single-dimension inputs:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_dim</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">T</span>
+        <span class="k">if</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_dim</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Shape of training inputs must be (len(y), k.num_dim)! &quot;</span>
+                             <span class="s">&quot;X given has shape </span><span class="si">%s</span><span class="s">, shape of &quot;</span>
+                             <span class="s">&quot;y is </span><span class="si">%s</span><span class="s"> and num_dim=</span><span class="si">%d</span><span class="s">.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_dim</span><span class="p">))</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">X</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">X</span> <span class="o">=</span> <span class="n">X</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">X</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">X</span><span class="p">,</span> <span class="n">X</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">err_y</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">err_y</span><span class="p">,</span> <span class="n">err_y</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="n">n</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">K_up_to_date</span> <span class="o">=</span> <span class="bp">False</span>
+    </div>
+<div class="viewcode-block" id="GaussianProcess.compute_Kij"><a class="viewcode-back" href="../../gptools.html#gptools.gaussian_process.GaussianProcess.compute_Kij">[docs]</a>    <span class="k">def</span> <span class="nf">compute_Kij</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Xi</span><span class="p">,</span> <span class="n">Xj</span><span class="p">,</span> <span class="n">ni</span><span class="p">,</span> <span class="n">nj</span><span class="p">,</span> <span class="n">noise</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">hyper_deriv</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">r&quot;&quot;&quot;Compute covariance matrix between datasets `Xi` and `Xj`.</span>
+<span class="sd">        </span>
+<span class="sd">        Specify the orders of derivatives at each location with the `ni`, `nj`</span>
+<span class="sd">        arrays. The `include_noise` flag is passed to the covariance kernel to</span>
+<span class="sd">        indicate whether noise is to be included (i.e., for evaluation of</span>
+<span class="sd">        :math:`K+\sigma I` versus :math:`K_*`).</span>
+<span class="sd">        </span>
+<span class="sd">        If `Xj` is None, the symmetric matrix :math:`K(X, X)` is formed.</span>
+<span class="sd">        </span>
+<span class="sd">        Note that type and dimension checking is NOT performed, as it is assumed</span>
+<span class="sd">        the data are from inside the instance and have hence been sanitized by</span>
+<span class="sd">        :py:meth:`add_data`.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        Xi : :py:class:`Matrix`, (`M`, `N`)</span>
+<span class="sd">            `M` input values of dimension `N`.</span>
+<span class="sd">        Xj : :py:class:`Matrix`, (`P`, `N`)</span>
+<span class="sd">            `P` input values of dimension `N`.</span>
+<span class="sd">        ni : :py:class:`Array`, (`M`,), non-negative integers</span>
+<span class="sd">            `M` derivative orders with respect to the `Xi` coordinates.</span>
+<span class="sd">        nj : :py:class:`Array`, (`P`,), non-negative integers</span>
+<span class="sd">            `P` derivative orders with respect to the `Xj` coordinates.</span>
+<span class="sd">        noise : bool, optional</span>
+<span class="sd">            If True, uses the noise kernel, otherwise uses the regular kernel.</span>
+<span class="sd">            Default is False (use regular kernel).</span>
+<span class="sd">        hyper_deriv : None or non-negative int</span>
+<span class="sd">            Index of the hyperparameter to compute the first derivative with</span>
+<span class="sd">            respect to. If None, no derivatives are taken. Default is None (no</span>
+<span class="sd">            hyperparameter derivatives).</span>
+<span class="sd">                </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Kij : :py:class:`Matrix`, (`M`, `P`)</span>
+<span class="sd">            Covariance matrix between `Xi` and `Xj`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">noise</span><span class="p">:</span>
+            <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">k</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">noise_k</span>
+        
+        <span class="k">if</span> <span class="n">Xj</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">symmetric</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="n">Xj</span> <span class="o">=</span> <span class="n">Xi</span>
+            <span class="n">nj</span> <span class="o">=</span> <span class="n">ni</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">symmetric</span> <span class="o">=</span> <span class="bp">False</span>
+        
+        <span class="c"># This technically doesn&#39;t take advantage of the symmetric case. Might</span>
+        <span class="c"># be worth trying to do that at some point, but this is vastly superior</span>
+        <span class="c"># to the double for loop implementation for which using symmetry is easy.</span>
+        <span class="n">Xi_tile</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">Xi</span><span class="p">,</span> <span class="n">Xj</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">ni_tile</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">ni</span><span class="p">,</span> <span class="n">Xj</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">Xj_tile</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">Xj</span><span class="p">,</span> <span class="p">(</span><span class="n">Xi</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">nj_tile</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">nj</span><span class="p">,</span> <span class="p">(</span><span class="n">Xi</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">Kij</span> <span class="o">=</span> <span class="n">k</span><span class="p">(</span><span class="n">Xi_tile</span><span class="p">,</span> <span class="n">Xj_tile</span><span class="p">,</span> <span class="n">ni_tile</span><span class="p">,</span> <span class="n">nj_tile</span><span class="p">,</span> <span class="n">hyper_deriv</span><span class="o">=</span><span class="n">hyper_deriv</span><span class="p">,</span> <span class="n">symmetric</span><span class="o">=</span><span class="n">symmetric</span><span class="p">)</span>
+        <span class="n">Kij</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asmatrix</span><span class="p">(</span><span class="n">scipy</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">Kij</span><span class="p">,</span> <span class="p">(</span><span class="n">Xi</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">)))</span>
+        
+        <span class="k">return</span> <span class="n">Kij</span>
+    </div>
+<div class="viewcode-block" id="GaussianProcess.compute_K_L_alpha_ll"><a class="viewcode-back" href="../../gptools.html#gptools.gaussian_process.GaussianProcess.compute_K_L_alpha_ll">[docs]</a>    <span class="k">def</span> <span class="nf">compute_K_L_alpha_ll</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">diag_factor</span><span class="o">=</span><span class="mf">1e2</span><span class="p">):</span>
+        <span class="sd">r&quot;&quot;&quot;Compute `K`, `L`, `alpha` and log-likelihood according to the first part of Algorithm 2.1 in R&amp;W.</span>
+<span class="sd">        </span>
+<span class="sd">        Computes `K` and the noise portion of `K` using :py:meth:`compute_Kij`,</span>
+<span class="sd">        computes `L` using :py:func:`scipy.linalg.cholesky`, then computes</span>
+<span class="sd">        `alpha` as `L.T\\(L\\y)`.</span>
+<span class="sd">        </span>
+<span class="sd">        Only does the computation if :py:attr:`K_up_to_date` is False --</span>
+<span class="sd">        otherwise leaves the existing values.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        diag_factor : float, optional</span>
+<span class="sd">            Factor of :py:attr:`sys.float_info.epsilon` which is added to</span>
+<span class="sd">            the diagonal of the total `K` matrix to improve the stability of</span>
+<span class="sd">            the Cholesky decomposition. If you are having issues, try increasing</span>
+<span class="sd">            this by a factor of 10 at a time. Default is 1e2.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">K_up_to_date</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">K</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_Kij</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="n">noise</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">noise_K</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_Kij</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="n">noise</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">L</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">matrix</span><span class="p">(</span><span class="n">scipy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">cholesky</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">K</span> <span class="o">+</span>
+                                                        <span class="n">scipy</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">err_y</span><span class="o">**</span><span class="mf">2.0</span><span class="p">)</span> <span class="o">+</span>
+                                                        <span class="bp">self</span><span class="o">.</span><span class="n">noise_K</span> <span class="o">+</span>
+                                                        <span class="n">diag_factor</span> <span class="o">*</span> <span class="n">sys</span><span class="o">.</span><span class="n">float_info</span><span class="o">.</span><span class="n">epsilon</span> <span class="o">*</span> <span class="n">scipy</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">)),</span>
+                                                        <span class="n">lower</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                                                        <span class="n">check_finite</span><span class="o">=</span><span class="bp">False</span><span class="p">))</span>
+            <span class="c"># Convert the array output to a matrix since scipy treats arrays</span>
+            <span class="c"># as row vectors:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve_triangular</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+                <span class="n">scipy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve_triangular</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">,</span>
+                    <span class="n">scipy</span><span class="o">.</span><span class="n">asmatrix</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+                    <span class="n">lower</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                    <span class="n">check_finite</span><span class="o">=</span><span class="bp">False</span>
+                <span class="p">),</span>
+                <span class="n">lower</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                <span class="n">check_finite</span><span class="o">=</span><span class="bp">False</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ll</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asmatrix</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">-</span>
+                       <span class="n">scipy</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">scipy</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">-</span> 
+                       <span class="mf">0.5</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">)</span> <span class="o">*</span> <span class="n">scipy</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mf">2.0</span><span class="o">*</span><span class="n">scipy</span><span class="o">.</span><span class="n">pi</span><span class="p">))[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">K_up_to_date</span> <span class="o">=</span> <span class="bp">True</span>
+    </div>
+<div class="viewcode-block" id="GaussianProcess.update_hyperparameters"><a class="viewcode-back" href="../../gptools.html#gptools.gaussian_process.GaussianProcess.update_hyperparameters">[docs]</a>    <span class="k">def</span> <span class="nf">update_hyperparameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_params</span><span class="p">,</span> <span class="n">return_jacobian</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update the kernel&#39;s hyperparameters to the new parameters.</span>
+<span class="sd">        </span>
+<span class="sd">        This will call :py:meth:`compute_K_L_alpha_ll` to update the state</span>
+<span class="sd">        accordingly.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        new_params : :py:class:`Array` or other Array-like, length dictated by kernel</span>
+<span class="sd">            New parameters to use.</span>
+<span class="sd">        return_jacobian : bool, optional</span>
+<span class="sd">            If True, the return is (`ll`, `jac`). Otherwise, return is `ll`</span>
+<span class="sd">            only and the execution is faster. Default is False (do not</span>
+<span class="sd">            compute Jacobian).</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        -1*ll : float</span>
+<span class="sd">            The updated log likelihood.</span>
+<span class="sd">        -1*jac : :py:class:`Array`, length equal to the number of parameters</span>
+<span class="sd">            The derivative of `ll` with respect to each of the parameters, in</span>
+<span class="sd">            order. Only computed and returned if `return_jacobian` is True.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="o">.</span><span class="n">set_hyperparams</span><span class="p">(</span><span class="n">new_params</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="o">.</span><span class="n">free_params</span><span class="p">)])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">noise_k</span><span class="o">.</span><span class="n">set_hyperparams</span><span class="p">(</span><span class="n">new_params</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="o">.</span><span class="n">free_params</span><span class="p">):])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">K_up_to_date</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compute_K_L_alpha_ll</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">return_jacobian</span><span class="p">:</span>
+            <span class="k">return</span> <span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ll</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># Doesn&#39;t handle noise!</span>
+            <span class="n">aaKI</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="o">.</span><span class="n">T</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">K</span><span class="o">.</span><span class="n">I</span>
+            <span class="n">jac</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="o">.</span><span class="n">free_params</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">jac</span><span class="p">)):</span>
+                <span class="c"># TODO: Put in noise</span>
+                <span class="n">dKijdHP</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_Kij</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="n">hyper_deriv</span><span class="o">=</span><span class="n">i</span><span class="p">)</span>
+                <span class="c"># TODO: Compare timing between doing the full product and</span>
+                <span class="c"># extracting only the trace.</span>
+                <span class="n">jac</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">scipy</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">aaKI</span> <span class="o">*</span> <span class="n">dKijdHP</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ll</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">jac</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="GaussianProcess.optimize_hyperparameters"><a class="viewcode-back" href="../../gptools.html#gptools.gaussian_process.GaussianProcess.optimize_hyperparameters">[docs]</a>    <span class="k">def</span> <span class="nf">optimize_hyperparameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s">&#39;SLSQP&#39;</span><span class="p">,</span> <span class="n">opt_kwargs</span><span class="o">=</span><span class="p">{},</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">r&quot;&quot;&quot;Optimize the hyperparameters by maximizing the log likelihood.</span>
+<span class="sd">        </span>
+<span class="sd">        Leaves the :py:class:`GaussianProcess` instance in the optimized state.</span>
+<span class="sd">        </span>
+<span class="sd">        If :py:func:`scipy.optimize.minimize` is not available (i.e., if your</span>
+<span class="sd">        :py:mod:`scipy` version is older than 0.11.0) then :py:func:`fmin_slsqp`</span>
+<span class="sd">        is used independent of what you set for the `method` keyword.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        method : str, optional</span>
+<span class="sd">            The method to pass to :py:func:`scipy.optimize.minimize`.</span>
+<span class="sd">            Refer to that function&#39;s docstring for valid options. Default</span>
+<span class="sd">            is &#39;SLSQP&#39;. See note above about behavior with older versions of</span>
+<span class="sd">            :py:mod:`scipy`.</span>
+<span class="sd">        opt_kwargs : dict, optional</span>
+<span class="sd">            Dictionary of extra keywords to pass to</span>
+<span class="sd">            :py:func:`scipy.optimize.minimize`. Refer to that function&#39;s docstring for</span>
+<span class="sd">            valid options. Note that if you use `jac` = True (i.e., optimization</span>
+<span class="sd">            function returns Jacobian) you should also set `args` = (True,) to</span>
+<span class="sd">            tell :py:meth:`update_hyperparameters` to compute and return the</span>
+<span class="sd">            Jacobian. Default is: {}.</span>
+<span class="sd">        verbose : bool, optional</span>
+<span class="sd">            Whether or not the output should be verbose. If</span>
+<span class="sd">            True, the entire :py:class:`Result` object from</span>
+<span class="sd">            :py:func:`scipy.optimize.minimize` is printed. If False, status</span>
+<span class="sd">            information is only printed if the `success` flag from</span>
+<span class="sd">            :py:func:`minimize` is False. Default is False.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">opt_kwargs</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c">#opt_kwargs = {&#39;args&#39;: (False,),</span>
+            <span class="c">#              &#39;bounds&#39;: scipy.concatenate((self.k.free_param_bounds, self.noise_k.free_param_bounds)),</span>
+            <span class="c">#              &#39;jac&#39;: None}</span>
+            <span class="n">opt_kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">opt_kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">opt_kwargs</span><span class="p">)</span>
+        <span class="c"># TODO: Add ability to do random starts to avoid local minima.</span>
+        <span class="k">if</span> <span class="s">&#39;method&#39;</span> <span class="ow">in</span> <span class="n">opt_kwargs</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Use of keyword &#39;method&#39; in opt_kwargs is not allowed, &quot;</span>
+                          <span class="s">&quot;and is being ignored. Use the &#39;method&#39; keyword for &quot;</span>
+                          <span class="s">&quot;optimize_hyperparameters instead.&quot;</span><span class="p">,</span>
+                          <span class="ne">RuntimeWarning</span><span class="p">)</span>
+            <span class="n">opt_kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;method&#39;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">minimize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">update_hyperparameters</span><span class="p">,</span>
+                                          <span class="n">scipy</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="o">.</span><span class="n">free_params</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">noise_k</span><span class="o">.</span><span class="n">free_params</span><span class="p">)),</span>
+                                          <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span>
+                                          <span class="o">**</span><span class="n">opt_kwargs</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;scipy.optimize.minimize not available, defaulting to fmin_slsqp.&quot;</span><span class="p">,</span>
+                          <span class="ne">RuntimeWarning</span><span class="p">)</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wrap_fmin_slsqp</span><span class="p">(</span><span class="n">opt_kwargs</span><span class="p">)</span>
+            
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_hyperparameters</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">return_jacobian</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">res</span><span class="o">.</span><span class="n">success</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Solver </span><span class="si">%s</span><span class="s"> reports failure, selected hyperparameters &quot;</span>
+                          <span class="s">&quot;are likely NOT optimal. Status: </span><span class="si">%d</span><span class="s">, Message: &#39;</span><span class="si">%s</span><span class="s">&#39;&quot;</span>
+                          <span class="o">%</span> <span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">status</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">message</span><span class="p">),</span>
+                          <span class="ne">RuntimeWarning</span><span class="p">)</span>
+    </div>
+    <span class="k">def</span> <span class="nf">_wrap_fmin_slsqp</span><span class="p">(</span><span class="n">opt_kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Wrapper for :py:func:`fmin_slsqp` to allow it to be called with :py:func:`minimize`-like syntax.</span>
+<span class="sd">        </span>
+<span class="sd">        This is included to enable the code to run with :py:mod:`scipy` versions</span>
+<span class="sd">        older than 0.11.0.</span>
+<span class="sd">        </span>
+<span class="sd">        Accepts `opt_kwargs` in the same format as used by</span>
+<span class="sd">        :py:func:`scipy.optimize.minimize`, with the additional precondition</span>
+<span class="sd">        that the keyword `method` has already been removed by the calling code.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        opt_kwargs : dict</span>
+<span class="sd">            Dictionary of extra keywords to pass to</span>
+<span class="sd">            :py:func:`scipy.optimize.minimize`. Refer to that function&#39;s</span>
+<span class="sd">            docstring for valid options. The keywords &#39;jac&#39;, &#39;hess&#39; and &#39;hessp&#39;</span>
+<span class="sd">            are ignored. Note that if you were planning to use `jac` = True</span>
+<span class="sd">            (i.e., optimization function returns Jacobian) and have set</span>
+<span class="sd">            `args` = (True,) to tell :py:meth:`update_hyperparameters` to</span>
+<span class="sd">            compute and return the Jacobian this may cause unexpected behavior.</span>
+<span class="sd">            The `method` keyword may not be passed. It is the responsibility</span>
+<span class="sd">            of the calling code to check for this. Default is: {}.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Result : namedtuple</span>
+<span class="sd">            :py:class:`namedtuple` that mimics the fields of the</span>
+<span class="sd">            :py:class:`Result` object returned by</span>
+<span class="sd">            :py:func:`scipy.optimize.minimize`. Has the following fields:</span>
+<span class="sd">            </span>
+<span class="sd">            ======= ======= ===================================================================================</span>
+<span class="sd">            status  int     Code indicating the exit mode of the optimizer (`imode` from :py:func:`fmin_slsqp`)</span>
+<span class="sd">            success bool    Boolean indicating whether or not the optimizer thinks a minimum was found.</span>
+<span class="sd">            fun     float   Value of the optimized function (-1*LL).</span>
+<span class="sd">            x       ndarray Optimal values of the hyperparameters.</span>
+<span class="sd">            message str     String describing the exit state (`smode` from :py:func:`fmin_slsqp`)</span>
+<span class="sd">            nit     int     Number of iterations.</span>
+<span class="sd">            ======= ======= ===================================================================================</span>
+<span class="sd">        </span>
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            Invalid constraint type in `constraints`. (See documentation for :py:func:`scipy.optimize.minimize`.)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">opt_kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">opt_kwargs</span><span class="p">)</span>
+        
+        <span class="n">eqcons</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">ieqcons</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="s">&#39;constraints&#39;</span> <span class="ow">in</span> <span class="n">opt_kwargs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">opt_kwargs</span><span class="p">[</span><span class="s">&#39;constraints&#39;</span><span class="p">],</span> <span class="nb">dict</span><span class="p">):</span>
+                <span class="n">opt_kwargs</span><span class="p">[</span><span class="s">&#39;constraints&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">opt_kwargs</span><span class="p">[</span><span class="s">&#39;constraints&#39;</span><span class="p">],]</span>
+            <span class="k">for</span> <span class="n">con</span> <span class="ow">in</span> <span class="n">opt_kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;constraints&#39;</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">con</span><span class="p">[</span><span class="s">&#39;type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;eq&#39;</span><span class="p">:</span>
+                    <span class="n">eqcons</span> <span class="o">+=</span> <span class="p">[</span><span class="n">con</span><span class="p">[</span><span class="s">&#39;fun&#39;</span><span class="p">],]</span>
+                <span class="k">elif</span> <span class="n">con</span><span class="p">[</span><span class="s">&#39;type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;ineq&#39;</span><span class="p">:</span>
+                    <span class="n">ieqcons</span> <span class="o">+=</span> <span class="p">[</span><span class="n">con</span><span class="p">[</span><span class="s">&#39;fun&#39;</span><span class="p">],]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Invalid constraint type </span><span class="si">%s</span><span class="s">!&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">con</span><span class="p">[</span><span class="s">&#39;type&#39;</span><span class="p">],))</span>
+        
+        <span class="k">if</span> <span class="s">&#39;jac&#39;</span> <span class="ow">in</span> <span class="n">opt_kwargs</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Jacobian not supported for default solver SLSQP!&quot;</span><span class="p">,</span>
+                          <span class="ne">RuntimeWarning</span><span class="p">)</span>
+            <span class="n">opt_kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;jac&#39;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="s">&#39;tol&#39;</span> <span class="ow">in</span> <span class="n">opt_kwargs</span><span class="p">:</span>
+            <span class="n">opt_kwargs</span><span class="p">[</span><span class="s">&#39;acc&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">opt_kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;tol&#39;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="s">&#39;options&#39;</span> <span class="ow">in</span> <span class="n">opt_kwargs</span><span class="p">:</span>
+            <span class="n">opts</span> <span class="o">=</span> <span class="n">opt_kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;options&#39;</span><span class="p">)</span>
+            <span class="n">opt_kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">opt_kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="o">+</span> <span class="n">opts</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+        
+        <span class="c"># Other keywords with less likelihood for causing failures are silently ignored:</span>
+        <span class="n">opt_kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;hess&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="n">opt_kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;hessp&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="n">opt_kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;callback&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        
+        <span class="n">out</span><span class="p">,</span> <span class="n">fx</span><span class="p">,</span> <span class="n">its</span><span class="p">,</span> <span class="n">imode</span><span class="p">,</span> <span class="n">smode</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">fmin_slsqp</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_hyperparameters</span><span class="p">,</span>
+            <span class="n">scipy</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="o">.</span><span class="n">free_params</span><span class="p">)),</span>
+            <span class="n">full_output</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+            <span class="n">eqcons</span><span class="o">=</span><span class="n">eqcons</span><span class="p">,</span>
+            <span class="n">ieqcons</span><span class="o">=</span><span class="n">ieqcons</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">opt_kwargs</span>
+        <span class="p">)</span>
+        
+        <span class="n">Result</span> <span class="o">=</span> <span class="n">collections</span><span class="o">.</span><span class="n">namedtuple</span><span class="p">(</span><span class="s">&#39;Result&#39;</span><span class="p">,</span>
+                                        <span class="p">[</span><span class="s">&#39;status&#39;</span><span class="p">,</span> <span class="s">&#39;success&#39;</span><span class="p">,</span> <span class="s">&#39;fun&#39;</span><span class="p">,</span> <span class="s">&#39;x&#39;</span><span class="p">,</span> <span class="s">&#39;message&#39;</span><span class="p">,</span> <span class="s">&#39;nit&#39;</span><span class="p">])</span>
+        
+        <span class="k">return</span> <span class="n">Result</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">imode</span><span class="p">,</span>
+                      <span class="n">success</span><span class="o">=</span><span class="p">(</span><span class="n">imode</span> <span class="o">==</span> <span class="mi">0</span><span class="p">),</span>
+                      <span class="n">fun</span><span class="o">=</span><span class="n">fx</span><span class="p">,</span>
+                      <span class="n">x</span><span class="o">=</span><span class="n">out</span><span class="p">,</span>
+                      <span class="n">message</span><span class="o">=</span><span class="n">smode</span><span class="p">,</span>
+                      <span class="n">nit</span><span class="o">=</span><span class="n">its</span><span class="p">)</span>
+        
+    
+<div class="viewcode-block" id="GaussianProcess.predict"><a class="viewcode-back" href="../../gptools.html#gptools.gaussian_process.GaussianProcess.predict">[docs]</a>    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Xstar</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">noise</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">return_cov</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Predict the mean and covariance at the inputs `Xstar`.</span>
+<span class="sd">        </span>
+<span class="sd">        The order of the derivative is given by `n`. The keyword `noise` sets</span>
+<span class="sd">        whether or not noise is included in the prediction.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        Xstar : :py:class:`Array` or other Array-like, (`M`, `N`)</span>
+<span class="sd">            `M` test input values of dimension `N`.</span>
+<span class="sd">        n : :py:class:`Matrix` or other Array-like, (`M`, `N`) or scalar, non-negative int, optional</span>
+<span class="sd">            Order of derivative to predict (0 is the base quantity). If `n` is</span>
+<span class="sd">            scalar, the value is used for all points in `Xstar`. If non-integer</span>
+<span class="sd">            values are passed, they will be silently rounded. Default is 0</span>
+<span class="sd">            (return base quantity).</span>
+<span class="sd">        noise : bool, optional</span>
+<span class="sd">            Whether or not noise should be included in the covariance. Default</span>
+<span class="sd">            is False (no noise in covariance).</span>
+<span class="sd">        return_cov : bool, optional</span>
+<span class="sd">            Set to True to compute and return the covariance matrix for the</span>
+<span class="sd">            predictions, False to skip this step. Default is True (return tuple</span>
+<span class="sd">            of (`mean`, `cov`)).</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        mean : :py:class:`Array`, (`M`,)</span>
+<span class="sd">            Predicted GP mean.</span>
+<span class="sd">        covariance : :py:class:`Matrix`, (`M`, `M`)</span>
+<span class="sd">            Predicted covariance matrix, only returned if `return_cov` is True.</span>
+<span class="sd">        </span>
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If `n` is not consistent with the shape of `Xstar` or is not entirely</span>
+<span class="sd">            composed of non-negative integers.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Process Xstar:</span>
+        <span class="n">Xstar</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asmatrix</span><span class="p">(</span><span class="n">Xstar</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="c"># Handle 1d x case where array is passed in:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_dim</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">Xstar</span> <span class="o">=</span> <span class="n">Xstar</span><span class="o">.</span><span class="n">T</span>
+        <span class="k">if</span> <span class="n">Xstar</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_dim</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Second dimension of Xstar must be equal to &quot;</span>
+                             <span class="s">&quot;self.num_dim! Shape of Xstar given is </span><span class="si">%s</span><span class="s">, &quot;</span>
+                             <span class="s">&quot;num_dim is </span><span class="si">%d</span><span class="s">.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">Xstar</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_dim</span><span class="p">))</span>
+        <span class="c"># Process n:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="nb">iter</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="n">n</span> <span class="o">*</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asmatrix</span><span class="p">(</span><span class="n">scipy</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">Xstar</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asmatrix</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">Xstar</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;When using array-like n, shape must match &quot;</span>
+                                 <span class="s">&quot;shape of Xstar! Shape of n given is </span><span class="si">%s</span><span class="s">, &quot;</span>
+                                 <span class="s">&quot;shape of Xstar given is </span><span class="si">%s</span><span class="s">.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">Xstar</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">n</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;All elements of n must be non-negative integers!&quot;</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">compute_K_L_alpha_ll</span><span class="p">()</span>
+        <span class="n">Kstar</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_Kij</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X</span><span class="p">,</span> <span class="n">Xstar</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">noise</span><span class="p">:</span>
+            <span class="n">Kstar</span> <span class="o">=</span> <span class="n">Kstar</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_Kij</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X</span><span class="p">,</span> <span class="n">Xstar</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">noise</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="n">mean</span> <span class="o">=</span> <span class="n">Kstar</span><span class="o">.</span><span class="n">T</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span>
+        <span class="k">if</span> <span class="n">return_cov</span><span class="p">:</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asmatrix</span><span class="p">(</span>
+                <span class="n">scipy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve_triangular</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">,</span> <span class="n">Kstar</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">check_finite</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">Kstarstar</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_Kij</span><span class="p">(</span><span class="n">Xstar</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">noise</span><span class="p">:</span>
+                <span class="n">Kstarstar</span> <span class="o">=</span> <span class="n">Kstarstar</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_Kij</span><span class="p">(</span><span class="n">Xstar</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="n">noise</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+            <span class="n">covariance</span> <span class="o">=</span> <span class="n">Kstarstar</span> <span class="o">-</span> <span class="n">v</span><span class="o">.</span><span class="n">T</span> <span class="o">*</span> <span class="n">v</span>
+            
+            <span class="k">return</span> <span class="p">(</span><span class="n">mean</span><span class="p">,</span> <span class="n">covariance</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">mean</span>
+    </div>
+<div class="viewcode-block" id="GaussianProcess.compute_ll_matrix"><a class="viewcode-back" href="../../gptools.html#gptools.gaussian_process.GaussianProcess.compute_ll_matrix">[docs]</a>    <span class="k">def</span> <span class="nf">compute_ll_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bounds</span><span class="p">,</span> <span class="n">num_pts</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the log likelihood over the (free) parameter space.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        bounds : 2-tuple or list of 2-tuples with length equal to the number of free parameters</span>
+<span class="sd">            Bounds on the range to use for each of the parameters. If a single</span>
+<span class="sd">            2-tuple is given, it will be used for each of the parameters.</span>
+<span class="sd">        num_pts : int or list of ints with length equal to the number of free parameters</span>
+<span class="sd">            If a single int is given, it will be used for each of the parameters.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">            ll_vals : :py:class:`Array`</span>
+<span class="sd">                The log likelihood for each of the parameter possibilities.</span>
+<span class="sd">            param_vals : List of :py:class:`Array`</span>
+<span class="sd">                The parameter values used.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">present_free_params</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="o">.</span><span class="n">free_params</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">noise_k</span><span class="o">.</span><span class="n">free_params</span><span class="p">))</span>
+        <span class="n">bounds</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">scipy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">bounds</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">bounds</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Argument bounds must have shape (n, 2)!&quot;</span><span class="p">)</span>
+        <span class="c"># If bounds is a single tuple, repeat it for each free parameter:</span>
+        <span class="k">if</span> <span class="n">bounds</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">bounds</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">bounds</span><span class="p">,</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">present_free_params</span><span class="p">),</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="c"># If num_pts is a single value, use it for all of the parameters:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="nb">iter</span><span class="p">(</span><span class="n">num_pts</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="n">num_pts</span> <span class="o">=</span> <span class="n">num_pts</span> <span class="o">*</span> <span class="n">scipy</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">bounds</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">num_pts</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">num_pts</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">num_pts</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">present_free_params</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Length of num_pts must match the number of free parameters of kernel!&quot;</span><span class="p">)</span>
+        
+        <span class="c"># Form arrays to evaluate parameters over:</span>
+        <span class="n">param_vals</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">present_free_params</span><span class="p">)):</span>
+            <span class="n">param_vals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">scipy</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">bounds</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">bounds</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">num_pts</span><span class="p">[</span><span class="n">k</span><span class="p">]))</span>
+        <span class="n">ll_vals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_ll_matrix</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">param_vals</span><span class="p">,</span> <span class="n">num_pts</span><span class="p">)</span>
+        
+        <span class="c"># Reset the parameters to what they were before:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_hyperparameters</span><span class="p">(</span><span class="n">scipy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">present_free_params</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
+        
+        <span class="k">return</span> <span class="p">(</span><span class="n">ll_vals</span><span class="p">,</span> <span class="n">param_vals</span><span class="p">)</span>
+    </div>
+    <span class="k">def</span> <span class="nf">_compute_ll_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">param_vals</span><span class="p">,</span> <span class="n">num_pts</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Recursive helper function for compute_ll_matrix.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        idx : int</span>
+<span class="sd">            The index of the parameter for this layer of the recursion to</span>
+<span class="sd">            work on. `idx` == len(`num_pts`) is the base case that terminates</span>
+<span class="sd">            the recursion.</span>
+<span class="sd">        param_vals : List of :py:class:`Array`</span>
+<span class="sd">            List of arrays of parameter values. Entries in the slots 0:`idx` are</span>
+<span class="sd">            set to scalars by the previous levels of recursion.</span>
+<span class="sd">        num_pts : :py:class:`Array`</span>
+<span class="sd">            The numbers of points for each parameter.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        vals : :py:class:`Array`</span>
+<span class="sd">            The log likelihood for each of the parameter possibilities at lower</span>
+<span class="sd">            levels.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">idx</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">num_pts</span><span class="p">):</span>
+            <span class="c"># Base case: All entries in param_vals should be scalars:</span>
+            <span class="k">return</span> <span class="o">-</span><span class="mf">1.0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">update_hyperparameters</span><span class="p">(</span><span class="n">scipy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">param_vals</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># Recursive case: call _compute_ll_matrix for each entry in param_vals[idx]:</span>
+            <span class="n">vals</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">num_pts</span><span class="p">[</span><span class="n">idx</span><span class="p">:],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">param_vals</span><span class="p">[</span><span class="n">idx</span><span class="p">])):</span>
+                <span class="n">specific_param_vals</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">param_vals</span><span class="p">)</span>
+                <span class="n">specific_param_vals</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">param_vals</span><span class="p">[</span><span class="n">idx</span><span class="p">][</span><span class="n">k</span><span class="p">]</span>
+                <span class="n">vals</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_ll_matrix</span><span class="p">(</span><span class="n">idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">specific_param_vals</span><span class="p">,</span> <span class="n">num_pts</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">vals</span>
+    
+<div class="viewcode-block" id="GaussianProcess.draw_sample"><a class="viewcode-back" href="../../gptools.html#gptools.gaussian_process.GaussianProcess.draw_sample">[docs]</a>    <span class="k">def</span> <span class="nf">draw_sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Xstar</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">noise</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">num_samp</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">rand_vars</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">rand_type</span><span class="o">=</span><span class="s">&#39;standard normal&#39;</span><span class="p">,</span> <span class="n">diag_factor</span><span class="o">=</span><span class="mf">1e3</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Draw a sample evaluated at the given points `Xstar`.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        Xstar : :py:class:`Matrix` or other Array-like, (`M`, `N`)</span>
+<span class="sd">            `M` test input values of dimension `N`.</span>
+<span class="sd">        n : :py:class:`Matrix` or other Array-like, (`M`, `N`) or scalar, non-negative int, optional</span>
+<span class="sd">            Derivative order to evaluate at. Default is 0 (evaluate value).</span>
+<span class="sd">        noise : bool, optional</span>
+<span class="sd">            Whether or not to include the noise components of the kernel in the</span>
+<span class="sd">            sample. Default is False (no noise in samples).</span>
+<span class="sd">        num_samp : Positive int, optional</span>
+<span class="sd">            Number of samples to draw. Default is 1. Cannot be used in</span>
+<span class="sd">            conjunction with `rand_vars`: If you pass both `num_samp` and</span>
+<span class="sd">            `rand_vars`, `num_samp` will be silently ignored.</span>
+<span class="sd">        rand_vars : :py:class:`Matrix` or other Array-like (`M`, `P`), optional</span>
+<span class="sd">            Vector of random variables :math:`u` to use in constructing the</span>
+<span class="sd">            sample :math:`y_* = f_* + Lu`, where :math:`K=LL^T`. If None,</span>
+<span class="sd">            values will be produced using :py:func:`numpy.random.multivariate_normal`.</span>
+<span class="sd">            This allows you to use pseudo/quasi random numbers generated by</span>
+<span class="sd">            an external routine. Default is None (use :py:func:`multivariate_normal`</span>
+<span class="sd">            directly).</span>
+<span class="sd">        rand_type : {&#39;standard normal&#39;, &#39;uniform&#39;}, optional</span>
+<span class="sd">            Type of distribution the inputs are given with.</span>
+<span class="sd">            </span>
+<span class="sd">                * &#39;standard normal&#39;: Standard (`mu` = 0, `sigma` = 1) normal</span>
+<span class="sd">                  distribution (this is the default)</span>
+<span class="sd">                * &#39;uniform&#39;: Uniform distribution on [0, 1). In this case</span>
+<span class="sd">                  the required Gaussian variables are produced with inversion.</span>
+<span class="sd">                  </span>
+<span class="sd">        diag_factor : float, optional</span>
+<span class="sd">            Number (times machine epsilon) added to the diagonal of the</span>
+<span class="sd">            covariance matrix prior to computing its Cholesky decomposition.</span>
+<span class="sd">            This is necessary as sometimes the decomposition will fail because,</span>
+<span class="sd">            to machine precision, the matrix appears to not be positive definite.</span>
+<span class="sd">            If you are getting errors from :py:func:`scipy.linalg.cholesky`, try increasing</span>
+<span class="sd">            this an order of magnitude at a time. This parameter only has an</span>
+<span class="sd">            effect when using rand_vars. Default value is 1e3. </span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">            samples : :py:class:`Array` (`M`, `P`) or (`M`, `num_samp`)</span>
+<span class="sd">                Samples evaluated at the `M` points.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># TODO: Add support for eigenvalue truncation!</span>
+        
+        <span class="c"># All of the input processing for Xstar and n will be done in here:</span>
+        <span class="n">mean</span><span class="p">,</span> <span class="n">cov</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">Xstar</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="n">noise</span><span class="o">=</span><span class="n">noise</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">rand_vars</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">multivariate_normal</span><span class="p">(</span><span class="n">scipy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">mean</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">cov</span><span class="p">,</span> <span class="n">num_samp</span><span class="p">))</span><span class="o">.</span><span class="n">T</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">valid_types</span> <span class="o">=</span> <span class="p">(</span><span class="s">&#39;standard normal&#39;</span><span class="p">,</span> <span class="s">&#39;uniform&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">rand_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">valid_types</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;rand_type </span><span class="si">%s</span><span class="s"> not recognized! Valid options are: </span><span class="si">%s</span><span class="s">.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">rand_type</span><span class="p">,</span> <span class="n">valid_types</span><span class="p">,))</span>
+            <span class="k">if</span> <span class="n">rand_type</span> <span class="o">==</span> <span class="s">&#39;uniform&#39;</span><span class="p">:</span>
+                <span class="n">rand_vars</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">ppf</span><span class="p">(</span><span class="n">rand_vars</span><span class="p">)</span>
+            
+            <span class="c"># TODO: Should probably do some shape-checking first...</span>
+            
+            <span class="n">L</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asmatrix</span><span class="p">(</span><span class="n">scipy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">cholesky</span><span class="p">(</span><span class="n">cov</span> <span class="o">+</span> <span class="n">diag_factor</span> <span class="o">*</span> <span class="n">sys</span><span class="o">.</span><span class="n">float_info</span><span class="o">.</span><span class="n">epsilon</span> <span class="o">*</span> <span class="n">scipy</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">cov</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+                                                     <span class="n">lower</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                                                     <span class="n">check_finite</span><span class="o">=</span><span class="bp">False</span><span class="p">),</span>
+                               <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">mean</span> <span class="o">+</span> <span class="n">L</span> <span class="o">*</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asmatrix</span><span class="p">(</span><span class="n">rand_vars</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="Constraint"><a class="viewcode-back" href="../../gptools.html#gptools.gaussian_process.Constraint">[docs]</a><span class="k">class</span> <span class="nc">Constraint</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Implements an inequality constraint on the value of the mean or its derivatives.</span>
+<span class="sd">    </span>
+<span class="sd">    Provides a callable such as can be passed to SLSQP or COBYLA to implement</span>
+<span class="sd">    the constraint when using :py:func:`scipy.optimize.minimize`.</span>
+<span class="sd">    </span>
+<span class="sd">    The function defaults implement a constraint that forces the mean value to</span>
+<span class="sd">    be positive everywhere.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    gp : :py:class:`GaussianProcess`</span>
+<span class="sd">        The :py:class:`GaussianProcess` instance to create the constraint on.</span>
+<span class="sd">    boundary_val : float, optional</span>
+<span class="sd">        Boundary value for the constraint. For `type_` = &#39;gt&#39;, this is the lower</span>
+<span class="sd">        bound, for `type_` = &#39;lt&#39;, this is the upper bound. Default is 0.0.</span>
+<span class="sd">    n : non-negative int, optional</span>
+<span class="sd">        Derivative order to evaluate. Default is 0 (value of the mean). Note</span>
+<span class="sd">        that non-int values are silently cast to int.</span>
+<span class="sd">    loc : {&#39;min&#39;, &#39;max&#39;}, float or Array-like of float (`num_dim`,), optional</span>
+<span class="sd">        Which extreme of the mean to use, or location to evaluate at.</span>
+<span class="sd">        </span>
+<span class="sd">        * If &#39;min&#39;, the minimum of the mean (optionally over `bounds`) is used.</span>
+<span class="sd">        * If &#39;max&#39;, the maximum of the mean (optionally over `bounds`) is used.</span>
+<span class="sd">        * If a float (valid for `num_dim` = 1 only) or Array of float, the mean</span>
+<span class="sd">          is evaluated at the given X value.</span>
+<span class="sd">        </span>
+<span class="sd">        Default is &#39;min&#39; (use function minimum).</span>
+<span class="sd">    type_ : {&#39;gt&#39;, &#39;lt&#39;}, optional</span>
+<span class="sd">        What type of inequality constraint to implement.</span>
+<span class="sd">        </span>
+<span class="sd">        * If &#39;gt&#39;, a greater-than-or-equals constraint is used.</span>
+<span class="sd">        * If &#39;lt&#39;, a less-than-or-equals constraint is used.</span>
+<span class="sd">        </span>
+<span class="sd">        Default is &#39;gt&#39; (greater-than-or-equals).</span>
+<span class="sd">    bounds : 2-tuple of float or 2-tuple Array-like of float (`num_dim`,) or None, optional</span>
+<span class="sd">        Bounds to use when `loc` is &#39;min&#39; or &#39;max&#39;.</span>
+<span class="sd">        </span>
+<span class="sd">        * If None, the bounds are taken to be the extremes of the training data.</span>
+<span class="sd">          For multivariate data, &quot;extremes&quot; essentially means the smallest</span>
+<span class="sd">          hypercube oriented parallel to the axes that encapsulates all of the</span>
+<span class="sd">          training inputs. (I.e., ``(gp.X.min(axis=0), gp.X.max(axis=0))``)</span>
+<span class="sd">        * If `bounds` is a 2-tuple, then this is used as (`lower`, `upper`)</span>
+<span class="sd">          where lower` and `upper` are Array-like with dimensions (`num_dim`,).</span>
+<span class="sd">        * If `num_dim` is 1 then `lower` and `upper` can be scalar floats.</span>
+<span class="sd">        </span>
+<span class="sd">        Default is None (use extreme values of training data).</span>
+<span class="sd">    </span>
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    TypeError</span>
+<span class="sd">        If `gp` is not an instance of :py:class:`GaussianProcess`.</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If `n` is negative.</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If `loc` is not &#39;min&#39;, &#39;max&#39; or an Array-like of the correct dimensions.</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If `type_` is not &#39;gt&#39; or &#39;lt&#39;.</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If `bounds` is not None or length 2 or if the elements of bounds don&#39;t</span>
+<span class="sd">        have the right dimensions.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gp</span><span class="p">,</span> <span class="n">boundary_val</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s">&#39;min&#39;</span><span class="p">,</span> <span class="n">type_</span><span class="o">=</span><span class="s">&#39;gt&#39;</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">gp</span><span class="p">,</span> <span class="n">GaussianProcess</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s">&quot;Argument gp must be an instance of GaussianProcess.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gp</span> <span class="o">=</span> <span class="n">gp</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">boundary_val</span> <span class="o">=</span> <span class="n">boundary_val</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;n must be a non-negative int!&quot;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">loc</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&#39;min&#39;</span><span class="p">,</span> <span class="s">&#39;max&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">loc</span> <span class="o">=</span> <span class="n">loc</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="nb">iter</span><span class="p">(</span><span class="n">loc</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">num_dim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">loc</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">loc</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Argument loc must be &#39;min&#39;, &#39;max&#39; or an array of length </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">num_dim</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">loc</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">loc</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">loc</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">num_dim</span><span class="p">,):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">loc</span> <span class="o">=</span> <span class="n">loc</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Argument loc must be &#39;min&#39;, &#39;max&#39; or have length </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">num_dim</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">type_</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&#39;gt&#39;</span><span class="p">,</span> <span class="s">&#39;lt&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">type_</span> <span class="o">=</span> <span class="n">type_</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Argument type_ must be &#39;gt&#39; or &#39;lt&#39;.&quot;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">bounds</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">bounds</span> <span class="o">=</span> <span class="p">(</span><span class="n">scipy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">X</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
+                      <span class="n">scipy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">X</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bounds</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Argument bounds must have length 2!&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">bounds</span><span class="p">)):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="nb">iter</span><span class="p">(</span><span class="n">bounds</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+                <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">num_dim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="n">bounds</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">bounds</span><span class="p">[</span><span class="n">k</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Each element in argument bounds must have length </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">num_dim</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">bounds</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">bounds</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">bounds</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">num_dim</span><span class="p">,):</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Each element in argument bounds must have length </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">num_dim</span><span class="p">)</span>
+        <span class="c"># Unfold bounds into the shape needed by minimize:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="n">bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    
+<div class="viewcode-block" id="Constraint.__call__"><a class="viewcode-back" href="../../gptools.html#gptools.gaussian_process.Constraint.__call__">[docs]</a>    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns a non-negative number if the constraint is satisfied.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        params : Array-like, length dictated by kernel</span>
+<span class="sd">            New parameters to use.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        val : float</span>
+<span class="sd">            Value of the constraint. :py:class:`minimize` will attempt to keep</span>
+<span class="sd">            this non-negative.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">update_hyperparameters</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">loc</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&#39;min&#39;</span><span class="p">,</span> <span class="s">&#39;max&#39;</span><span class="p">):</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loc</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="n">return_cov</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">loc</span> <span class="o">==</span> <span class="s">&#39;max&#39;</span><span class="p">:</span>
+                <span class="n">factor</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">factor</span> <span class="o">=</span> <span class="mf">1.0</span>
+            
+            <span class="n">res</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">minimize</span><span class="p">(</span>
+                <span class="k">lambda</span> <span class="n">X</span><span class="p">:</span> <span class="n">factor</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">gp</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="n">return_cov</span><span class="o">=</span><span class="bp">False</span><span class="p">)[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+                <span class="n">scipy</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+                <span class="n">method</span><span class="o">=</span><span class="s">&#39;SLSQP&#39;</span><span class="p">,</span>
+                <span class="n">bounds</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bounds</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">res</span><span class="o">.</span><span class="n">success</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Solver reports failure, extremum was likely NOT &quot;</span>
+                              <span class="s">&quot;found. Status: </span><span class="si">%d</span><span class="s">, Message: &#39;</span><span class="si">%s</span><span class="s">&#39;&quot;</span>
+                              <span class="o">%</span> <span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">status</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">message</span><span class="p">),</span>
+                              <span class="ne">RuntimeWarning</span><span class="p">)</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="n">factor</span> <span class="o">*</span> <span class="n">res</span><span class="o">.</span><span class="n">fun</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_</span> <span class="o">==</span> <span class="s">&#39;gt&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">val</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary_val</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">boundary_val</span> <span class="o">-</span> <span class="n">val</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">gptools 0.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Mark Chilenski.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

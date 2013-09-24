@@ -1,0 +1,65 @@
+\indexentry{gptools.\_\_init\_\_ (module)|hyperpage}{3}
+\indexentry{gptools.error\_handling (module)|hyperpage}{3}
+\indexentry{GPArgumentError|hyperpage}{3}
+\indexentry{gptools.gaussian\_process (module)|hyperpage}{3}
+\indexentry{GaussianProcess (class in gptools.gaussian\_process)|hyperpage}{3}
+\indexentry{num\_dim (gptools.gaussian\_process.GaussianProcess attribute)|hyperpage}{5}
+\indexentry{add\_data() (gptools.gaussian\_process.GaussianProcess method)|hyperpage}{5}
+\indexentry{compute\_Kij() (gptools.gaussian\_process.GaussianProcess method)|hyperpage}{6}
+\indexentry{compute\_K\_L\_alpha\_ll() (gptools.gaussian\_process.GaussianProcess method)|hyperpage}{6}
+\indexentry{update\_hyperparameters() (gptools.gaussian\_process.GaussianProcess method)|hyperpage}{6}
+\indexentry{optimize\_hyperparameters() (gptools.gaussian\_process.GaussianProcess method)|hyperpage}{7}
+\indexentry{predict() (gptools.gaussian\_process.GaussianProcess method)|hyperpage}{7}
+\indexentry{compute\_ll\_matrix() (gptools.gaussian\_process.GaussianProcess method)|hyperpage}{8}
+\indexentry{draw\_sample() (gptools.gaussian\_process.GaussianProcess method)|hyperpage}{8}
+\indexentry{Constraint (class in gptools.gaussian\_process)|hyperpage}{9}
+\indexentry{\_\_call\_\_() (gptools.gaussian\_process.Constraint method)|hyperpage}{10}
+\indexentry{gptools.utils (module)|hyperpage}{10}
+\indexentry{parallel\_compute\_ll\_matrix() (in module gptools.utils)|hyperpage}{10}
+\indexentry{slice\_plot() (in module gptools.utils)|hyperpage}{11}
+\indexentry{arrow\_respond() (in module gptools.utils)|hyperpage}{11}
+\indexentry{incomplete\_bell\_poly() (in module gptools.utils)|hyperpage}{11}
+\indexentry{generate\_set\_partition\_strings() (in module gptools.utils)|hyperpage}{12}
+\indexentry{generate\_set\_partitions() (in module gptools.utils)|hyperpage}{12}
+\indexentry{unique\_rows() (in module gptools.utils)|hyperpage}{13}
+\indexentry{gptools.kernel (module)|hyperpage}{13}
+\indexentry{gptools.kernel.core (module)|hyperpage}{13}
+\indexentry{Kernel (class in gptools.kernel.core)|hyperpage}{13}
+\indexentry{\_\_call\_\_() (gptools.kernel.core.Kernel method)|hyperpage}{14}
+\indexentry{set\_hyperparams() (gptools.kernel.core.Kernel method)|hyperpage}{14}
+\indexentry{free\_params (gptools.kernel.core.Kernel attribute)|hyperpage}{15}
+\indexentry{free\_param\_bounds (gptools.kernel.core.Kernel attribute)|hyperpage}{15}
+\indexentry{\_\_add\_\_() (gptools.kernel.core.Kernel method)|hyperpage}{15}
+\indexentry{\_\_mul\_\_() (gptools.kernel.core.Kernel method)|hyperpage}{15}
+\indexentry{BinaryKernel (class in gptools.kernel.core)|hyperpage}{15}
+\indexentry{set\_hyperparams() (gptools.kernel.core.BinaryKernel method)|hyperpage}{15}
+\indexentry{SumKernel (class in gptools.kernel.core)|hyperpage}{15}
+\indexentry{\_\_call\_\_() (gptools.kernel.core.SumKernel method)|hyperpage}{15}
+\indexentry{ProductKernel (class in gptools.kernel.core)|hyperpage}{16}
+\indexentry{\_\_call\_\_() (gptools.kernel.core.ProductKernel method)|hyperpage}{16}
+\indexentry{ChainRuleKernel (class in gptools.kernel.core)|hyperpage}{16}
+\indexentry{\_\_call\_\_() (gptools.kernel.core.ChainRuleKernel method)|hyperpage}{17}
+\indexentry{ArbitraryKernel (class in gptools.kernel.core)|hyperpage}{17}
+\indexentry{\_\_call\_\_() (gptools.kernel.core.ArbitraryKernel method)|hyperpage}{18}
+\indexentry{gptools.kernel.gibbs (module)|hyperpage}{18}
+\indexentry{tanh\_warp() (in module gptools.kernel.gibbs)|hyperpage}{18}
+\indexentry{spline\_warp() (in module gptools.kernel.gibbs)|hyperpage}{19}
+\indexentry{gauss\_warp() (in module gptools.kernel.gibbs)|hyperpage}{19}
+\indexentry{GibbsFunction1d (class in gptools.kernel.gibbs)|hyperpage}{20}
+\indexentry{\_\_call\_\_() (gptools.kernel.gibbs.GibbsFunction1d method)|hyperpage}{20}
+\indexentry{GibbsKernel1dtanh (class in gptools.kernel.gibbs)|hyperpage}{20}
+\indexentry{GibbsKernel1dSpline (class in gptools.kernel.gibbs)|hyperpage}{21}
+\indexentry{GibbsKernel1dGauss (class in gptools.kernel.gibbs)|hyperpage}{21}
+\indexentry{gptools.kernel.matern (module)|hyperpage}{22}
+\indexentry{MaternKernel (class in gptools.kernel.matern)|hyperpage}{22}
+\indexentry{nu (gptools.kernel.matern.MaternKernel attribute)|hyperpage}{22}
+\indexentry{gptools.kernel.noise (module)|hyperpage}{22}
+\indexentry{DiagonalNoiseKernel (class in gptools.kernel.noise)|hyperpage}{22}
+\indexentry{\_\_call\_\_() (gptools.kernel.noise.DiagonalNoiseKernel method)|hyperpage}{23}
+\indexentry{ZeroKernel (class in gptools.kernel.noise)|hyperpage}{23}
+\indexentry{\_\_call\_\_() (gptools.kernel.noise.ZeroKernel method)|hyperpage}{23}
+\indexentry{gptools.kernel.rational\_quadratic (module)|hyperpage}{24}
+\indexentry{RationalQuadraticKernel (class in gptools.kernel.rational\_quadratic)|hyperpage}{24}
+\indexentry{gptools.kernel.squared\_exponential (module)|hyperpage}{25}
+\indexentry{SquaredExponentialKernel (class in gptools.kernel.squared\_exponential)|hyperpage}{25}
+\indexentry{\_\_call\_\_() (gptools.kernel.squared\_exponential.SquaredExponentialKernel method)|hyperpage}{25}

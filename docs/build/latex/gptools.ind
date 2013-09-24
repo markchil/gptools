@@ -1,0 +1,125 @@
+\begin{theindex}
+\def\bigletter#1{{\Large\sffamily#1}\nopagebreak\vspace{1mm}}
+
+  \bigletter {Symbols}
+  \item \_\_add\_\_() (gptools.kernel.core.Kernel method), \hyperpage{15}
+  \item \_\_call\_\_() (gptools.gaussian\_process.Constraint method), \hyperpage{10}
+  \item \_\_call\_\_() (gptools.kernel.core.ArbitraryKernel method), \hyperpage{18}
+  \item \_\_call\_\_() (gptools.kernel.core.ChainRuleKernel method), \hyperpage{17}
+  \item \_\_call\_\_() (gptools.kernel.core.Kernel method), \hyperpage{14}
+  \item \_\_call\_\_() (gptools.kernel.core.ProductKernel method), \hyperpage{16}
+  \item \_\_call\_\_() (gptools.kernel.core.SumKernel method), \hyperpage{15}
+  \item \_\_call\_\_() (gptools.kernel.gibbs.GibbsFunction1d method), \hyperpage{20}
+  \item \_\_call\_\_() (gptools.kernel.noise.DiagonalNoiseKernel method), \hyperpage{23}
+  \item \_\_call\_\_() (gptools.kernel.noise.ZeroKernel method), \hyperpage{23}
+  \item \_\_call\_\_() (gptools.kernel.squared\_exponential.SquaredExponentialKernel method), 
+		\hyperpage{25}
+  \item \_\_mul\_\_() (gptools.kernel.core.Kernel method), \hyperpage{15}
+
+  \indexspace
+  \bigletter A
+  \item add\_data() (gptools.gaussian\_process.GaussianProcess method), \hyperpage{5}
+  \item ArbitraryKernel (class in gptools.kernel.core), \hyperpage{17}
+  \item arrow\_respond() (in module gptools.utils), \hyperpage{11}
+
+  \indexspace
+  \bigletter B
+  \item BinaryKernel (class in gptools.kernel.core), \hyperpage{15}
+
+  \indexspace
+  \bigletter C
+  \item ChainRuleKernel (class in gptools.kernel.core), \hyperpage{16}
+  \item compute\_K\_L\_alpha\_ll() (gptools.gaussian\_process.GaussianProcess method), 
+		\hyperpage{6}
+  \item compute\_Kij() (gptools.gaussian\_process.GaussianProcess method), \hyperpage{6}
+  \item compute\_ll\_matrix() (gptools.gaussian\_process.GaussianProcess method), \hyperpage{8}
+  \item Constraint (class in gptools.gaussian\_process), \hyperpage{9}
+
+  \indexspace
+  \bigletter D
+  \item DiagonalNoiseKernel (class in gptools.kernel.noise), \hyperpage{22}
+  \item draw\_sample() (gptools.gaussian\_process.GaussianProcess method), \hyperpage{8}
+
+  \indexspace
+  \bigletter F
+  \item free\_param\_bounds (gptools.kernel.core.Kernel attribute), \hyperpage{15}
+  \item free\_params (gptools.kernel.core.Kernel attribute), \hyperpage{15}
+
+  \indexspace
+  \bigletter G
+  \item gauss\_warp() (in module gptools.kernel.gibbs), \hyperpage{19}
+  \item GaussianProcess (class in gptools.gaussian\_process), \hyperpage{3}
+  \item generate\_set\_partition\_strings() (in module gptools.utils), \hyperpage{12}
+  \item generate\_set\_partitions() (in module gptools.utils), \hyperpage{12}
+  \item GibbsFunction1d (class in gptools.kernel.gibbs), \hyperpage{20}
+  \item GibbsKernel1dGauss (class in gptools.kernel.gibbs), \hyperpage{21}
+  \item GibbsKernel1dSpline (class in gptools.kernel.gibbs), \hyperpage{21}
+  \item GibbsKernel1dtanh (class in gptools.kernel.gibbs), \hyperpage{20}
+  \item GPArgumentError, \hyperpage{3}
+  \item gptools.\_\_init\_\_ (module), \hyperpage{3}
+  \item gptools.error\_handling (module), \hyperpage{3}
+  \item gptools.gaussian\_process (module), \hyperpage{3}
+  \item gptools.kernel (module), \hyperpage{13}
+  \item gptools.kernel.core (module), \hyperpage{13}
+  \item gptools.kernel.gibbs (module), \hyperpage{18}
+  \item gptools.kernel.matern (module), \hyperpage{22}
+  \item gptools.kernel.noise (module), \hyperpage{22}
+  \item gptools.kernel.rational\_quadratic (module), \hyperpage{24}
+  \item gptools.kernel.squared\_exponential (module), \hyperpage{25}
+  \item gptools.utils (module), \hyperpage{10}
+
+  \indexspace
+  \bigletter I
+  \item incomplete\_bell\_poly() (in module gptools.utils), \hyperpage{11}
+
+  \indexspace
+  \bigletter K
+  \item Kernel (class in gptools.kernel.core), \hyperpage{13}
+
+  \indexspace
+  \bigletter M
+  \item MaternKernel (class in gptools.kernel.matern), \hyperpage{22}
+
+  \indexspace
+  \bigletter N
+  \item nu (gptools.kernel.matern.MaternKernel attribute), \hyperpage{22}
+  \item num\_dim (gptools.gaussian\_process.GaussianProcess attribute), \hyperpage{5}
+
+  \indexspace
+  \bigletter O
+  \item optimize\_hyperparameters() (gptools.gaussian\_process.GaussianProcess method), 
+		\hyperpage{7}
+
+  \indexspace
+  \bigletter P
+  \item parallel\_compute\_ll\_matrix() (in module gptools.utils), \hyperpage{10}
+  \item predict() (gptools.gaussian\_process.GaussianProcess method), \hyperpage{7}
+  \item ProductKernel (class in gptools.kernel.core), \hyperpage{16}
+
+  \indexspace
+  \bigletter R
+  \item RationalQuadraticKernel (class in gptools.kernel.rational\_quadratic), \hyperpage{24}
+
+  \indexspace
+  \bigletter S
+  \item set\_hyperparams() (gptools.kernel.core.BinaryKernel method), \hyperpage{15}
+  \item set\_hyperparams() (gptools.kernel.core.Kernel method), \hyperpage{14}
+  \item slice\_plot() (in module gptools.utils), \hyperpage{11}
+  \item spline\_warp() (in module gptools.kernel.gibbs), \hyperpage{19}
+  \item SquaredExponentialKernel (class in gptools.kernel.squared\_exponential), \hyperpage{25}
+  \item SumKernel (class in gptools.kernel.core), \hyperpage{15}
+
+  \indexspace
+  \bigletter T
+  \item tanh\_warp() (in module gptools.kernel.gibbs), \hyperpage{18}
+
+  \indexspace
+  \bigletter U
+  \item unique\_rows() (in module gptools.utils), \hyperpage{13}
+  \item update\_hyperparameters() (gptools.gaussian\_process.GaussianProcess method), \hyperpage{6}
+
+  \indexspace
+  \bigletter Z
+  \item ZeroKernel (class in gptools.kernel.noise), \hyperpage{23}
+
+\end{theindex}
