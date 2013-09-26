@@ -384,5 +384,10 @@ def unique_rows(arr):
     b = scipy.ascontiguousarray(arr).view(
         scipy.dtype((scipy.void, arr.dtype.itemsize * arr.shape[1]))
     )
-    dum, idx = scipy.unique(b, return_index=True)
+    try:
+        dum, idx = scipy.unique(b, return_index=True)
+    except TypeError:
+        # Handle bug in numpy 1.6.2:
+        idx = scipy.argsort(b)
+        idx = scipy.unique(idx)
     return arr[idx]
