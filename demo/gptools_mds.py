@@ -74,6 +74,9 @@ dev_Te_ETS_w = dev_Te_ETS_w[good_idxs]
 R_mid_ETS_w = R_mid_ETS[:, idx]
 R_mid_ETS_w = R_mid_ETS_w[good_idxs]
 
+R_mag_mean = R_mag[idx]
+R_mag_std = 0.0
+
 # Te_TS_w = scipy.mean(Te_TS, axis=1)
 # dev_Te_TS_w = scipy.std(Te_TS, axis=1)
 # R_mid_w = scipy.mean(R_mid_CTS, axis=1)
