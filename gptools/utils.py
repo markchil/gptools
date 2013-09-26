@@ -406,9 +406,11 @@ def unique_rows(arr):
         transition_idxs = scipy.where(row_cmp != 0)[0]
         print('transition_idxs:')
         print(transition_idxs)
-        idx = srt_idx[transition_idxs]
+        idx = scipy.asarray(srt_idx)[transition_idxs]
         print('idx:')
         print(idx)
+        print('arr[idx]:')
+        print(arr[idx])
     return arr[idx]
 
 class _Row(object):
