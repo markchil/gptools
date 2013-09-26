@@ -19,12 +19,12 @@ Z_CTS = data_dict['Z']
 Z_sort = Z_CTS.argsort()
 Z_CTS = Z_CTS[Z_sort]
 Te_TS = data_dict['Te'][Z_sort, :]
-Te_TS = scipy.delete(Te_TS, (10,), axis=0)
+# Te_TS = scipy.delete(Te_TS, (10,), axis=0)
 dev_Te_TS = data_dict['dev_Te'][Z_sort, :]
-dev_Te_TS = scipy.delete(dev_Te_TS, (10,), axis=0)
+# dev_Te_TS = scipy.delete(dev_Te_TS, (10,), axis=0)
 t_Te_TS = data_dict['t']
 R_mid_CTS = data_dict['R_mid'][Z_sort, :]
-R_mid_CTS = scipy.delete(R_mid_CTS, (10,), axis=0)
+# R_mid_CTS = scipy.delete(R_mid_CTS, (10,), axis=0)
 R_mag = data_dict['R_mag']
 
 Te_ETS = data_dict['Te_ETS'] / 1e3
@@ -38,28 +38,28 @@ R_mag_mean = scipy.mean(R_mag)
 R_mag_std = scipy.std(R_mag)
 
 # Compute weighted mean and weighted corected sample standard deviation:
-idx = 44
-Te_TS_w = Te_TS[:, idx]
-dev_Te_TS_w = dev_Te_TS[:, idx]
-R_mid_w = R_mid_CTS[:, idx]
+# idx = 44
+# Te_TS_w = Te_TS[:, idx]
+# dev_Te_TS_w = dev_Te_TS[:, idx]
+# R_mid_w = R_mid_CTS[:, idx]
+# 
+# Te_ETS_w = Te_ETS[:, idx]
+# good_idxs = ~scipy.isnan(Te_ETS_w)
+# Te_ETS_w = Te_ETS_w[good_idxs]
+# dev_Te_ETS_w = dev_Te_ETS[:, idx]
+# dev_Te_ETS_w = dev_Te_ETS_w[good_idxs]
+# R_mid_ETS_w = R_mid_ETS[:, idx]
+# R_mid_ETS_w = R_mid_ETS_w[good_idxs]
 
-Te_ETS_w = Te_ETS[:, idx]
-good_idxs = ~scipy.isnan(Te_ETS_w)
-Te_ETS_w = Te_ETS_w[good_idxs]
-dev_Te_ETS_w = dev_Te_ETS[:, idx]
-dev_Te_ETS_w = dev_Te_ETS_w[good_idxs]
-R_mid_ETS_w = R_mid_ETS[:, idx]
-R_mid_ETS_w = R_mid_ETS_w[good_idxs]
+Te_TS_w = scipy.mean(Te_TS, axis=1)
+dev_Te_TS_w = scipy.std(Te_TS, axis=1)
+R_mid_w = scipy.mean(R_mid_CTS, axis=1)
+dev_R_mid_w = scipy.std(R_mid_CTS, axis=1)
 
-# Te_TS_w = scipy.mean(Te_TS, axis=1)
-# dev_Te_TS_w = scipy.std(Te_TS, axis=1)
-# R_mid_w = scipy.mean(R_mid_CTS, axis=1)
-# dev_R_mid_w = scipy.std(R_mid_CTS, axis=1)
-
-# Te_ETS_w = scipy.stats.nanmean(Te_ETS, axis=1)
-# dev_Te_ETS_w = scipy.stats.nanstd(Te_ETS, axis=1)
-# R_mid_ETS_w = scipy.mean(R_mid_ETS, axis=1)
-# dev_R_mid_ETS_w = scipy.std(R_mid_ETS, axis=1)
+Te_ETS_w = scipy.stats.nanmean(Te_ETS, axis=1)
+dev_Te_ETS_w = scipy.stats.nanstd(Te_ETS, axis=1)
+R_mid_ETS_w = scipy.mean(R_mid_ETS, axis=1)
+dev_R_mid_ETS_w = scipy.std(R_mid_ETS, axis=1)
 
 # skip = 1
 # R_mid_w = R_mid_CTS.flatten()[::skip]
@@ -78,10 +78,10 @@ R_mid_ETS_w = R_mid_ETS_w[good_idxs]
 # dev_Te_ETS_w = scipy.sqrt(((dev_Te_ETS).flatten()[::skip])**2.0 +
 #                           (scipy.repeat(scipy.std(Te_ETS, axis=1), Te_ETS.shape[1])[::skip])**2)
 
-k = gptools.SquaredExponentialKernel(1,
-                                     initial_params=[1, 0.15],
-                                     fixed_params=[False, False],
-                                     param_bounds=[(0.0, 1000.0), (0.01, 1.0)])
+# k = gptools.SquaredExponentialKernel(1,
+#                                      initial_params=[1, 0.15],
+#                                      fixed_params=[False, False],
+#                                      param_bounds=[(0.0, 1000.0), (0.01, 1.0)])
 # k = gptools.MaternKernel(1,
 #                          initial_params=[1, 3.0/2.0, 0.15],
 #                          fixed_params=[False, False, False],
@@ -91,11 +91,11 @@ k = gptools.SquaredExponentialKernel(1,
 #                                     fixed_params=[False, False, False],
 #                                     param_bounds=[(0.0, 1000.0), (0.001, 100.0), (0.01, 1.0)],
 #                                     enforce_bounds=True)
-# k = gptools.GibbsKernel1dtanh(initial_params=[1, 0.15, 0.01, 0.005, 0.89],
-#                               fixed_params=[False, False, False, False, False],
-#                               param_bounds=[(0.0, 1000.0), (0.01, 10.0), (0.0001, 1.0), (0.0001, 0.1), (0.88, 0.91)],
-#                               num_proc=None,
-#                               enforce_bounds=True)
+k = gptools.GibbsKernel1dtanh(initial_params=[1, 0.15, 0.01, 0.005, 0.89],
+                              fixed_params=[False, False, False, False, False],
+                              param_bounds=[(0.0, 1000.0), (0.01, 10.0), (0.0001, 1.0), (0.0001, 0.1), (0.88, 0.91)],
+                              num_proc=None,
+                              enforce_bounds=True)
 
 nk = gptools.DiagonalNoiseKernel(1, n=0, initial_noise=0.0, fixed_noise=True, noise_bound=(0.0001, 10.0))
 """nk = (gptools.DiagonalNoiseKernel(1, n=0, initial_noise=0.1, fixed_noise=False) +
@@ -103,7 +103,7 @@ nk = gptools.DiagonalNoiseKernel(1, n=0, initial_noise=0.0, fixed_noise=True, no
       gptools.SquaredExponentialKernel(1, initial_params=[1, 0.01], fixed_params=[False, False]))"""
 
 gp = gptools.GaussianProcess(k, noise_k=nk, X=R_mid_w, y=Te_TS_w, err_y=dev_Te_TS_w)
-# gp.add_data(R_mid_ETS_w, Te_ETS_w, err_y=dev_Te_ETS_w)
+gp.add_data(R_mid_ETS_w, Te_ETS_w, err_y=dev_Te_ETS_w)
 gp.add_data(R_mag_mean, 0, n=1)
 #gp.add_data(R_mag_mean, 0, n=2)
 #gp.add_data(R_mag_mean, 0, n=3)
@@ -140,7 +140,7 @@ gp.optimize_hyperparameters(
 )
 opt_elapsed = time.time() - opt_start
 
-Rstar = scipy.linspace(R_mag_mean, R_mid_ETS_w.max(), 24*100)
+Rstar = scipy.linspace(R_mag_mean, R_mid_ETS_w.max(), 24*10)
 
 mean_start = time.time()
 mean, cov = gp.predict(Rstar, noise=False)
@@ -166,8 +166,8 @@ meandd_approx = scipy.gradient(meand, Rstar[1] - Rstar[0])
 
 f = plt.figure()
 
-# f.suptitle('Univariate GPR on TS data')
-f.suptitle('Univariate GPR on single frame of TS data, $t=%.2fs$' % t_Te_TS[idx])
+f.suptitle('Univariate GPR on TS data')
+# f.suptitle('Univariate GPR on single frame of TS data, $t=%.2fs$' % t_Te_TS[idx])
 #f.suptitle('With slope constraint')
 
 a1 = f.add_subplot(3, 1, 1)
