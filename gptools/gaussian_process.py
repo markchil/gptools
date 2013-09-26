@@ -641,9 +641,15 @@ class GaussianProcess(object):
             Kstar = Kstar + self.compute_Kij(self.X, Xstar, self.n, n, noise=True)
         mean = Kstar.T * self.alpha
         if return_cov:
-            v = scipy.asmatrix(
-                scipy.linalg.solve_triangular(self.L, Kstar, lower=True, check_finite=False)
-            )
+            try:
+                v = scipy.asmatrix(
+                    scipy.linalg.solve_triangular(self.L, Kstar, lower=True, check_finite=False)
+                )
+            except TypeError:
+                # Handle older versions of scipy:
+                v = scipy.asmatrix(
+                    scipy.linalg.solve_triangular(self.L, Kstar, lower=True)
+                )
             Kstarstar = self.compute_Kij(Xstar, None, n, None)
             if noise:
                 Kstarstar = Kstarstar + self.compute_Kij(Xstar, None, n, None, noise=True)
