@@ -403,7 +403,7 @@ def unique_rows(arr):
         row_cmp = scipy.asarray(row_cmp)
         print('row_cmp:')
         print(row_cmp)
-        transition_idxs = scipy.where(row_cmp != 0)
+        transition_idxs = scipy.where(row_cmp != 0)[0]
         print('transition_idxs:')
         print(transition_idxs)
         idx = srt_idx[transition_idxs]
