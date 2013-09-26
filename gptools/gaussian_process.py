@@ -327,12 +327,26 @@ class GaussianProcess(object):
         if not self.K_up_to_date:
             self.K = self.compute_Kij(self.X, None, self.n, None, noise=False)
             self.noise_K = self.compute_Kij(self.X, None, self.n, None, noise=True)
-            self.L = scipy.matrix(scipy.linalg.cholesky(self.K +
-                                                        scipy.diag(self.err_y**2.0) +
-                                                        self.noise_K +
-                                                        diag_factor * sys.float_info.epsilon * scipy.eye(len(self.y)),
-                                                        lower=True,
-                                                        check_finite=False))
+            K_tot = (self.K +
+                     scipy.diag(self.err_y**2.0) +
+                     self.noise_K +
+                     diag_factor * sys.float_info.epsilon * scipy.eye(len(self.y)))
+            try:
+                self.L = scipy.matrix(
+                    scipy.linalg.cholesky(
+                        K_tot,
+                        lower=True,
+                        check_finite=False
+                    )
+                )
+            except TypeError:
+                # Catch lack of check_finite in older scipy:
+                self.L = scipy.matrix(
+                    scipy.linalg.cholesky(
+                        K_tot,
+                        lower=True
+                    )
+                )
             # Convert the array output to a matrix since scipy treats arrays
             # as row vectors:
             self.alpha = scipy.linalg.solve_triangular(
