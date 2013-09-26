@@ -163,7 +163,7 @@ gp.optimize_hyperparameters(
 )
 opt_elapsed = time.time() - opt_start
 
-Rstar = scipy.linspace(R_mag_mean, R_mid_ETS_w.max(), 24*100)
+Rstar = scipy.linspace(R_mag_mean, R_mid_ETS_w.max(), 24*5)
 
 mean_start = time.time()
 mean, cov = gp.predict(Rstar, noise=False)
@@ -193,7 +193,7 @@ f = plt.figure()
 f.suptitle('Univariate GPR on single frame of TS data, $t=%.2fs$' % t_Te_TS[idx])
 #f.suptitle('With slope constraint')
 
-a1 = f.add_subplot(3, 1, 1)
+a1 = f.add_subplot(2, 1, 1)
 a1.plot(Rstar, mean, 'k', linewidth=3)
 a1.fill_between(Rstar, mean-std, mean+std, alpha=0.375, facecolor='k')
 a1.errorbar(R_mid_w, Te_TS_w, yerr=dev_Te_TS_w, fmt='r.')  #, xerr=dev_R_mid_w
@@ -205,20 +205,20 @@ a1.get_xaxis().set_visible(False)
 a1.set_ylim(0, 4.5)
 a1.set_ylabel('$T_{e}$ [keV]')
 
-a2 = f.add_subplot(3, 1, 2, sharex=a1)
+a2 = f.add_subplot(2, 1, 2, sharex=a1)
 a2.plot(Rstar, meand, 'k', linewidth=3)
 #a2.plot(Rstar, meand_approx)
 a2.fill_between(Rstar, (meand-stdd), (meand+stdd), alpha=0.375, facecolor='k')
 a2.axvline(x=R_mag_mean, color='r')
 a2.axvspan(R_mag_mean-R_mag_std, R_mag_mean+R_mag_std, alpha=0.375, facecolor='r')
-# a2.set_xlabel('$R$ [m]')
-a2.get_xaxis().set_visible(False)
+a2.set_xlabel('$R$ [m]')
+# a2.get_xaxis().set_visible(False)
 a2.set_ylabel('$dT_{e}/dR$\n[keV/m]')
 
-a3 = f.add_subplot(3, 1, 3, sharex=a1)
-a3.plot(Rstar, gp.k.cov_func.warp_function(Rstar, *gp.k.params[1:]), linewidth=3)
-a3.set_xlabel('$R$ [m]')
-a3.set_ylabel('$l$ [m]')
+# a3 = f.add_subplot(3, 1, 3, sharex=a1)
+# a3.plot(Rstar, gp.k.cov_func.warp_function(Rstar, *gp.k.params[1:]), linewidth=3)
+# a3.set_xlabel('$R$ [m]')
+# a3.set_ylabel('$l$ [m]')
 
 """a3 = f.add_subplot(3, 1, 3, sharex=a1)
 a3.plot(Rstar, meandd, 'k', linewidth=3)
@@ -230,13 +230,13 @@ a3.set_xlabel('$R$ [m]')
 a3.set_ylabel('$d^2T_{e}/dR^2$ [keV/m$^2$]')"""
 
 a1.set_xlim(0.69, 0.92)
-a3.set_ylim(0.0, 0.1)
+# a3.set_ylim(0.0, 0.1)
 
-a3.text(1,
+a2.text(1,
         0.0,
         'C-Mod shot %d' % data_dict['shot'],
         rotation=90,
-        transform=a3.transAxes,
+        transform=a2.transAxes,
         verticalalignment='bottom',
         horizontalalignment='left',
         size=12)
@@ -251,7 +251,7 @@ f.subplots_adjust(hspace=0)
 # a2.plot(Rstar, deriv_samps, linewidth=2)
 
 a2.yaxis.get_major_ticks()[-1].label.set_visible(False)
-a2.yaxis.get_major_ticks()[0].label.set_visible(False)
+# a2.yaxis.get_major_ticks()[0].label.set_visible(False)
 # a3.yaxis.get_major_ticks()[-1].label.set_visible(False)
 f.canvas.draw()
 
