@@ -101,10 +101,10 @@ R_mid_ETS_w = R_mid_ETS_w[good_idxs]
 # dev_Te_ETS_w = scipy.sqrt(((dev_Te_ETS).flatten()[::skip])**2.0 +
 #                           (scipy.repeat(scipy.std(Te_ETS, axis=1), Te_ETS.shape[1])[::skip])**2)
 
-# k = gptools.SquaredExponentialKernel(1,
-#                                      initial_params=[1, 0.15],
-#                                      fixed_params=[False, False],
-#                                      param_bounds=[(0.0, 1000.0), (0.01, 1.0)])
+k = gptools.SquaredExponentialKernel(1,
+                                     initial_params=[1, 0.15],
+                                     fixed_params=[False, False],
+                                     param_bounds=[(0.0, 1000.0), (0.01, 1.0)])
 # k = gptools.MaternKernel(1,
 #                          initial_params=[1, 3.0/2.0, 0.15],
 #                          fixed_params=[False, False, False],
@@ -114,11 +114,11 @@ R_mid_ETS_w = R_mid_ETS_w[good_idxs]
 #                                     fixed_params=[False, False, False],
 #                                     param_bounds=[(0.0, 1000.0), (0.001, 100.0), (0.01, 1.0)],
 #                                     enforce_bounds=True)
-k = gptools.GibbsKernel1dtanh(initial_params=[1, 0.15, 0.01, 0.005, 0.89],
-                              fixed_params=[False, False, False, False, False],
-                              param_bounds=[(0.0, 1000.0), (0.01, 10.0), (0.0001, 1.0), (0.0001, 0.1), (0.88, 0.91)],
-                              num_proc=None,
-                              enforce_bounds=True)
+# k = gptools.GibbsKernel1dtanh(initial_params=[1, 0.15, 0.01, 0.005, 0.89],
+#                               fixed_params=[False, False, False, False, False],
+#                               param_bounds=[(0.0, 1000.0), (0.01, 10.0), (0.0001, 1.0), (0.0001, 0.1), (0.88, 0.91)],
+#                               num_proc=None,
+#                               enforce_bounds=True)
 
 nk = gptools.DiagonalNoiseKernel(1, n=0, initial_noise=0.0, fixed_noise=True, noise_bound=(0.0001, 10.0))
 """nk = (gptools.DiagonalNoiseKernel(1, n=0, initial_noise=0.1, fixed_noise=False) +
@@ -126,7 +126,7 @@ nk = gptools.DiagonalNoiseKernel(1, n=0, initial_noise=0.0, fixed_noise=True, no
       gptools.SquaredExponentialKernel(1, initial_params=[1, 0.01], fixed_params=[False, False]))"""
 
 gp = gptools.GaussianProcess(k, noise_k=nk, X=R_mid_w, y=Te_TS_w, err_y=dev_Te_TS_w)
-gp.add_data(R_mid_ETS_w, Te_ETS_w, err_y=dev_Te_ETS_w)
+# gp.add_data(R_mid_ETS_w, Te_ETS_w, err_y=dev_Te_ETS_w)
 gp.add_data(R_mag_mean, 0, n=1)
 #gp.add_data(R_mag_mean, 0, n=2)
 #gp.add_data(R_mag_mean, 0, n=3)
