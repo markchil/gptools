@@ -390,7 +390,7 @@ def unique_rows(arr):
         # Handle bug in numpy 1.6.2:
         rows = [_Row(row) for row in b]
         srt_idx = sorted(range(len(rows)), key=rows.__getitem__)
-        rows = rows[srt_idx]
+        rows = scipy.asarray(rows)[srt_idx]
         row_cmp = [-1]
         for k in xrange(1, len(srt_idx)):
             row_cmp.append(rows[k-1].__cmp__(rows[k]))
