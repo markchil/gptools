@@ -389,11 +389,17 @@ def unique_rows(arr):
     except TypeError:
         # Handle bug in numpy 1.6.2:
         rows = [_Row(row) for row in b]
-        dum, idx = scipy.unique(rows, return_index=True)
+        srt_idx = sorted(range(len(rows)), key=rows.__getitem__)
+        rows = rows[srt_idx]
+        row_cmp = [-1]
+        for k in xrange(1, len(srt_idx)):
+            row_cmp.append(rows[k-1].__cmp__(rows[k]))
+        transition_idxs = scipy.where(row_cmp != 0)[0]
+        idx = srt_idx[transition_idxs]
     return arr[idx]
 
 class _Row(object):
-    """Creates a class to compare rows of a matrix.
+    """Helper class to compare rows of a matrix.
     
     This is used to workaround the bug with scipy.unique in numpy 1.6.2.
     
@@ -426,7 +432,7 @@ class _Row(object):
             return 0
         else:
             # Get first non-equal element:
-            first_nonequal_idx = numpy.where(self.row != other.row)[0][0]
+            first_nonequal_idx = scipy.where(self.row != other.row)[0][0]
             if self.row[first_nonequal_idx] > other.row[first_nonequal_idx]:
                 return 1
             else:
