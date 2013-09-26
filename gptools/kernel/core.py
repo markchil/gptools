@@ -581,7 +581,6 @@ class ArbitraryKernel(Kernel):
         n_cat = scipy.asarray(scipy.concatenate((ni, nj), axis=1), dtype=int)
         X_cat = scipy.asarray(scipy.concatenate((Xi, Xj), axis=1), dtype=float)
         n_cat_unique = unique_rows(n_cat)
-        print(n_cat_unique)
         k = scipy.zeros(Xi.shape[0], dtype=float)
         # Loop over unique 
         for n_cat_state in n_cat_unique:
