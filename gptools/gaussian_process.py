@@ -349,17 +349,28 @@ class GaussianProcess(object):
                 )
             # Convert the array output to a matrix since scipy treats arrays
             # as row vectors:
-            self.alpha = scipy.linalg.solve_triangular(
-                self.L.T,
-                scipy.linalg.solve_triangular(
-                    self.L,
-                    scipy.asmatrix(self.y).T,
-                    lower=True,
+            try:
+                self.alpha = scipy.linalg.solve_triangular(
+                    self.L.T,
+                    scipy.linalg.solve_triangular(
+                        self.L,
+                        scipy.asmatrix(self.y).T,
+                        lower=True,
+                        check_finite=False
+                    ),
+                    lower=False,
                     check_finite=False
-                ),
-                lower=False,
-                check_finite=False
-            )
+                )
+            except TypeError:
+                self.alpha = scipy.linalg.solve_triangular(
+                    self.L.T,
+                    scipy.linalg.solve_triangular(
+                        self.L,
+                        scipy.asmatrix(self.y).T,
+                        lower=True
+                    ),
+                    lower=False
+                )
             self.ll = (-0.5 * scipy.asmatrix(self.y) * self.alpha -
                        scipy.log(scipy.diag(self.L)).sum() - 
                        0.5 * len(self.y) * scipy.log(2.0*scipy.pi))[0, 0]
