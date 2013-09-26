@@ -388,6 +388,8 @@ def unique_rows(arr):
         dum, idx = scipy.unique(b, return_index=True)
     except TypeError:
         # Handle bug in numpy 1.6.2:
+        print('arr:')
+        print(arr)
         rows = [_Row(row) for row in b]
         srt_idx = sorted(range(len(rows)), key=rows.__getitem__)
         print('srt_idx:')
@@ -398,9 +400,10 @@ def unique_rows(arr):
         row_cmp = [-1]
         for k in xrange(1, len(srt_idx)):
             row_cmp.append(rows[k-1].__cmp__(rows[k]))
+        row_cmp = scipy.asarray(row_cmp)
         print('row_cmp:')
         print(row_cmp)
-        transition_idxs = scipy.where(row_cmp != 0)[0]
+        transition_idxs = scipy.where(row_cmp != 0)
         print('transition_idxs:')
         print(transition_idxs)
         idx = srt_idx[transition_idxs]
