@@ -234,7 +234,7 @@ a1.set_xlim(0.69, 0.92)
 
 a2.text(1,
         0.0,
-        'C-Mod shot %d' % data_dict['shot'],
+        'C-Mod shot %d' % shot,
         rotation=90,
         transform=a2.transAxes,
         verticalalignment='bottom',
