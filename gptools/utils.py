@@ -390,12 +390,22 @@ def unique_rows(arr):
         # Handle bug in numpy 1.6.2:
         rows = [_Row(row) for row in b]
         srt_idx = sorted(range(len(rows)), key=rows.__getitem__)
+        print('srt_idx:')
+        print(srt_idx)
         rows = scipy.asarray(rows)[srt_idx]
+        print('rows:')
+        print(rows)
         row_cmp = [-1]
         for k in xrange(1, len(srt_idx)):
             row_cmp.append(rows[k-1].__cmp__(rows[k]))
+        print('row_cmp:')
+        print(row_cmp)
         transition_idxs = scipy.where(row_cmp != 0)[0]
+        print('transition_idxs:')
+        print(transition_idxs)
         idx = srt_idx[transition_idxs]
+        print('idx:')
+        print(idx)
     return arr[idx]
 
 class _Row(object):
