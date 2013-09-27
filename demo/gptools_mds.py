@@ -294,7 +294,7 @@ opt_elapsed = time.time() - opt_start
 
 # Make predictions:
 Rstar = scipy.linspace(0.63, 0.93, 24*5)
-asdf()
+
 mean_start = time.time()
 mean, cov = gp.predict(Rstar, noise=False)
 mean_elapsed = time.time() - mean_start
