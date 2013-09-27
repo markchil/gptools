@@ -272,27 +272,25 @@ class pos_cf(object):
 
 # Optimize hyperparameters:
 opt_start = time.time()
-gp.optimize_hyperparameters(
-    method='SLSQP',
-    verbose=True,
-    opt_kwargs={
-        'bounds': (k + nk).free_param_bounds,
-        'constraints': (
-            # {'type': 'ineq', 'fun': pos_cf(0)},
-            # {'type': 'ineq', 'fun': pos_cf(1)},
-            # {'type': 'ineq', 'fun': pos_cf(2)},
-            # {'type': 'ineq', 'fun': pos_cf(3)},
-            # {'type': 'ineq', 'fun': pos_cf(4)},
-            # {'type': 'ineq', 'fun': pos_cf(5)},
-            {'type': 'ineq', 'fun': l_cf},
-            # {'type': 'ineq', 'fun': gptools.Constraint(gp, n=1, type_='lt', loc='max')},
-            # {'type': 'ineq', 'fun': gptools.Constraint(gp)},
-        )
-    }
-)
+# gp.optimize_hyperparameters(
+#     method='SLSQP',
+#     verbose=True,
+#     opt_kwargs={
+#         'bounds': (k + nk).free_param_bounds,
+#         'constraints': (
+#             # {'type': 'ineq', 'fun': pos_cf(0)},
+#             # {'type': 'ineq', 'fun': pos_cf(1)},
+#             # {'type': 'ineq', 'fun': pos_cf(2)},
+#             # {'type': 'ineq', 'fun': pos_cf(3)},
+#             # {'type': 'ineq', 'fun': pos_cf(4)},
+#             # {'type': 'ineq', 'fun': pos_cf(5)},
+#             {'type': 'ineq', 'fun': l_cf},
+#             # {'type': 'ineq', 'fun': gptools.Constraint(gp, n=1, type_='lt', loc='max')},
+#             # {'type': 'ineq', 'fun': gptools.Constraint(gp)},
+#         )
+#     }
+# )
 opt_elapsed = time.time() - opt_start
-
-print('opt done')
 
 # Make predictions:
 Rstar = scipy.linspace(0.63, 0.93, 24*5)
