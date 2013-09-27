@@ -1,3 +1,4 @@
+from __future__ import division
 import gptools
 import eqtools
 import MDSplus
@@ -11,65 +12,67 @@ import matplotlib.pyplot as plt
 plt.ion()
 #plt.close('all')
 
-shot = 1101014006  # 1120808024
+shot = 1101014006
+# Start and end times of flat top:
+flat_start = 0.5
+flat_stop = 1.5
+
+efit_tree = eqtools.CModEFITTree(shot)
+t_EFIT = efit_tree.getTimeBase()
 
 electrons = MDSplus.Tree('electrons', shot)
+
+# Get core TS data:
 N_Te_TS = electrons.getNode(r'\electrons::top.yag_new.results.profiles:te_rz')
 
 t_Te_TS = N_Te_TS.dim_of().data()
-# Only keep points that are in the RF flat top so the rise and fall don't mess
-# with our statistical tests:
-ok_idxs = (t_Te_TS >= 0.5) & (t_Te_TS <= 1.5)
+
+# Only keep points that are in the RF flat top:
+ok_idxs = (t_Te_TS >= flat_start) & (t_Te_TS <= flat_stop)
 t_Te_TS = t_Te_TS[ok_idxs]
 
 Te_TS = N_Te_TS.data()[:, ok_idxs]
-# assume everything for TS is on the same timebase...
 dev_Te_TS = electrons.getNode(r'yag_new.results.profiles:te_err').data()[:, ok_idxs]
 
 Z_CTS = electrons.getNode(r'yag_new.results.profiles:z_sorted').data()
 R_CTS = electrons.getNode(r'yag.results.param:r').data() * scipy.ones_like(Z_CTS)
-
 t_grid, Z_grid = scipy.meshgrid(t_Te_TS, Z_CTS)
 t_grid, R_grid = scipy.meshgrid(t_Te_TS, R_CTS)
-
-efit_tree = eqtools.CModEFITTree(shot)
 R_mid_CTS = efit_tree.rz2rmid(R_grid, Z_grid, t_grid, each_t=False)
-
-R_mag = efit_tree.getMagR()
-t_EFIT = efit_tree.getTimeBase()
-R_mag_TS = scipy.interpolate.InterpolatedUnivariateSpline(t_EFIT, R_mag)(t_Te_TS)
-
-R_out = efit_tree.getRmidOut()
-R_out_TS = scipy.interpolate.InterpolatedUnivariateSpline(t_EFIT, R_out)(t_Te_TS)
 
 # Get edge data:
 N_Te_ETS = electrons.getNode(r'yag_edgets.results:te')
 
 t_Te_ETS = N_Te_ETS.dim_of().data()
-#ok_idxs = (t_Te_ETS >= 0.7) & (t_Te_ETS <= 1.5)
+# Assume ETS is on same timebase as CTS and use indices from above:
 t_Te_ETS = t_Te_ETS[ok_idxs]
 
 Te_ETS = N_Te_ETS.data()[:, ok_idxs] / 1e3
 dev_Te_ETS = electrons.getNode(r'yag_edgets.results:te:error').data()[:, ok_idxs] / 1e3
+
 Z_ETS = electrons.getNode(r'yag_edgets.data:fiber_z').data()
 R_ETS = electrons.getNode(r'yag.results.param:R').data() * scipy.ones_like(Z_ETS)
-
 t_grid, Z_grid = scipy.meshgrid(t_Te_ETS, Z_ETS)
 t_grid, R_grid = scipy.meshgrid(t_Te_ETS, R_ETS)
-
 R_mid_ETS = efit_tree.rz2rmid(R_grid, Z_grid, t_grid, each_t=False)
 
+# Flag bad points for exclusion:
 Te_ETS[(Te_ETS == 0) & (dev_Te_ETS == 1)] = scipy.nan
 
-# Mean magnetic axis:
+# Get magnetic axis location:
+R_mag = efit_tree.getMagR()
+R_mag_TS = scipy.interpolate.InterpolatedUnivariateSpline(t_EFIT, R_mag)(t_Te_TS)
 R_mag_mean = scipy.mean(R_mag)
 R_mag_std = scipy.std(R_mag)
 
-# Mean magnetic axis:
+# Get LCFS outboard midplane location:
+R_out = efit_tree.getRmidOut()
+R_out_TS = scipy.interpolate.InterpolatedUnivariateSpline(t_EFIT, R_out)(t_Te_TS)
 R_out_mean = scipy.mean(R_out)
 R_out_std = scipy.std(R_out)
 
 # Compute weighted mean and weighted corected sample standard deviation:
+# # Single time slice:
 # idx = 44
 # Te_TS_w = Te_TS[:, idx]
 # dev_Te_TS_w = dev_Te_TS[:, idx]
@@ -85,7 +88,10 @@ R_out_std = scipy.std(R_out)
 # 
 # R_mag_mean = R_mag[idx]
 # R_mag_std = 0.0
+# R_out_mean = R_out[idx]
+# R_out_std = 0.0
 
+# Average over entire data set:
 Te_TS_w = scipy.mean(Te_TS, axis=1)
 dev_Te_TS_w = scipy.std(Te_TS, axis=1)
 R_mid_w = scipy.mean(R_mid_CTS, axis=1)
@@ -96,11 +102,12 @@ dev_Te_ETS_w = scipy.stats.nanstd(Te_ETS, axis=1)
 R_mid_ETS_w = scipy.mean(R_mid_ETS, axis=1)
 dev_R_mid_ETS_w = scipy.std(R_mid_ETS, axis=1)
 
+# # Use entire data set, taking every skip-th point:
 # skip = 1
 # R_mid_w = R_mid_CTS.flatten()[::skip]
 # Te_TS_w = Te_TS.flatten()[::skip]
 # dev_Te_TS_w = dev_Te_TS.flatten()[::skip]
-# dev_Te_TS_w = 4*scipy.sqrt((dev_Te_TS_w)**2.0 +
+# dev_Te_TS_w = scipy.sqrt((dev_Te_TS_w)**2.0 +
 #                          (scipy.repeat(scipy.std(Te_TS, axis=1), Te_TS.shape[1])[::skip])**2)
 # 
 # Te_ETS_w = Te_ETS.flatten()[::skip]
@@ -113,6 +120,7 @@ dev_R_mid_ETS_w = scipy.std(R_mid_ETS, axis=1)
 # dev_Te_ETS_w = scipy.sqrt(((dev_Te_ETS).flatten()[::skip])**2.0 +
 #                           (scipy.repeat(scipy.std(Te_ETS, axis=1), Te_ETS.shape[1])[::skip])**2)
 
+# Set kernel:
 # k = gptools.SquaredExponentialKernel(1,
 #                                      initial_params=[1, 0.15],
 #                                      fixed_params=[False, False],
@@ -126,26 +134,21 @@ dev_R_mid_ETS_w = scipy.std(R_mid_ETS, axis=1)
 #                                     fixed_params=[False, False, False],
 #                                     param_bounds=[(0.0, 1000.0), (0.001, 100.0), (0.01, 1.0)],
 #                                     enforce_bounds=True)
-k = gptools.GibbsKernel1dtanh(#initial_params=[1, 0.15, 0.01, 0.005, 0.89],
-                              initial_params=[1.88, 0.09655, 0.05637, 0.002941, 0.8937],
-                              fixed_params=[False, False, False, False, False],
-                              param_bounds=[(0.0, 1000.0), (0.01, 10.0), (0.0001, 1.0), (0.0001, 0.1), (0.88, 0.91)],
-                              num_proc=None,
-                              enforce_bounds=True)
+k = gptools.GibbsKernel1dtanh(
+    initial_params=[1.88, 0.09655, 0.05637, 0.002941, 0.8937],
+    fixed_params=[False, False, False, False, False],
+    param_bounds=[(0.0, 1000.0), (0.01, 10.0), (0.0001, 1.0), (0.0001, 0.1), (0.88, 0.91)],
+    num_proc=None,
+    enforce_bounds=True
+)
 
 nk = gptools.DiagonalNoiseKernel(1, n=0, initial_noise=0.0, fixed_noise=True, noise_bound=(0.0001, 10.0))
-"""nk = (gptools.DiagonalNoiseKernel(1, n=0, initial_noise=0.1, fixed_noise=False) +
-      gptools.DiagonalNoiseKernel(1, n=1, initial_noise=0.0, fixed_noise=True) +
-      gptools.SquaredExponentialKernel(1, initial_params=[1, 0.01], fixed_params=[False, False]))"""
 
 gp = gptools.GaussianProcess(k, noise_k=nk, X=R_mid_w, y=Te_TS_w, err_y=dev_Te_TS_w)
 gp.add_data(R_mid_ETS_w, Te_ETS_w, err_y=dev_Te_ETS_w)
 gp.add_data(R_mag_mean, 0, n=1)
-#gp.add_data(R_mag_mean, 0, n=2)
-#gp.add_data(R_mag_mean, 0, n=3)
-#gp.add_data(0.95, 0, n=0)
-#gp.add_data(0.95, 0, n=1)
 
+# Make constraint functions:
 def l_cf(params):
     return params[1] - params[2]
 
@@ -156,24 +159,24 @@ class pos_cf(object):
         return params[self.idx]
 
 opt_start = time.time()
-# gp.optimize_hyperparameters(
-#     method='SLSQP',
-#     verbose=True,
-#     opt_kwargs={
-#         'bounds': (k + nk).free_param_bounds,
-#         'constraints': (
-#             # {'type': 'ineq', 'fun': pos_cf(0)},
-#             # {'type': 'ineq', 'fun': pos_cf(1)},
-#             # {'type': 'ineq', 'fun': pos_cf(2)},
-#             # {'type': 'ineq', 'fun': pos_cf(3)},
-#             # {'type': 'ineq', 'fun': pos_cf(4)},
-#             # {'type': 'ineq', 'fun': pos_cf(5)},
-#             {'type': 'ineq', 'fun': l_cf},
-#             # {'type': 'ineq', 'fun': gptools.Constraint(gp, n=1, type_='lt', loc='max')},
-#             #{'type': 'ineq', 'fun': gptools.Constraint(gp)},
-#         )
-#     }
-# )
+gp.optimize_hyperparameters(
+    method='SLSQP',
+    verbose=True,
+    opt_kwargs={
+        'bounds': (k + nk).free_param_bounds,
+        'constraints': (
+            # {'type': 'ineq', 'fun': pos_cf(0)},
+            # {'type': 'ineq', 'fun': pos_cf(1)},
+            # {'type': 'ineq', 'fun': pos_cf(2)},
+            # {'type': 'ineq', 'fun': pos_cf(3)},
+            # {'type': 'ineq', 'fun': pos_cf(4)},
+            # {'type': 'ineq', 'fun': pos_cf(5)},
+            {'type': 'ineq', 'fun': l_cf},
+            # {'type': 'ineq', 'fun': gptools.Constraint(gp, n=1, type_='lt', loc='max')},
+            #{'type': 'ineq', 'fun': gptools.Constraint(gp)},
+        )
+    }
+)
 opt_elapsed = time.time() - opt_start
 
 Rstar = scipy.linspace(R_mag_mean, R_mid_ETS_w.max(), 24*5)
