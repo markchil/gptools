@@ -189,6 +189,8 @@ dev_Te_GPC_w = scipy.std(Te_GPC, axis=1)
 R_mid_GPC_w = scipy.mean(R_mid_GPC, axis=1)
 dev_R_mid_GPC_w = scipy.std(R_mid_GPC, axis=1)
 
+print('data done')
+
 # # Use entire data set, taking every skip-th point:
 # skip = 1
 # R_mid_w = R_mid_CTS.flatten()[::skip]
