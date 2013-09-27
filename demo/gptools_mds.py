@@ -59,6 +59,19 @@ R_mid_ETS = efit_tree.rz2rmid(R_grid, Z_grid, t_grid, each_t=False)
 # Flag bad points for exclusion:
 Te_ETS[(Te_ETS == 0) & (dev_Te_ETS == 1)] = scipy.nan
 
+# Get FRCECE data:
+Te_FRC = []
+R_mid_FRC = []
+for k in xrange(0, 32):
+    N = electrons.getNode(r'frcece.data.eces%02d' % (k + 1,))
+    Te_FRC.append(N.data())
+    N_R = electrons.getNode(r'frcece.data.rmid_%02d' % (k + 1,))
+    R_mid_FRC.append(N_R.data())
+# Assume all slow channels are on the same timebase:
+t_FRC = N.dim_of().data()
+Te_FRC = scipy.asarray(Te_FRC, dtype=float)
+R_mid_FRC = scipy.asarray(R_mid_FRC, dtype=float)
+
 # Get magnetic axis location:
 R_mag = efit_tree.getMagR()
 R_mag_TS = scipy.interpolate.InterpolatedUnivariateSpline(t_EFIT, R_mag)(t_Te_TS)
@@ -101,6 +114,11 @@ Te_ETS_w = scipy.stats.nanmean(Te_ETS, axis=1)
 dev_Te_ETS_w = scipy.stats.nanstd(Te_ETS, axis=1)
 R_mid_ETS_w = scipy.mean(R_mid_ETS, axis=1)
 dev_R_mid_ETS_w = scipy.std(R_mid_ETS, axis=1)
+
+Te_FRC_w = scipy.mean(Te_FRC, axis=1)
+dev_Te_FRC_w = scipy.std(Te_FRC, axis=1)
+R_mid_FRC_w = scipy.mean(R_mid_FRC, axis=1)
+dev_R_mid_w = scipy.std(R_mid_FRC, axis=1)
 
 # # Use entire data set, taking every skip-th point:
 # skip = 1
@@ -146,8 +164,10 @@ k = gptools.GibbsKernel1dtanh(
 nk = gptools.DiagonalNoiseKernel(1, n=0, initial_noise=0.0, fixed_noise=True, noise_bound=(0.0001, 10.0))
 
 # Create and populate GP:
-gp = gptools.GaussianProcess(k, noise_k=nk, X=R_mid_w, y=Te_TS_w, err_y=dev_Te_TS_w)
+gp = gptools.GaussianProcess(k, noise_k=nk)
+gp.add_data(R_mid_w, Te_TS_w, err_y=dev_Te_TS_w)
 gp.add_data(R_mid_ETS_w, Te_ETS_w, err_y=dev_Te_ETS_w)
+gp.add_data(R_mid_FRC_w, Te_FRC_w, err_y=dev_Te_FRC_w)
 gp.add_data(R_mag_mean, 0, n=1)
 
 # Make constraint functions:
@@ -201,6 +221,7 @@ gp.optimize_hyperparameters(
 )
 opt_elapsed = time.time() - opt_start
 
+# Make predictions:
 Rstar = scipy.linspace(R_mag_mean, R_mid_ETS_w.max(), 24*5)
 
 mean_start = time.time()
@@ -232,14 +253,16 @@ f.suptitle('Univariate GPR on TS data')
 #f.suptitle('With slope constraint')
 
 a1 = f.add_subplot(3, 1, 1)
-a1.plot(Rstar, mean, 'k', linewidth=3)
+a1.plot(Rstar, mean, 'k', linewidth=3, label='mean')
 a1.fill_between(Rstar, mean-std, mean+std, alpha=0.375, facecolor='k')
-a1.errorbar(R_mid_w, Te_TS_w, yerr=dev_Te_TS_w, fmt='r.')  #, xerr=dev_R_mid_w
-a1.errorbar(R_mid_ETS_w, Te_ETS_w, yerr=dev_Te_ETS_w, fmt='m.')  #, xerr=dev_R_mid_ETS_w
-a1.axvline(x=R_mag_mean, color='r')
+a1.errorbar(R_mid_w, Te_TS_w, xerr=dev_R_mid_w, yerr=dev_Te_TS_w, fmt='r.', label='CTS')
+a1.errorbar(R_mid_ETS_w, Te_ETS_w, xerr=dev_R_mid_ETS_w, yerr=dev_Te_ETS_w, fmt='m.', label='ETS')
+a1.errorbar(R_mid_FRC_w, Te_FRC_w, xerr=dev_R_mid_FRC_w, yerr=dev_Te_FRC_w, fmt='b.', label='FRC')
+a1.axvline(x=R_mag_mean, color='r', label='$R_{mag}$')
 a1.axvspan(R_mag_mean-R_mag_std, R_mag_mean+R_mag_std, alpha=0.375, facecolor='r')
-a1.axvline(x=R_out_mean, color='g')
+a1.axvline(x=R_out_mean, color='g', label='$R_{out}$')
 a1.axvspan(R_out_mean-R_out_std, R_out_mean+R_out_std, alpha=0.375, facecolor='g')
+a1.legend(loc='best')
 #a1.set_xlabel('$R$ [m]')
 a1.get_xaxis().set_visible(False)
 a1.set_ylim(0, 4.5)
