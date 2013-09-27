@@ -95,6 +95,9 @@ ok_idxs = (t_R_GPC2 >= flat_start) & (t_R_GPC2 <= flat_stop)
 t_R_GPC2 = t_R_GPC2[ok_idxs]
 R_mid_GPC2 = R_mid_GPC2[:, ok_idxs]
 
+# Flag bad points for exclusion:
+Te_GPC2[(Te_GPC2 == 0.0)] = scipy.nan
+
 # Get magnetic axis location:
 R_mag = efit_tree.getMagR()
 R_mag_TS = scipy.interpolate.InterpolatedUnivariateSpline(t_EFIT, R_mag)(t_Te_TS)
@@ -149,8 +152,8 @@ dev_Te_FRC_w = dev_Te_FRC_w[good_idxs]
 R_mid_FRC_w = R_mid_FRC_w[good_idxs]
 dev_R_mid_FRC_w = dev_R_mid_FRC_w[good_idxs]
 
-Te_GPC2_w = scipy.mean(Te_GPC2, axis=1)
-dev_Te_GPC2_w = scipy.std(Te_GPC2, axis=1)
+Te_GPC2_w = scipy.stats.nanmean(Te_GPC2, axis=1)
+dev_Te_GPC2_w = scipy.stats.nanstd(Te_GPC2, axis=1)
 R_mid_GPC2_w = scipy.mean(R_mid_GPC2, axis=1)
 dev_R_mid_GPC2_w = scipy.std(R_mid_GPC2, axis=1)
 
