@@ -189,8 +189,6 @@ dev_Te_GPC_w = scipy.std(Te_GPC, axis=1)
 R_mid_GPC_w = scipy.mean(R_mid_GPC, axis=1)
 dev_R_mid_GPC_w = scipy.std(R_mid_GPC, axis=1)
 
-print('data done')
-
 # # Use entire data set, taking every skip-th point:
 # skip = 1
 # R_mid_w = R_mid_CTS.flatten()[::skip]
@@ -242,6 +240,8 @@ gp.add_data(R_mid_FRC_w, Te_FRC_w, err_y=dev_Te_FRC_w)
 gp.add_data(R_mid_GPC2_w, Te_GPC2_w, err_y=dev_Te_GPC2_w)
 gp.add_data(R_mid_GPC_w, Te_GPC_w, err_y=dev_Te_GPC_w)
 gp.add_data(R_mag_mean, 0, n=1)
+
+print("data added")
 
 # Make constraint functions:
 def l_cf(params):
