@@ -20,6 +20,8 @@ In all cases, these kernels have been constructed in a way to allow inputs of ar
 
 Other kernels can be implemented by extending the :py:class:`~gptools.kernel.core.Kernel` class. Furthermore, kernels may be added or multiplied together to yield a new, valid kernel.
 
+:py:mod:`gptools` has been developed and tested on Python 2.7 and scipy 0.12.0. Catches have been included to enable it to work on scipy 0.10.1. It may work just as well on other versions, but has not been tested.
+
 Contents
 --------
 
