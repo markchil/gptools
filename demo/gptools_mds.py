@@ -128,6 +128,12 @@ Te_FRC_w = scipy.mean(Te_FRC, axis=1)
 dev_Te_FRC_w = scipy.std(Te_FRC, axis=1)
 R_mid_FRC_w = scipy.mean(R_mid_FRC, axis=1)
 dev_R_mid_FRC_w = scipy.std(R_mid_FRC, axis=1)
+# Get rid of clearly too small points (Why do these happen?)
+good_idxs = (Te_FRC_w >= 0.1)
+Te_FRC_w = Te_FRC_w[good_idxs]
+dev_Te_FRC_w = dev_Te_FRC_w[good_idxs]
+R_mid_FRC_w = R_mid_FRC_w[good_idxs]
+dev_R_mid_FRC_w = dev_R_mid_FRC_w[good_idxs]
 
 # # Use entire data set, taking every skip-th point:
 # skip = 1
