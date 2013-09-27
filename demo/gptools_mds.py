@@ -110,12 +110,6 @@ for k in xrange(0, 9):
 t_GPC = N.dim_of().data()
 # The radius is given on the EFIT timebase, so must be handled separately:
 t_R_GPC = N_R.dim_of().data()
-
-print(scipy.asarray(Te_GPC).shape)
-print(scipy.asarray(R_mid_GPC).shape)
-print(t_GPC.shape)
-print(t_R_GPC.shape)
-
 # Remove points outside of range of interest:
 ok_idxs = (t_GPC >= flat_start) & (t_GPC <= flat_stop)
 t_GPC = t_GPC[ok_idxs]
@@ -125,8 +119,6 @@ Te_GPC = scipy.asarray(Te_GPC, dtype=float)[:, ok_idxs]
 ok_idxs = (t_R_GPC >= flat_start) & (t_R_GPC <= flat_stop)
 t_R_GPC = t_R_GPC[ok_idxs]
 R_mid_GPC = scipy.asarray(R_mid_GPC, dtype=float)[:, ok_idxs]
-
-asf()
 
 # Get magnetic axis location:
 R_mag = efit_tree.getMagR()
@@ -299,6 +291,8 @@ gp.optimize_hyperparameters(
     }
 )
 opt_elapsed = time.time() - opt_start
+
+print('opt done')
 
 # Make predictions:
 Rstar = scipy.linspace(0.63, 0.93, 24*5)
