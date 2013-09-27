@@ -71,8 +71,11 @@ for k in xrange(0, 32):
 t_FRC = N.dim_of().data()
 ok_idxs = (t_FRC >= flat_start) & (t_FRC <= flat_stop)
 t_FRC = t_FRC[ok_idxs]
-Te_FRC = scipy.asarray(Te_FRC, dtype=float)[:, ok_idxs]
-R_mid_FRC = scipy.asarray(R_mid_FRC, dtype=float)[:, ok_idxs]
+Te_FRC = scipy.asarray(Te_FRC, dtype=float)#[:, ok_idxs]
+R_mid_FRC = scipy.asarray(R_mid_FRC, dtype=float)#[:, ok_idxs]
+
+print(Te_FRC.shape)
+print(R_mid_FRC.shape)
 
 # Get magnetic axis location:
 R_mag = efit_tree.getMagR()
