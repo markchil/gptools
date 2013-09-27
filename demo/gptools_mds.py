@@ -81,6 +81,20 @@ ok_idxs = (t_R_FRC >= flat_start) & (t_R_FRC <= flat_stop)
 t_R_FRC = t_R_FRC[ok_idxs]
 R_mid_FRC = scipy.asarray(R_mid_FRC, dtype=float)[:, ok_idxs]
 
+# Get GPC2 data:
+N_GPC2 = electrons.getNode('gpc_2.results.gpc2_te')
+Te_GPC2 = N_GPC2.data()
+t_GPC2 = N_GPC2.dim_of().data()
+ok_idxs = (t_GPC2 >= flat_start) & (t_GPC2 <= flat_stop)
+t_GPC2 = t_GPC2[ok_idxs]
+Te_GPC2 = Te_GPC2[:, ok_idxs]
+N_R = electrons.getNode('gpc_2.results.radii')
+R_mid_GPC2 = N_R.data()
+t_R_GPC2 = N_R.dim_of().data()
+ok_idxs = (t_R_GPC2 >= flat_start) & (t_R_GPC2 <= flat_stop)
+t_R_GPC2 = t_R_GPC2[ok_idxs]
+R_mid_GPC2 = R_mid_GPC2[ok_idxs]
+
 # Get magnetic axis location:
 R_mag = efit_tree.getMagR()
 R_mag_TS = scipy.interpolate.InterpolatedUnivariateSpline(t_EFIT, R_mag)(t_Te_TS)
@@ -135,6 +149,11 @@ dev_Te_FRC_w = dev_Te_FRC_w[good_idxs]
 R_mid_FRC_w = R_mid_FRC_w[good_idxs]
 dev_R_mid_FRC_w = dev_R_mid_FRC_w[good_idxs]
 
+Te_GPC2_w = scipy.mean(Te_GPC2, axis=1)
+dev_Te_GPC2_w = scipy.std(Te_GPC2, axis=1)
+R_mid_GPC2_w = scipy.mean(R_mid_GPC2, axis=1)
+dev_R_mid_GPC2_w = scipy.std(R_mid_GPC2, axis=1)
+
 # # Use entire data set, taking every skip-th point:
 # skip = 1
 # R_mid_w = R_mid_CTS.flatten()[::skip]
@@ -183,6 +202,7 @@ gp = gptools.GaussianProcess(k, noise_k=nk)
 gp.add_data(R_mid_w, Te_TS_w, err_y=dev_Te_TS_w)
 gp.add_data(R_mid_ETS_w, Te_ETS_w, err_y=dev_Te_ETS_w)
 gp.add_data(R_mid_FRC_w, Te_FRC_w, err_y=dev_Te_FRC_w)
+gp.add_data(R_mid_GPC2_w, Te_GPC2_w, err_y=dev_Te_GPC2_w)
 gp.add_data(R_mag_mean, 0, n=1)
 
 # Make constraint functions:
@@ -263,7 +283,8 @@ meandd_approx = scipy.gradient(meand, Rstar[1] - Rstar[0])
 
 f = plt.figure()
 
-f.suptitle('Univariate GPR on TS data')
+# f.suptitle('Univariate GPR on TS data')
+f.suptitle('Univariate GPR on time-averaged data')
 # f.suptitle('Univariate GPR on single frame of TS data, $t=%.2fs$' % t_Te_TS[idx])
 #f.suptitle('With slope constraint')
 
@@ -273,6 +294,7 @@ a1.fill_between(Rstar, mean-std, mean+std, alpha=0.375, facecolor='k')
 a1.errorbar(R_mid_w, Te_TS_w, xerr=dev_R_mid_w, yerr=dev_Te_TS_w, fmt='r.', label='CTS')
 a1.errorbar(R_mid_ETS_w, Te_ETS_w, xerr=dev_R_mid_ETS_w, yerr=dev_Te_ETS_w, fmt='m.', label='ETS')
 a1.errorbar(R_mid_FRC_w, Te_FRC_w, xerr=dev_R_mid_FRC_w, yerr=dev_Te_FRC_w, fmt='b.', label='FRC')
+a1.errorbar(R_mid_GPC2_w, Te_GPC2_w, xerr=dev_R_mid_GPC2_w, yerr=dev_Te_GPC2_w, fmt='g.', label='GPC2')
 a1.axvline(x=R_mag_mean, color='r', label='$R_{mag}$')
 a1.axvspan(R_mag_mean-R_mag_std, R_mag_mean+R_mag_std, alpha=0.375, facecolor='r')
 a1.axvline(x=R_out_mean, color='g', label='$R_{out}$')
