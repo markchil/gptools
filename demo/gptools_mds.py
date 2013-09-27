@@ -118,7 +118,7 @@ dev_R_mid_ETS_w = scipy.std(R_mid_ETS, axis=1)
 Te_FRC_w = scipy.mean(Te_FRC, axis=1)
 dev_Te_FRC_w = scipy.std(Te_FRC, axis=1)
 R_mid_FRC_w = scipy.mean(R_mid_FRC, axis=1)
-dev_R_mid_w = scipy.std(R_mid_FRC, axis=1)
+dev_R_mid_FRC_w = scipy.std(R_mid_FRC, axis=1)
 
 # # Use entire data set, taking every skip-th point:
 # skip = 1
