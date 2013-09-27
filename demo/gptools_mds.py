@@ -181,7 +181,7 @@ nk = gptools.DiagonalNoiseKernel(1, n=0, initial_noise=0.0, fixed_noise=True, no
 # Create and populate GP:
 gp = gptools.GaussianProcess(k, noise_k=nk)
 gp.add_data(R_mid_w, Te_TS_w, err_y=dev_Te_TS_w)
-# gp.add_data(R_mid_ETS_w, Te_ETS_w, err_y=dev_Te_ETS_w)
+gp.add_data(R_mid_ETS_w, Te_ETS_w, err_y=dev_Te_ETS_w)
 gp.add_data(R_mid_FRC_w, Te_FRC_w, err_y=dev_Te_FRC_w)
 gp.add_data(R_mag_mean, 0, n=1)
 
