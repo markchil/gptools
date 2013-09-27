@@ -138,12 +138,14 @@ k = gptools.GibbsKernel1dtanh(
     initial_params=[1.88, 0.09655, 0.05637, 0.002941, 0.8937],
     fixed_params=[False, False, False, False, False],
     param_bounds=[(0.0, 1000.0), (0.01, 10.0), (0.0001, 1.0), (0.0001, 0.1), (0.88, 0.91)],
-    num_proc=None,
+    num_proc=0,
     enforce_bounds=True
 )
 
+# Set noise kernel:
 nk = gptools.DiagonalNoiseKernel(1, n=0, initial_noise=0.0, fixed_noise=True, noise_bound=(0.0001, 10.0))
 
+# Create and populate GP:
 gp = gptools.GaussianProcess(k, noise_k=nk, X=R_mid_w, y=Te_TS_w, err_y=dev_Te_TS_w)
 gp.add_data(R_mid_ETS_w, Te_ETS_w, err_y=dev_Te_ETS_w)
 gp.add_data(R_mag_mean, 0, n=1)
@@ -153,11 +155,31 @@ def l_cf(params):
     return params[1] - params[2]
 
 class pos_cf(object):
+    """Constraint to force the parameter in slot idx to be positive.
+    
+    Parameters
+    ----------
+    idx : non-negative int
+        The index of the parameter to constrain.
+    """
     def __init__(self, idx):
         self.idx = idx
+    
     def __call__(self, params):
+        """Evaluate the constraint.
+        
+        Parameters
+        ----------
+        params : list or other 1d array-like
+            The parameters of the model.
+        
+        Returns
+        -------
+        Element `idx` of `params`.
+        """
         return params[self.idx]
 
+# Optimize hyperparameters:
 opt_start = time.time()
 gp.optimize_hyperparameters(
     method='SLSQP',
@@ -173,7 +195,7 @@ gp.optimize_hyperparameters(
             # {'type': 'ineq', 'fun': pos_cf(5)},
             {'type': 'ineq', 'fun': l_cf},
             # {'type': 'ineq', 'fun': gptools.Constraint(gp, n=1, type_='lt', loc='max')},
-            #{'type': 'ineq', 'fun': gptools.Constraint(gp)},
+            # {'type': 'ineq', 'fun': gptools.Constraint(gp)},
         )
     }
 )
