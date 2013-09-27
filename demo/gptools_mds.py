@@ -99,9 +99,9 @@ R_mid_GPC2 = R_mid_GPC2[:, ok_idxs]
 Te_GPC = []
 R_mid_GPC = []
 for k in xrange(0, 9):
-    N = electrons.getNode(r'ece.gpc_results.te%d' % (k + 1,))
+    N = electrons.getNode(r'ece.gpc_results.te.te%d' % (k + 1,))
     Te_GPC.append(N.data())
-    N_R = electrons.getNode(r'ece.gpc_results.rad%d' % (k + 1,))
+    N_R = electrons.getNode(r'ece.gpc_results.rad.r%d' % (k + 1,))
     R_mid_GPC.append(N_R.data())
 # Assume all slow channels are on the same timebase:
 t_GPC = N.dim_of().data()
