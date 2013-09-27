@@ -241,8 +241,6 @@ gp.add_data(R_mid_GPC2_w, Te_GPC2_w, err_y=dev_Te_GPC2_w)
 gp.add_data(R_mid_GPC_w, Te_GPC_w, err_y=dev_Te_GPC_w)
 gp.add_data(R_mag_mean, 0, n=1)
 
-print("data added")
-
 # Make constraint functions:
 def l_cf(params):
     return params[1] - params[2]
@@ -296,7 +294,7 @@ opt_elapsed = time.time() - opt_start
 
 # Make predictions:
 Rstar = scipy.linspace(0.63, 0.93, 24*5)
-
+asdf()
 mean_start = time.time()
 mean, cov = gp.predict(Rstar, noise=False)
 mean_elapsed = time.time() - mean_start
