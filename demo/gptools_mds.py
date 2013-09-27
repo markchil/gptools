@@ -95,6 +95,9 @@ ok_idxs = (t_R_GPC2 >= flat_start) & (t_R_GPC2 <= flat_stop)
 t_R_GPC2 = t_R_GPC2[ok_idxs]
 R_mid_GPC2 = R_mid_GPC2[:, ok_idxs]
 
+# Flag bad points for exclusion:
+Te_GPC2[(Te_GPC2 == 0.0)] = scipy.nan
+
 # Get GPC data:
 Te_GPC = []
 R_mid_GPC = []
@@ -123,8 +126,7 @@ ok_idxs = (t_R_GPC >= flat_start) & (t_R_GPC <= flat_stop)
 t_R_GPC = t_R_GPC[ok_idxs]
 R_mid_GPC = scipy.asarray(R_mid_GPC, dtype=float)[:, ok_idxs]
 
-# Flag bad points for exclusion:
-Te_GPC2[(Te_GPC2 == 0.0)] = scipy.nan
+asf()
 
 # Get magnetic axis location:
 R_mag = efit_tree.getMagR()
