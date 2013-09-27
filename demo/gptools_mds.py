@@ -81,10 +81,6 @@ ok_idxs = (t_R_FRC >= flat_start) & (t_R_FRC <= flat_stop)
 t_R_FRC = t_R_FRC[ok_idxs]
 R_mid_FRC = scipy.asarray(R_mid_FRC, dtype=float)[:, ok_idxs]
 
-print(t_FRC.shape)
-print(Te_FRC.shape)
-print(R_mid_FRC.shape)
-
 # Get magnetic axis location:
 R_mag = efit_tree.getMagR()
 R_mag_TS = scipy.interpolate.InterpolatedUnivariateSpline(t_EFIT, R_mag)(t_Te_TS)
@@ -152,10 +148,10 @@ dev_R_mid_FRC_w = scipy.std(R_mid_FRC, axis=1)
 #                           (scipy.repeat(scipy.std(Te_ETS, axis=1), Te_ETS.shape[1])[::skip])**2)
 
 # Set kernel:
-# k = gptools.SquaredExponentialKernel(1,
-#                                      initial_params=[1, 0.15],
-#                                      fixed_params=[False, False],
-#                                      param_bounds=[(0.0, 1000.0), (0.01, 1.0)])
+k = gptools.SquaredExponentialKernel(1,
+                                     initial_params=[1, 0.15],
+                                     fixed_params=[False, False],
+                                     param_bounds=[(0.0, 1000.0), (0.01, 1.0)])
 # k = gptools.MaternKernel(1,
 #                          initial_params=[1, 3.0/2.0, 0.15],
 #                          fixed_params=[False, False, False],
@@ -165,13 +161,13 @@ dev_R_mid_FRC_w = scipy.std(R_mid_FRC, axis=1)
 #                                     fixed_params=[False, False, False],
 #                                     param_bounds=[(0.0, 1000.0), (0.001, 100.0), (0.01, 1.0)],
 #                                     enforce_bounds=True)
-k = gptools.GibbsKernel1dtanh(
-    initial_params=[1.88, 0.09655, 0.05637, 0.002941, 0.8937],
-    fixed_params=[False, False, False, False, False],
-    param_bounds=[(0.0, 1000.0), (0.01, 10.0), (0.0001, 1.0), (0.0001, 0.1), (0.88, 0.91)],
-    num_proc=0,
-    enforce_bounds=True
-)
+# k = gptools.GibbsKernel1dtanh(
+#     initial_params=[1.88, 0.09655, 0.05637, 0.002941, 0.8937],
+#     fixed_params=[False, False, False, False, False],
+#     param_bounds=[(0.0, 1000.0), (0.01, 10.0), (0.0001, 1.0), (0.0001, 0.1), (0.88, 0.91)],
+#     num_proc=0,
+#     enforce_bounds=True
+# )
 
 # Set noise kernel:
 nk = gptools.DiagonalNoiseKernel(1, n=0, initial_noise=0.0, fixed_noise=True, noise_bound=(0.0001, 10.0))
@@ -179,7 +175,7 @@ nk = gptools.DiagonalNoiseKernel(1, n=0, initial_noise=0.0, fixed_noise=True, no
 # Create and populate GP:
 gp = gptools.GaussianProcess(k, noise_k=nk)
 gp.add_data(R_mid_w, Te_TS_w, err_y=dev_Te_TS_w)
-gp.add_data(R_mid_ETS_w, Te_ETS_w, err_y=dev_Te_ETS_w)
+# gp.add_data(R_mid_ETS_w, Te_ETS_w, err_y=dev_Te_ETS_w)
 gp.add_data(R_mid_FRC_w, Te_FRC_w, err_y=dev_Te_FRC_w)
 gp.add_data(R_mag_mean, 0, n=1)
 
