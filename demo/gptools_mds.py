@@ -19,7 +19,7 @@ N_Te_TS = electrons.getNode(r'\electrons::top.yag_new.results.profiles:te_rz')
 t_Te_TS = N_Te_TS.dim_of().data()
 # Only keep points that are in the RF flat top so the rise and fall don't mess
 # with our statistical tests:
-ok_idxs = (t_Te_TS >= 0.7) & (t_Te_TS <= 1.5)
+ok_idxs = (t_Te_TS >= 0.5) & (t_Te_TS <= 1.5)
 t_Te_TS = t_Te_TS[ok_idxs]
 
 Te_TS = N_Te_TS.data()[:, ok_idxs]
