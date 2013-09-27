@@ -178,7 +178,8 @@ Te_GPC2_w = scipy.stats.nanmean(Te_GPC2, axis=1)
 dev_Te_GPC2_w = scipy.stats.nanstd(Te_GPC2, axis=1)
 R_mid_GPC2_w = scipy.mean(R_mid_GPC2, axis=1)
 dev_R_mid_GPC2_w = scipy.std(R_mid_GPC2, axis=1)
-bad_idxs = scipy.where(scipy.isnan(Te_GPC2_w))[0]
+# Get rid of bad channels and channels outside the pedestal:
+bad_idxs = scipy.where(scipy.isnan(Te_GPC2_w) | (R_mid_GPC2 >= 0.9))[0]
 Te_GPC2_w = scipy.delete(Te_GPC2_w, bad_idxs)
 dev_Te_GPC2_w = scipy.delete(dev_Te_GPC2_w, bad_idxs)
 R_mid_GPC2_w = scipy.delete(R_mid_GPC2_w, bad_idxs)
@@ -188,6 +189,12 @@ Te_GPC_w = scipy.mean(Te_GPC, axis=1)
 dev_Te_GPC_w = scipy.std(Te_GPC, axis=1)
 R_mid_GPC_w = scipy.mean(R_mid_GPC, axis=1)
 dev_R_mid_GPC_w = scipy.std(R_mid_GPC, axis=1)
+# Get rid of clearly too small points (Why do these happen?)
+good_idxs = (Te_GPC_w >= 0.1)
+Te_GPC_w = Te_GPC_w[good_idxs]
+dev_Te_GPC_w = dev_Te_GPC_w[good_idxs]
+R_mid_GPC_w = R_mid_GPC_w[good_idxs]
+dev_R_mid_GPC_w = dev_R_mid_GPC_w[good_idxs]
 
 # # Use entire data set, taking every skip-th point:
 # skip = 1
@@ -272,24 +279,24 @@ class pos_cf(object):
 
 # Optimize hyperparameters:
 opt_start = time.time()
-# gp.optimize_hyperparameters(
-#     method='SLSQP',
-#     verbose=True,
-#     opt_kwargs={
-#         'bounds': (k + nk).free_param_bounds,
-#         'constraints': (
-#             # {'type': 'ineq', 'fun': pos_cf(0)},
-#             # {'type': 'ineq', 'fun': pos_cf(1)},
-#             # {'type': 'ineq', 'fun': pos_cf(2)},
-#             # {'type': 'ineq', 'fun': pos_cf(3)},
-#             # {'type': 'ineq', 'fun': pos_cf(4)},
-#             # {'type': 'ineq', 'fun': pos_cf(5)},
-#             {'type': 'ineq', 'fun': l_cf},
-#             # {'type': 'ineq', 'fun': gptools.Constraint(gp, n=1, type_='lt', loc='max')},
-#             # {'type': 'ineq', 'fun': gptools.Constraint(gp)},
-#         )
-#     }
-# )
+gp.optimize_hyperparameters(
+    method='SLSQP',
+    verbose=True,
+    opt_kwargs={
+        'bounds': (k + nk).free_param_bounds,
+        'constraints': (
+            # {'type': 'ineq', 'fun': pos_cf(0)},
+            # {'type': 'ineq', 'fun': pos_cf(1)},
+            # {'type': 'ineq', 'fun': pos_cf(2)},
+            # {'type': 'ineq', 'fun': pos_cf(3)},
+            # {'type': 'ineq', 'fun': pos_cf(4)},
+            # {'type': 'ineq', 'fun': pos_cf(5)},
+            # {'type': 'ineq', 'fun': l_cf},
+            # {'type': 'ineq', 'fun': gptools.Constraint(gp, n=1, type_='lt', loc='max')},
+            # {'type': 'ineq', 'fun': gptools.Constraint(gp)},
+        )
+    }
+)
 opt_elapsed = time.time() - opt_start
 
 # Make predictions:
