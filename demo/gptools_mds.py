@@ -65,14 +65,21 @@ R_mid_FRC = []
 for k in xrange(0, 32):
     N = electrons.getNode(r'frcece.data.eces%02d' % (k + 1,))
     Te_FRC.append(N.data())
-    N_R = electrons.getNode(r'frcece.data.rmid_%02d' % (k + 1,))
+    N_R = electrons.getNode(r'frcece.data.rmid_%02d' % (k + 1,).flatten())
     R_mid_FRC.append(N_R.data())
 # Assume all slow channels are on the same timebase:
 t_FRC = N.dim_of().data()
+# The radius is given on the EFIT timebase, so must be handled separately:
+t_R_FRC = N_R.dim_of().data()
+# Remove points outside of range of interest:
 ok_idxs = (t_FRC >= flat_start) & (t_FRC <= flat_stop)
-#t_FRC = t_FRC[ok_idxs]
-Te_FRC = scipy.asarray(Te_FRC, dtype=float)#[:, ok_idxs]
-R_mid_FRC = scipy.asarray(R_mid_FRC, dtype=float)#[:, ok_idxs]
+t_FRC = t_FRC[ok_idxs]
+Te_FRC = scipy.asarray(Te_FRC, dtype=float)[:, ok_idxs]
+# Handling the radius like this will be fine for shot-average, but needs to be
+# interpolated to handle single-frame:
+ok_idxs = (t_R_FRC >= flat_start) & (t_R_FRC <= flat_stop)
+t_R_FRC = t_R_FRC[ok_idxs]
+R_mid_FRC = scipy.asarray(R_mid_FRC, dtype=float)[:, ok_idxs]
 
 print(t_FRC.shape)
 print(Te_FRC.shape)
