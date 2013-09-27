@@ -93,7 +93,7 @@ R_mid_GPC2 = N_R.data()
 t_R_GPC2 = N_R.dim_of().data()
 ok_idxs = (t_R_GPC2 >= flat_start) & (t_R_GPC2 <= flat_stop)
 t_R_GPC2 = t_R_GPC2[ok_idxs]
-R_mid_GPC2 = R_mid_GPC2[ok_idxs]
+R_mid_GPC2 = R_mid_GPC2[:, ok_idxs]
 
 # Get magnetic axis location:
 R_mag = efit_tree.getMagR()
