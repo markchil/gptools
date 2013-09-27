@@ -95,6 +95,34 @@ ok_idxs = (t_R_GPC2 >= flat_start) & (t_R_GPC2 <= flat_stop)
 t_R_GPC2 = t_R_GPC2[ok_idxs]
 R_mid_GPC2 = R_mid_GPC2[:, ok_idxs]
 
+# Get GPC data:
+Te_GPC = []
+R_mid_GPC = []
+for k in xrange(0, 9):
+    N = electrons.getNode(r'ece.gpc_results.te%d' % (k + 1,))
+    Te_GPC.append(N.data())
+    N_R = electrons.getNode(r'ece.gpc_results.rad%d' % (k + 1,))
+    R_mid_GPC.append(N_R.data())
+# Assume all slow channels are on the same timebase:
+t_GPC = N.dim_of().data()
+# The radius is given on the EFIT timebase, so must be handled separately:
+t_R_GPC = N_R.dim_of().data()
+
+print(scipy.asarray(Te_GPC).shape)
+print(scipy.asarray(R_mid_GPC).shape)
+print(t_GPC.shape)
+print(t_R_GPC.shape)
+
+# Remove points outside of range of interest:
+ok_idxs = (t_GPC >= flat_start) & (t_GPC <= flat_stop)
+t_GPC = t_GPC[ok_idxs]
+Te_GPC = scipy.asarray(Te_GPC, dtype=float)[:, ok_idxs]
+# Handling the radius like this will be fine for shot-average, but needs to be
+# interpolated to handle single-frame:
+ok_idxs = (t_R_GPC >= flat_start) & (t_R_GPC <= flat_stop)
+t_R_GPC = t_R_GPC[ok_idxs]
+R_mid_GPC = scipy.asarray(R_mid_GPC, dtype=float)[:, ok_idxs]
+
 # Flag bad points for exclusion:
 Te_GPC2[(Te_GPC2 == 0.0)] = scipy.nan
 
@@ -162,6 +190,11 @@ dev_Te_GPC2_w = scipy.delete(dev_Te_GPC2_w, bad_idxs)
 R_mid_GPC2_w = scipy.delete(R_mid_GPC2_w, bad_idxs)
 dev_R_mid_GPC2_w = scipy.delete(dev_R_mid_GPC2_w, bad_idxs)
 
+Te_GPC_w = scipy.mean(Te_GPC, axis=1)
+dev_Te_GPC_w = scipy.std(Te_GPC, axis=1)
+R_mid_GPC_w = scipy.mean(R_mid_GPC, axis=1)
+dev_R_mid_GPC_w = scipy.std(R_mid_GPC, axis=1)
+
 # # Use entire data set, taking every skip-th point:
 # skip = 1
 # R_mid_w = R_mid_CTS.flatten()[::skip]
@@ -211,6 +244,7 @@ gp.add_data(R_mid_w, Te_TS_w, err_y=dev_Te_TS_w)
 gp.add_data(R_mid_ETS_w, Te_ETS_w, err_y=dev_Te_ETS_w)
 gp.add_data(R_mid_FRC_w, Te_FRC_w, err_y=dev_Te_FRC_w)
 gp.add_data(R_mid_GPC2_w, Te_GPC2_w, err_y=dev_Te_GPC2_w)
+gp.add_data(R_mid_GPC_w, Te_GPC_w, err_y=dev_Te_GPC_w)
 gp.add_data(R_mag_mean, 0, n=1)
 
 # Make constraint functions:
@@ -265,7 +299,7 @@ gp.optimize_hyperparameters(
 opt_elapsed = time.time() - opt_start
 
 # Make predictions:
-Rstar = scipy.linspace(R_mag_mean, R_mid_ETS_w.max(), 24*5)
+Rstar = scipy.linspace(0.63, 0.93, 24*5)
 
 mean_start = time.time()
 mean, cov = gp.predict(Rstar, noise=False)
@@ -303,11 +337,12 @@ a1.errorbar(R_mid_w, Te_TS_w, xerr=dev_R_mid_w, yerr=dev_Te_TS_w, fmt='r.', labe
 a1.errorbar(R_mid_ETS_w, Te_ETS_w, xerr=dev_R_mid_ETS_w, yerr=dev_Te_ETS_w, fmt='m.', label='ETS')
 a1.errorbar(R_mid_FRC_w, Te_FRC_w, xerr=dev_R_mid_FRC_w, yerr=dev_Te_FRC_w, fmt='b.', label='FRC')
 a1.errorbar(R_mid_GPC2_w, Te_GPC2_w, xerr=dev_R_mid_GPC2_w, yerr=dev_Te_GPC2_w, fmt='g.', label='GPC2')
+a1.errorbar(R_mid_GPC_w, Te_GPC_w, xerr=dev_R_mid_GPC_w, yerr=dev_Te_GPC_w, fmt='k.', label='GPC')
 a1.axvline(x=R_mag_mean, color='r', label='$R_{mag}$')
 a1.axvspan(R_mag_mean-R_mag_std, R_mag_mean+R_mag_std, alpha=0.375, facecolor='r')
 a1.axvline(x=R_out_mean, color='g', label='$R_{out}$')
 a1.axvspan(R_out_mean-R_out_std, R_out_mean+R_out_std, alpha=0.375, facecolor='g')
-a1.legend(loc='best')
+a1.legend(loc='best', fontsize=10, ncol=2)
 #a1.set_xlabel('$R$ [m]')
 a1.get_xaxis().set_visible(False)
 a1.set_ylim(0, 4.5)
@@ -339,7 +374,7 @@ a3.axvspan(R_mag_mean-R_mag_std, R_mag_mean+R_mag_std, alpha=0.375, facecolor='r
 a3.set_xlabel('$R$ [m]')
 a3.set_ylabel('$d^2T_{e}/dR^2$ [keV/m$^2$]')"""
 
-a1.set_xlim(0.66, 0.91)
+a1.set_xlim(0.63, 0.93)
 a3.set_ylim(0.0, 0.15)
 
 a3.text(1,
