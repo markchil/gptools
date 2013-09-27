@@ -179,7 +179,7 @@ dev_Te_GPC2_w = scipy.stats.nanstd(Te_GPC2, axis=1)
 R_mid_GPC2_w = scipy.mean(R_mid_GPC2, axis=1)
 dev_R_mid_GPC2_w = scipy.std(R_mid_GPC2, axis=1)
 # Get rid of bad channels and channels outside the pedestal:
-bad_idxs = scipy.where(scipy.isnan(Te_GPC2_w) | (R_mid_GPC2 >= 0.9))[0]
+bad_idxs = scipy.where(scipy.isnan(Te_GPC2_w) | (R_mid_GPC2_w >= 0.9))[0]
 Te_GPC2_w = scipy.delete(Te_GPC2_w, bad_idxs)
 dev_Te_GPC2_w = scipy.delete(dev_Te_GPC2_w, bad_idxs)
 R_mid_GPC2_w = scipy.delete(R_mid_GPC2_w, bad_idxs)
