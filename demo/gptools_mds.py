@@ -65,8 +65,8 @@ R_mid_FRC = []
 for k in xrange(0, 32):
     N = electrons.getNode(r'frcece.data.eces%02d' % (k + 1,))
     Te_FRC.append(N.data())
-    N_R = electrons.getNode(r'frcece.data.rmid_%02d' % (k + 1,).flatten())
-    R_mid_FRC.append(N_R.data())
+    N_R = electrons.getNode(r'frcece.data.rmid_%02d' % (k + 1,))
+    R_mid_FRC.append(N_R.data().flatten())
 # Assume all slow channels are on the same timebase:
 t_FRC = N.dim_of().data()
 # The radius is given on the EFIT timebase, so must be handled separately:
