@@ -39,6 +39,9 @@ R_mag = efit_tree.getMagR()
 t_EFIT = efit_tree.getTimeBase()
 R_mag_TS = scipy.interpolate.InterpolatedUnivariateSpline(t_EFIT, R_mag)(t_Te_TS)
 
+R_out = efit_tree.getRmidOut()
+R_out_TS = scipy.interpolate.InterpolatedUnivariateSpline(t_EFIT, R_out)(t_Te_TS)
+
 # Get edge data:
 N_Te_ETS = electrons.getNode(r'yag_edgets.results:te')
 
@@ -61,6 +64,10 @@ Te_ETS[(Te_ETS == 0) & (dev_Te_ETS == 1)] = scipy.nan
 # Mean magnetic axis:
 R_mag_mean = scipy.mean(R_mag)
 R_mag_std = scipy.std(R_mag)
+
+# Mean magnetic axis:
+R_out_mean = scipy.mean(R_out)
+R_out_std = scipy.std(R_out)
 
 # Compute weighted mean and weighted corected sample standard deviation:
 # idx = 44
@@ -206,6 +213,8 @@ a1.errorbar(R_mid_w, Te_TS_w, yerr=dev_Te_TS_w, fmt='r.')  #, xerr=dev_R_mid_w
 a1.errorbar(R_mid_ETS_w, Te_ETS_w, yerr=dev_Te_ETS_w, fmt='m.')  #, xerr=dev_R_mid_ETS_w
 a1.axvline(x=R_mag_mean, color='r')
 a1.axvspan(R_mag_mean-R_mag_std, R_mag_mean+R_mag_std, alpha=0.375, facecolor='r')
+a1.axvline(x=R_out_mean, color='g')
+a1.axvspan(R_out_mean-R_out_std, R_out_mean+R_out_std, alpha=0.375, facecolor='g')
 #a1.set_xlabel('$R$ [m]')
 a1.get_xaxis().set_visible(False)
 a1.set_ylim(0, 4.5)
@@ -217,6 +226,8 @@ a2.plot(Rstar, meand, 'k', linewidth=3)
 a2.fill_between(Rstar, (meand-stdd), (meand+stdd), alpha=0.375, facecolor='k')
 a2.axvline(x=R_mag_mean, color='r')
 a2.axvspan(R_mag_mean-R_mag_std, R_mag_mean+R_mag_std, alpha=0.375, facecolor='r')
+a1.axvline(x=R_out_mean, color='g')
+a1.axvspan(R_out_mean-R_out_std, R_out_mean+R_out_std, alpha=0.375, facecolor='g')
 # a2.set_xlabel('$R$ [m]')
 a2.get_xaxis().set_visible(False)
 a2.set_ylabel('$dT_{e}/dR$\n[keV/m]')
