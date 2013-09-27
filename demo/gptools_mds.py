@@ -237,7 +237,7 @@ k = gptools.GibbsKernel1dtanh(
 )
 
 # Set noise kernel:
-nk = gptools.DiagonalNoiseKernel(1, n=0, initial_noise=0.0, fixed_noise=True, noise_bound=(0.0, 10.0))
+nk = gptools.DiagonalNoiseKernel(1, n=0, initial_noise=0.0, fixed_noise=False, noise_bound=(0.0, 10.0))
 
 # Create and populate GP:
 gp = gptools.GaussianProcess(k, noise_k=nk)
