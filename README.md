@@ -1,7 +1,7 @@
 gptools
 =======
 
-Gaussian processes with arbitrary derivative constraints and predictions.f
+Gaussian processes with arbitrary derivative constraints and predictions.
 
 Developed and tested using Python 2.7 and scipy 0.12.0. Catches have been included to enable use with scipy 0.10.1. May work with other versions, but it has not been tested under such configurations.
 
