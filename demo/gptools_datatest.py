@@ -38,28 +38,28 @@ R_mag_mean = scipy.mean(R_mag)
 R_mag_std = scipy.std(R_mag)
 
 # Compute weighted mean and weighted corected sample standard deviation:
-# idx = 44
-# Te_TS_w = Te_TS[:, idx]
-# dev_Te_TS_w = dev_Te_TS[:, idx]
-# R_mid_w = R_mid_CTS[:, idx]
+idx = 65
+Te_TS_w = Te_TS[:, idx]
+dev_Te_TS_w = dev_Te_TS[:, idx]
+R_mid_w = R_mid_CTS[:, idx]
+
+Te_ETS_w_a = Te_ETS[:, idx]
+good_idxs = ~scipy.isnan(Te_ETS_w_a)
+Te_ETS_w = Te_ETS_w_a[good_idxs]
+dev_Te_ETS_w_a = dev_Te_ETS[:, idx]
+dev_Te_ETS_w = dev_Te_ETS_w_a[good_idxs]
+R_mid_ETS_w_a = R_mid_ETS[:, idx]
+R_mid_ETS_w = R_mid_ETS_w_a[good_idxs]
+
+# Te_TS_w = scipy.mean(Te_TS, axis=1)
+# dev_Te_TS_w = scipy.std(Te_TS, axis=1)
+# R_mid_w = scipy.mean(R_mid_CTS, axis=1)
+# dev_R_mid_w = scipy.std(R_mid_CTS, axis=1)
 # 
-# Te_ETS_w = Te_ETS[:, idx]
-# good_idxs = ~scipy.isnan(Te_ETS_w)
-# Te_ETS_w = Te_ETS_w[good_idxs]
-# dev_Te_ETS_w = dev_Te_ETS[:, idx]
-# dev_Te_ETS_w = dev_Te_ETS_w[good_idxs]
-# R_mid_ETS_w = R_mid_ETS[:, idx]
-# R_mid_ETS_w = R_mid_ETS_w[good_idxs]
-
-Te_TS_w = scipy.mean(Te_TS, axis=1)
-dev_Te_TS_w = scipy.std(Te_TS, axis=1)
-R_mid_w = scipy.mean(R_mid_CTS, axis=1)
-dev_R_mid_w = scipy.std(R_mid_CTS, axis=1)
-
-Te_ETS_w = scipy.stats.nanmean(Te_ETS, axis=1)
-dev_Te_ETS_w = scipy.stats.nanstd(Te_ETS, axis=1)
-R_mid_ETS_w = scipy.mean(R_mid_ETS, axis=1)
-dev_R_mid_ETS_w = scipy.std(R_mid_ETS, axis=1)
+# Te_ETS_w = scipy.stats.nanmean(Te_ETS, axis=1)
+# dev_Te_ETS_w = scipy.stats.nanstd(Te_ETS, axis=1)
+# R_mid_ETS_w = scipy.mean(R_mid_ETS, axis=1)
+# dev_R_mid_ETS_w = scipy.std(R_mid_ETS, axis=1)
 
 # skip = 1
 # R_mid_w = R_mid_CTS.flatten()[::skip]
@@ -140,7 +140,7 @@ gp.optimize_hyperparameters(
 )
 opt_elapsed = time.time() - opt_start
 
-Rstar = scipy.linspace(R_mag_mean, R_mid_ETS_w.max(), 24*10)
+Rstar = scipy.linspace(R_mag_mean, R_mid_ETS_w.max(), 24*40)
 
 mean_start = time.time()
 mean, cov = gp.predict(Rstar, noise=False)
@@ -166,14 +166,15 @@ meandd_approx = scipy.gradient(meand, Rstar[1] - Rstar[0])
 
 f = plt.figure()
 
-f.suptitle('Univariate GPR on TS data')
-# f.suptitle('Univariate GPR on single frame of TS data, $t=%.2fs$' % t_Te_TS[idx])
+# f.suptitle('Univariate GPR on TS data')
+f.suptitle('Univariate GPR on single frame of TS data, $t=%.2fs$' % t_Te_TS[idx])
 #f.suptitle('With slope constraint')
 
 a1 = f.add_subplot(3, 1, 1)
 a1.plot(Rstar, mean, 'k', linewidth=3)
 a1.fill_between(Rstar, mean-std, mean+std, alpha=0.375, facecolor='k')
 a1.errorbar(R_mid_w, Te_TS_w, yerr=dev_Te_TS_w, fmt='r.')  #, xerr=dev_R_mid_w
+# a1.errorbar(R_mid_ETS_w_a, Te_ETS_w_a, yerr=dev_Te_ETS_w_a, fmt='k.')  #, xerr=dev_R_mid_ETS_w
 a1.errorbar(R_mid_ETS_w, Te_ETS_w, yerr=dev_Te_ETS_w, fmt='m.')  #, xerr=dev_R_mid_ETS_w
 a1.axvline(x=R_mag_mean, color='r')
 a1.axvspan(R_mag_mean-R_mag_std, R_mag_mean+R_mag_std, alpha=0.375, facecolor='r')
