@@ -150,8 +150,8 @@ gp = gptools.GaussianProcess(k, noise_k=nk)
 gp.add_data(R_mid_w, ne_TS_w, err_y=dev_ne_TS_w)
 gp.add_data(R_mid_ETS_w, ne_ETS_w, err_y=dev_ne_ETS_w)
 gp.add_data(R_mag_mean, 0, n=1)
-gp.add_data(0.93, 0)
-gp.add_data(0.93, 0, n=1)
+# gp.add_data(0.93, 0)
+# gp.add_data(0.93, 0, n=1)
 
 # Make constraint functions:
 def l_cf(params):
