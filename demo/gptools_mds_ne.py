@@ -31,7 +31,7 @@ t_ne_TS = N_ne_TS.dim_of().data()
 ok_idxs = (t_ne_TS >= flat_start) & (t_ne_TS <= flat_stop)
 t_ne_TS = t_ne_TS[ok_idxs]
 
-ne_TS = N_ne_TS.data()[:, ok_idxs]
+ne_TS = N_ne_TS.data()[:, ok_idxs] / 1e20
 dev_ne_TS = electrons.getNode(r'yag_new.results.profiles:ne_err').data()[:, ok_idxs]
 
 Z_CTS = electrons.getNode(r'yag_new.results.profiles:z_sorted').data()
@@ -47,7 +47,7 @@ t_ne_ETS = N_ne_ETS.dim_of().data()
 # Assume ETS is on same timebase as CTS and use indices from above:
 t_ne_ETS = t_ne_ETS[ok_idxs]
 
-ne_ETS = N_ne_ETS.data()[:, ok_idxs]
+ne_ETS = N_ne_ETS.data()[:, ok_idxs] / 1e20
 dev_ne_ETS = electrons.getNode(r'yag_edgets.results:ne:error').data()[:, ok_idxs]
 
 Z_ETS = electrons.getNode(r'yag_edgets.data:fiber_z').data()
@@ -242,7 +242,7 @@ a1.legend(loc='best', fontsize=10, ncol=2)
 #a1.set_xlabel('$R$ [m]')
 a1.get_xaxis().set_visible(False)
 a1.set_ylim(0, 4.5)
-a1.set_ylabel('$n_{e}$ [m$^{-3}$]')
+a1.set_ylabel('$n_{e}$ [$10^{20}$m$^{-3}$]')
 
 a2 = f.add_subplot(3, 1, 2, sharex=a1)
 a2.plot(Rstar, meand, 'k', linewidth=3)
@@ -254,7 +254,7 @@ a1.axvline(x=R_out_mean, color='g')
 a1.axvspan(R_out_mean-R_out_std, R_out_mean+R_out_std, alpha=0.375, facecolor='g')
 # a2.set_xlabel('$R$ [m]')
 a2.get_xaxis().set_visible(False)
-a2.set_ylabel('$dn_{e}/dR$\n[m$^{-3}$/m]')
+a2.set_ylabel('$dn_{e}/dR$\n[$10^{20}$m$^{-3}$/m]')
 
 a3 = f.add_subplot(3, 1, 3, sharex=a1)
 a3.plot(Rstar, gp.k.cov_func.warp_function(Rstar, *gp.k.params[1:]), linewidth=3)
