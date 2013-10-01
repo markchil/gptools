@@ -226,14 +226,14 @@ f = plt.figure()
 
 # f.suptitle('Univariate GPR on TS data')
 # f.suptitle('Univariate GPR on time-averaged data')
-f.suptitle('Univariate GPR on single frame of TS data, $t=%.2fs$' % t_Te_TS[idx])
+f.suptitle('Univariate GPR on single frame of TS data, $t=%.2fs$' % t_ne_TS[idx])
 # f.suptitle('With slope constraint')
 
 a1 = f.add_subplot(3, 1, 1)
 a1.plot(Rstar, mean, 'k', linewidth=3, label='mean')
 a1.fill_between(Rstar, mean-std, mean+std, alpha=0.375, facecolor='k')
-a1.errorbar(R_mid_w, ne_TS_w, xerr=dev_R_mid_w, yerr=dev_ne_TS_w, fmt='r.', label='CTS')
-a1.errorbar(R_mid_ETS_w, ne_ETS_w, xerr=dev_R_mid_ETS_w, yerr=dev_ne_ETS_w, fmt='m.', label='ETS')
+a1.errorbar(R_mid_w, ne_TS_w, yerr=dev_ne_TS_w, fmt='r.', label='CTS') # , xerr=dev_R_mid_w
+a1.errorbar(R_mid_ETS_w, ne_ETS_w, yerr=dev_ne_ETS_w, fmt='m.', label='ETS') # , xerr=dev_R_mid_ETS_w
 a1.axvline(x=R_mag_mean, color='r', label='$R_{mag}$')
 a1.axvspan(R_mag_mean-R_mag_std, R_mag_mean+R_mag_std, alpha=0.375, facecolor='r')
 a1.axvline(x=R_out_mean, color='g', label='$R_{out}$')
@@ -241,7 +241,7 @@ a1.axvspan(R_out_mean-R_out_std, R_out_mean+R_out_std, alpha=0.375, facecolor='g
 a1.legend(loc='best', fontsize=10, ncol=2)
 #a1.set_xlabel('$R$ [m]')
 a1.get_xaxis().set_visible(False)
-a1.set_ylim(0, 4.5)
+#a1.set_ylim(bottom=0)
 a1.set_ylabel('$n_{e}$ [$10^{20}$m$^{-3}$]')
 
 a2 = f.add_subplot(3, 1, 2, sharex=a1)
