@@ -32,7 +32,7 @@ ok_idxs = (t_ne_TS >= flat_start) & (t_ne_TS <= flat_stop)
 t_ne_TS = t_ne_TS[ok_idxs]
 
 ne_TS = N_ne_TS.data()[:, ok_idxs] / 1e20
-dev_ne_TS = electrons.getNode(r'yag_new.results.profiles:ne_err').data()[:, ok_idxs]
+dev_ne_TS = electrons.getNode(r'yag_new.results.profiles:ne_err').data()[:, ok_idxs] / 1e20
 
 Z_CTS = electrons.getNode(r'yag_new.results.profiles:z_sorted').data()
 R_CTS = electrons.getNode(r'yag.results.param:r').data() * scipy.ones_like(Z_CTS)
@@ -48,7 +48,7 @@ t_ne_ETS = N_ne_ETS.dim_of().data()
 t_ne_ETS = t_ne_ETS[ok_idxs]
 
 ne_ETS = N_ne_ETS.data()[:, ok_idxs] / 1e20
-dev_ne_ETS = electrons.getNode(r'yag_edgets.results:ne:error').data()[:, ok_idxs]
+dev_ne_ETS = electrons.getNode(r'yag_edgets.results:ne:error').data()[:, ok_idxs] / 1e20
 
 Z_ETS = electrons.getNode(r'yag_edgets.data:fiber_z').data()
 R_ETS = electrons.getNode(r'yag.results.param:R').data() * scipy.ones_like(Z_ETS)
