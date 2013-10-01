@@ -314,22 +314,17 @@ meand_elapsed = time.time() - meand_start
 meand = scipy.asarray(meand).flatten()
 stdd = scipy.sqrt(scipy.diagonal(covd))
 
-print("Optimization took: %.2fs\nMean prediction took: %.2fs\nGradient prediction took: %.2fs\n"  % (opt_elapsed, mean_elapsed, meand_elapsed))
+print("Optimization took: %.2fs\nMean prediction took: %.2fs\nGradient "
+      "prediction took: %.2fs\n"  % (opt_elapsed, mean_elapsed, meand_elapsed))
 
-"""meandd, covdd = gp.predict(Rstar, noise=False, n=2)
-meandd = scipy.asarray(meandd).flatten()
-stddd = scipy.sqrt(scipy.diagonal(covdd))"""
-
-
-meand_approx = scipy.gradient(mean, Rstar[1] - Rstar[0])
-meandd_approx = scipy.gradient(meand, Rstar[1] - Rstar[0])
+# meand_approx = scipy.gradient(mean, Rstar[1] - Rstar[0])
 
 f = plt.figure()
 
 # f.suptitle('Univariate GPR on TS data')
 f.suptitle('Univariate GPR on time-averaged data')
 # f.suptitle('Univariate GPR on single frame of TS data, $t=%.2fs$' % t_Te_TS[idx])
-#f.suptitle('With slope constraint')
+# f.suptitle('With slope constraint')
 
 a1 = f.add_subplot(3, 1, 1)
 a1.plot(Rstar, mean, 'k', linewidth=3, label='mean')
@@ -366,15 +361,6 @@ a3.plot(Rstar, gp.k.cov_func.warp_function(Rstar, *gp.k.params[1:]), linewidth=3
 a3.set_xlabel('$R$ [m]')
 a3.set_ylabel('$l$ [m]')
 
-"""a3 = f.add_subplot(3, 1, 3, sharex=a1)
-a3.plot(Rstar, meandd, 'k', linewidth=3)
-a3.plot(Rstar, meandd_approx)
-a3.fill_between(Rstar, (meandd-stddd), (meandd+stddd), alpha=0.375, facecolor='k')
-a3.axvline(x=R_mag_mean, color='r')
-a3.axvspan(R_mag_mean-R_mag_std, R_mag_mean+R_mag_std, alpha=0.375, facecolor='r')
-a3.set_xlabel('$R$ [m]')
-a3.set_ylabel('$d^2T_{e}/dR^2$ [keV/m$^2$]')"""
-
 a1.set_xlim(0.63, 0.93)
 a3.set_ylim(0.0, 0.15)
 
@@ -400,51 +386,3 @@ a2.yaxis.get_major_ticks()[-1].label.set_visible(False)
 a2.yaxis.get_major_ticks()[0].label.set_visible(False)
 # a3.yaxis.get_major_ticks()[-1].label.set_visible(False)
 f.canvas.draw()
-
-"""print("Computing LL matrix...this could take a while!")
-
-sigma_f_1_bounds = (0.75, 5.0)
-l_1_bounds = (0.1, 0.5)
-sigma_f_2_bounds = (0.75, 5.0)
-l_2_bounds = (0.001, 0.1)
-num_sigma_f_1 = 24
-num_l_1 = 25
-num_sigma_f_2 = 26
-num_l_2 = 27
-ll_vals, param_vals = gptools.parallel_compute_ll_matrix(
-    gp,
-    [sigma_f_1_bounds, l_1_bounds, sigma_f_2_bounds, l_2_bounds],
-    [num_sigma_f_1, num_l_1, num_sigma_f_2, num_l_2],
-    num_proc=None
-)
-#ll_vals, param_vals = gp.compute_ll_matrix([sigma_f_bounds, l_bounds], [num_sigma_f, num_l])
-sigma_f_1_vals = param_vals[0]
-l_1_vals = param_vals[1]
-sigma_f_2_vals = param_vals[2]
-l_2_vals = param_vals[3]
-
-gptools.slice_plot(ll_vals, sigma_f_1_vals, l_1_vals, sigma_f_2_vals, l_2_vals, names=['sigma f 1', 'l 1', 'sigma f 2', 'l2'])"""
-
-#L, SIGMA_F = scipy.meshgrid(l_vals, sigma_f_vals)
-
-"""grid = scipy.mgrid[0:num_sigma_f, 0:num_l, 0:num_sigma_n]
-SIGMA_F = sigma_f_vals[grid[0]]
-L = l_vals[grid[1]]
-SIGMA_N = sigma_n_vals[grid[2]]
-
-cs = mlab.contour3d(SIGMA_F/sigma_f_vals.max(), L/l_vals.max(), SIGMA_N/sigma_n_vals.max(), ll_vals, contours=200, opacity=0.5)
-ax = mlab.axes(xlabel='sigma f', ylabel='l', zlabel='sigma n')
-cb = mlab.colorbar(title='ll')
-mlab.show()"""
-
-"""f2 = plt.figure()
-a2 = f2.add_subplot(1, 1, 1)
-cs = a2.contour(L, SIGMA_F, ll_vals, 300)#, vmin=-40, vmax=0)
-cbar = f2.colorbar(cs)
-cbar.set_label('$\ln\, p(T\,|\,R,\, l,\, \sigma_f)$', labelpad=12)
-#cbar.set_ticks(range(-45, 5, 5))
-#a2.plot(gp.k.params[1], gp.k.params[0], 'k+', markersize=12)
-a2.set_xlabel('$l$ [m]')
-a2.set_ylabel('$\sigma_{f}$ [keV]')
-
-a2.set_title('Contours of $\ln\, p(T\,|\,R,\, l,\, \sigma_f)$')"""
