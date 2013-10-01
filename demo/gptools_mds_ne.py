@@ -57,7 +57,7 @@ t_grid, R_grid = scipy.meshgrid(t_ne_ETS, R_ETS)
 R_mid_ETS = efit_tree.rz2rmid(R_grid, Z_grid, t_grid, each_t=False)
 
 # Flag bad points for exclusion:
-#ne_ETS[(ne_ETS == 0) & (dev_ne_ETS == 1)] = scipy.nan
+ne_ETS[(ne_ETS == 0) & (dev_ne_ETS == 2)] = scipy.nan
 
 # Get magnetic axis location:
 R_mag = efit_tree.getMagR()
@@ -72,35 +72,35 @@ R_out_mean = scipy.mean(R_out)
 R_out_std = scipy.std(R_out)
 
 # Compute weighted mean and weighted corected sample standard deviation:
-# Single time slice:
-idx = 44
-ne_TS_w = ne_TS[:, idx]
-dev_ne_TS_w = dev_ne_TS[:, idx]
-R_mid_w = R_mid_CTS[:, idx]
-
-ne_ETS_w = ne_ETS[:, idx]
-good_idxs = ~scipy.isnan(ne_ETS_w)
-ne_ETS_w = ne_ETS_w[good_idxs]
-dev_ne_ETS_w = dev_ne_ETS[:, idx]
-dev_ne_ETS_w = dev_ne_ETS_w[good_idxs]
-R_mid_ETS_w = R_mid_ETS[:, idx]
-R_mid_ETS_w = R_mid_ETS_w[good_idxs]
-
-R_mag_mean = R_mag[idx]
-R_mag_std = 0.0
-R_out_mean = R_out[idx]
-R_out_std = 0.0
+# # Single time slice:
+# idx = 44
+# ne_TS_w = ne_TS[:, idx]
+# dev_ne_TS_w = dev_ne_TS[:, idx]
+# R_mid_w = R_mid_CTS[:, idx]
+# 
+# ne_ETS_w = ne_ETS[:, idx]
+# good_idxs = ~scipy.isnan(ne_ETS_w)
+# ne_ETS_w = ne_ETS_w[good_idxs]
+# dev_ne_ETS_w = dev_ne_ETS[:, idx]
+# dev_ne_ETS_w = dev_ne_ETS_w[good_idxs]
+# R_mid_ETS_w = R_mid_ETS[:, idx]
+# R_mid_ETS_w = R_mid_ETS_w[good_idxs]
+# 
+# R_mag_mean = R_mag[idx]
+# R_mag_std = 0.0
+# R_out_mean = R_out[idx]
+# R_out_std = 0.0
 
 # Average over entire data set:
-# ne_TS_w = scipy.mean(ne_TS, axis=1)
-# dev_ne_TS_w = scipy.std(ne_TS, axis=1, ddof=1)
-# R_mid_w = scipy.mean(R_mid_CTS, axis=1)
-# dev_R_mid_w = scipy.std(R_mid_CTS, axis=1, ddof=1)
-# 
-# ne_ETS_w = scipy.stats.nanmean(ne_ETS, axis=1)
-# dev_ne_ETS_w = scipy.stats.nanstd(ne_ETS, axis=1)
-# R_mid_ETS_w = scipy.mean(R_mid_ETS, axis=1)
-# dev_R_mid_ETS_w = scipy.std(R_mid_ETS, axis=1, ddof=1)
+ne_TS_w = scipy.mean(ne_TS, axis=1)
+dev_ne_TS_w = scipy.std(ne_TS, axis=1, ddof=1)
+R_mid_w = scipy.mean(R_mid_CTS, axis=1)
+dev_R_mid_w = scipy.std(R_mid_CTS, axis=1, ddof=1)
+
+ne_ETS_w = scipy.stats.nanmean(ne_ETS, axis=1)
+dev_ne_ETS_w = scipy.stats.nanstd(ne_ETS, axis=1)
+R_mid_ETS_w = scipy.mean(R_mid_ETS, axis=1)
+dev_R_mid_ETS_w = scipy.std(R_mid_ETS, axis=1, ddof=1)
 
 # # Use entire data set, taking every skip-th point:
 # skip = 1
@@ -225,15 +225,15 @@ print("Optimization took: %.2fs\nMean prediction took: %.2fs\nGradient "
 f = plt.figure()
 
 # f.suptitle('Univariate GPR on TS data')
-# f.suptitle('Univariate GPR on time-averaged data')
-f.suptitle('Univariate GPR on single frame of TS data, $t=%.2fs$' % t_ne_TS[idx])
+f.suptitle('Univariate GPR on time-averaged data')
+# f.suptitle('Univariate GPR on single frame of TS data, $t=%.2fs$' % t_ne_TS[idx])
 # f.suptitle('With slope constraint')
 
 a1 = f.add_subplot(3, 1, 1)
 a1.plot(Rstar, mean, 'k', linewidth=3, label='mean')
 a1.fill_between(Rstar, mean-std, mean+std, alpha=0.375, facecolor='k')
-a1.errorbar(R_mid_w, ne_TS_w, yerr=dev_ne_TS_w, fmt='r.', label='CTS') # , xerr=dev_R_mid_w
-a1.errorbar(R_mid_ETS_w, ne_ETS_w, yerr=dev_ne_ETS_w, fmt='m.', label='ETS') # , xerr=dev_R_mid_ETS_w
+a1.errorbar(R_mid_w, ne_TS_w, xerr=dev_R_mid_w, yerr=dev_ne_TS_w, fmt='r.', label='CTS')
+a1.errorbar(R_mid_ETS_w, ne_ETS_w, xerr=dev_R_mid_ETS_w, yerr=dev_ne_ETS_w, fmt='m.', label='ETS')
 a1.axvline(x=R_mag_mean, color='r', label='$R_{mag}$')
 a1.axvspan(R_mag_mean-R_mag_std, R_mag_mean+R_mag_std, alpha=0.375, facecolor='r')
 a1.axvline(x=R_out_mean, color='g', label='$R_{out}$')
@@ -241,7 +241,7 @@ a1.axvspan(R_out_mean-R_out_std, R_out_mean+R_out_std, alpha=0.375, facecolor='g
 a1.legend(loc='best', fontsize=10, ncol=2)
 #a1.set_xlabel('$R$ [m]')
 a1.get_xaxis().set_visible(False)
-#a1.set_ylim(bottom=0)
+a1.set_ylim(bottom=0)
 a1.set_ylabel('$n_{e}$ [$10^{20}$m$^{-3}$]')
 
 a2 = f.add_subplot(3, 1, 2, sharex=a1)
