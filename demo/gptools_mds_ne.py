@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 plt.ion()
 #plt.close('all')
 
-shot = 1101014006
+shot = 1120808024#1101014006
 # Start and end times of flat top:
 flat_start = 1.0
 flat_stop = 1.5
@@ -150,8 +150,8 @@ gp = gptools.GaussianProcess(k, noise_k=nk)
 gp.add_data(R_mid_w, ne_TS_w, err_y=dev_ne_TS_w)
 gp.add_data(R_mid_ETS_w, ne_ETS_w, err_y=dev_ne_ETS_w)
 gp.add_data(R_mag_mean, 0, n=1)
-gp.add_data(0.902, 0)
-gp.add_data(0.902, 0, n=1)
+# gp.add_data(0.902, 0)
+# gp.add_data(0.902, 0, n=1)
 
 # Make constraint functions:
 def l_cf(params):
