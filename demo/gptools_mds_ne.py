@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 plt.ion()
 #plt.close('all')
 
-shot = 1120808024#1101014006
+shot = 1101014006
 # Start and end times of flat top:
 flat_start = 1.0
 flat_stop = 1.5
