@@ -30,6 +30,7 @@ import matplotlib.pyplot as plt
 import matplotlib.widgets as mplw
 import matplotlib.gridspec as mplgs
 import itertools
+import collections
 
 def parallel_compute_ll_matrix(gp, bounds, num_pts, num_proc=None):
     """Compute matrix of the log likelihood over the parameter space in parallel.
