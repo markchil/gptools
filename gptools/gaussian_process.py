@@ -31,7 +31,6 @@ import scipy.stats
 import numpy.random
 import sys
 import warnings
-import collections
 
 class GaussianProcess(object):
     r"""Gaussian process.
@@ -860,7 +859,7 @@ class Constraint(object):
                 res = wrap_fmin_slsqp(
                     lambda X: factor * self.gp.predict(X, n=self.n, return_cov=False)[0, 0],
                     scipy.mean(self.bounds, axis=1),
-                    opt_kwargs={'bounds': self.bounds}
+                    opt_kwargs={'bounds': self.bounds, 'iprint': 0}
                 )
                 
             if not res.success:
