@@ -150,8 +150,8 @@ gp = gptools.GaussianProcess(k, noise_k=nk)
 gp.add_data(R_mid_w, ne_TS_w, err_y=dev_ne_TS_w)
 gp.add_data(R_mid_ETS_w, ne_ETS_w, err_y=dev_ne_ETS_w)
 gp.add_data(R_mag_mean, 0, n=1)
-gp.add_data(0.902, 0)
-gp.add_data(0.902, 0, n=1)
+# gp.add_data(0.902, 0)
+# gp.add_data(0.902, 0, n=1)
 
 # Make constraint functions:
 def l_cf(params):
@@ -197,7 +197,7 @@ gp.optimize_hyperparameters(
             # {'type': 'ineq', 'fun': pos_cf(4)},
             # {'type': 'ineq', 'fun': pos_cf(5)},
             {'type': 'ineq', 'fun': l_cf},
-            # {'type': 'ineq', 'fun': gptools.Constraint(gp, n=1, type_='lt', loc=0.93)},
+            {'type': 'ineq', 'fun': gptools.Constraint(gp, n=1, type_='lt', loc=0.902)},
             # {'type': 'ineq', 'fun': gptools.Constraint(gp)},
         )
     }
