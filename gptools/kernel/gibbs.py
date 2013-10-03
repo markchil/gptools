@@ -219,7 +219,7 @@ class GibbsKernel1dGaussArb(ArbitraryKernel):
                                                     **kwargs)
 
 class GibbsKernel1d(Kernel):
-    """Univariate Gibbs kernel with arbitrary length scale warping for low derivatives.
+    r"""Univariate Gibbs kernel with arbitrary length scale warping for low derivatives.
     
     The covariance function is given by
     
