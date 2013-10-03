@@ -91,10 +91,9 @@ R_mid_ETS_w = R_mid_ETS_w_a[good_idxs]
 #                                     fixed_params=[False, False, False],
 #                                     param_bounds=[(0.0, 1000.0), (0.001, 100.0), (0.01, 1.0)],
 #                                     enforce_bounds=True)
-k = gptools.GibbsKernel1dtanh(initial_params=[1, 0.15, 0.01, 0.005, 0.89],
+k = gptools.GibbsKernel1dTanh(initial_params=[1, 0.15, 0.01, 0.005, 0.89],
                               fixed_params=[False, False, False, False, False],
                               param_bounds=[(0.0, 1000.0), (0.01, 10.0), (0.0001, 1.0), (0.0001, 0.1), (0.88, 0.91)],
-                              num_proc=None,
                               enforce_bounds=True)
 
 nk = gptools.DiagonalNoiseKernel(1, n=0, initial_noise=0.0, fixed_noise=True, noise_bound=(0.0001, 10.0))
@@ -121,22 +120,22 @@ class pos_cf(object):
 
 opt_start = time.time()
 gp.optimize_hyperparameters(
-    method='SLSQP',
-    verbose=True,
-    opt_kwargs={
-        'bounds': (k + nk).free_param_bounds,
-        'constraints': (
-            # {'type': 'ineq', 'fun': pos_cf(0)},
-            # {'type': 'ineq', 'fun': pos_cf(1)},
-            # {'type': 'ineq', 'fun': pos_cf(2)},
-            # {'type': 'ineq', 'fun': pos_cf(3)},
-            # {'type': 'ineq', 'fun': pos_cf(4)},
-            # {'type': 'ineq', 'fun': pos_cf(5)},
-            {'type': 'ineq', 'fun': l_cf},
-            # {'type': 'ineq', 'fun': gptools.Constraint(gp, n=1, type_='lt', loc='max')},
-            #{'type': 'ineq', 'fun': gptools.Constraint(gp)},
-        )
-    }
+   method='SLSQP',
+   verbose=True,
+   opt_kwargs={
+       'bounds': (k + nk).free_param_bounds,
+       'constraints': (
+           # {'type': 'ineq', 'fun': pos_cf(0)},
+           # {'type': 'ineq', 'fun': pos_cf(1)},
+           # {'type': 'ineq', 'fun': pos_cf(2)},
+           # {'type': 'ineq', 'fun': pos_cf(3)},
+           # {'type': 'ineq', 'fun': pos_cf(4)},
+           # {'type': 'ineq', 'fun': pos_cf(5)},
+           {'type': 'ineq', 'fun': l_cf},
+           # {'type': 'ineq', 'fun': gptools.Constraint(gp, n=1, type_='lt', loc='max')},
+           #{'type': 'ineq', 'fun': gptools.Constraint(gp)},
+       )
+   }
 )
 opt_elapsed = time.time() - opt_start
 
@@ -194,7 +193,7 @@ a2.get_xaxis().set_visible(False)
 a2.set_ylabel('$dT_{e}/dR$\n[keV/m]')
 
 a3 = f.add_subplot(3, 1, 3, sharex=a1)
-a3.plot(Rstar, gp.k.cov_func.warp_function(Rstar, *gp.k.params[1:]), linewidth=3)
+a3.plot(Rstar, gp.k.l_func(Rstar, 0, *gp.k.params[1:]), linewidth=3)
 a3.set_xlabel('$R$ [m]')
 a3.set_ylabel('$l$ [m]')
 
@@ -208,7 +207,7 @@ a3.set_xlabel('$R$ [m]')
 a3.set_ylabel('$d^2T_{e}/dR^2$ [keV/m$^2$]')"""
 
 a1.set_xlim(0.69, 0.92)
-a3.set_ylim(0.0, 0.1)
+a3.set_ylim(bottom=0.0)
 
 a3.text(1,
         0.0,

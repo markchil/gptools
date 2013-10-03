@@ -20,13 +20,15 @@
 
 from __future__ import division
 
-from .core import ArbitraryKernel
+from .core import Kernel, ArbitraryKernel
+from ..utils import unique_rows
 
 import mpmath
 import scipy
 import scipy.interpolate
+import inspect
 
-def tanh_warp(X, l1, l2, lw, x0):
+def tanh_warp_arb(X, l1, l2, lw, x0):
     r"""Warps the `X` coordinate with the tanh model
     
     .. math::
@@ -58,40 +60,7 @@ def tanh_warp(X, l1, l2, lw, x0):
     else:
         return 0.5 * ((l1 + l2) - (l1 - l2) * mpmath.tanh((X - x0) / lw))
 
-def spline_warp(X, l1, l2, lw, x0):
-    r"""Warps the `X` coordinate with a "divot" spline shape.
-    
-    .. WARNING:: Broken! Do not use!
-    
-    Parameters
-    ----------
-    X : :py:class:`Array`, (`M`,) or scalar float
-        `M` locations to evaluate length scale at.
-    l1 : positive float
-        Global value of the length scale.
-    l2 : positive float
-        Pedestal value of the length scale.
-    lw : positive float
-        Width of the dip.
-    x0 : float
-        Location of the center of the dip in length scale.
-    
-    Returns
-    -------
-    l : :py:class:`Array`, (`M`,) or scalar float
-        The value of the length scale at the specified point.
-    """
-    # TODO: Why does this give non-PSD covariance matrices?
-    if isinstance(X, mpmath.mpf):
-        X = float(X)
-    if isinstance(X, scipy.matrix):
-        X = scipy.asarray(X, dtype=float).squeeze()
-    return scipy.interpolate.UnivariateSpline([0.0, x0-lw/2.0, x0, x0+lw/2.0, 1.0],
-                                              [l1, l1, l2, l1, l1],
-                                              k=3,
-                                              s=0)(X)
-
-def gauss_warp(X, l1, l2, lw, x0):
+def gauss_warp_arb(X, l1, l2, lw, x0):
     r"""Warps the `X` coordinate with a Gaussian-shaped divot.
     
     .. math::
@@ -123,7 +92,7 @@ def gauss_warp(X, l1, l2, lw, x0):
     else:
         return l1 - (l1 - l2) * mpmath.exp(-4.0 * mpmath.log(2.0) * (X - x0)**2.0 / (lw**2.0))
 
-class GibbsFunction1d(object):
+class GibbsFunction1dArb(object):
     r"""Wrapper class for the Gibbs covariance function, permits the use of arbitrary warping.
     
     The covariance function is given by
@@ -173,7 +142,7 @@ class GibbsFunction1d(object):
             return sigmaf**2.0 * (mpmath.sqrt(2.0 * li * lj / (li**2.0 + lj**2.0)) *
                                   mpmath.exp(-(Xi - Xj)**2.0 / (li**2 + lj**2)))
 
-class GibbsKernel1dtanh(ArbitraryKernel):
+class GibbsKernel1dTanhArb(ArbitraryKernel):
     r"""Gibbs warped squared exponential covariance function in 1d.
     
     Computes derivatives using :py:func:`mpmath.diff` and is hence in general
@@ -207,47 +176,11 @@ class GibbsKernel1dtanh(ArbitraryKernel):
         All parameters are passed to :py:class:`~gptools.kernel.core.Kernel`.
     """
     def __init__(self, **kwargs):
-        super(GibbsKernel1dtanh, self).__init__(1,
-                                                GibbsFunction1d(tanh_warp),
-                                                **kwargs)
+        super(GibbsKernel1dTanhArb, self).__init__(1,
+                                                   GibbsFunction1dArb(tanh_warp_arb),
+                                                   **kwargs)
 
-class GibbsKernel1dSpline(ArbitraryKernel):
-    r"""Gibbs warped squared exponential covariance function in 1d.
-    
-    .. WARNING:: Broken! Do not use!
-    
-    Computes derivatives using :py:func:`mpmath.diff` and is hence in general
-    much slower than a hard-coded implementation of a given kernel.
-    
-    The covariance function is given by
-    
-    .. math::
-
-        k = \left ( \frac{2l(x)l(x')}{l^2(x)+l^2(x')} \right )^{1/2}\exp\left ( -\frac{(x-x')^2}{l^2(x)+l^2(x')} \right )
-    
-    Warps the length scale using a spline.
-    
-    The order of the hyperparameters is:
-    
-    = ====== ==================================================
-    0 sigmaf Amplitude of the covariance function
-    1 l1     Global value of the length scale.
-    2 l2     Pedestal value of the length scale.
-    3 lw     Width of the dip.
-    4 x0     Location of the center of the dip in length scale.
-    = ====== ==================================================
-
-    Parameters
-    ----------
-    **kwargs
-        All parameters are passed to :py:class:`~gptools.kernel.core.Kernel`.
-    """
-    def __init__(self, **kwargs):
-        super(GibbsKernel1dSpline, self).__init__(1,
-                                                  GibbsFunction1d(spline_warp),
-                                                  **kwargs)
-
-class GibbsKernel1dGauss(ArbitraryKernel):
+class GibbsKernel1dGaussArb(ArbitraryKernel):
     r"""Gibbs warped squared exponential covariance function in 1d.
     
     Computes derivatives using :py:func:`mpmath.diff` and is hence in general
@@ -281,6 +214,236 @@ class GibbsKernel1dGauss(ArbitraryKernel):
         All parameters are passed to :py:class:`~gptools.kernel.core.Kernel`.
     """
     def __init__(self, **kwargs):
-        super(GibbsKernel1dGauss, self).__init__(1,
-                                                 GibbsFunction1d(gauss_warp),
-                                                 **kwargs)
+        super(GibbsKernel1dGaussArb, self).__init__(1,
+                                                    GibbsFunction1dArb(gauss_warp_arb),
+                                                    **kwargs)
+
+class GibbsKernel1d(Kernel):
+    """Univariate Gibbs kernel with arbitrary length scale warping for low derivatives.
+    
+    The derivatives are hard-coded using expressions obtained from Mathematica.
+    
+    Parameters
+    ----------
+    l_func : callable
+        Function that dictates the length scale warping and its derivative.
+        Must have fingerprint (`x`, `n`, `p1`, `p2`, ...) where `p1` is element
+        one of the kernel's parameters (i.e., element zero is skipped).
+    **kwargs
+        All remaining arguments are passed to :py:class:`~gptools.kernel.core.Kernel`.
+    """
+    def __init__(self, l_func, **kwargs):
+        self.l_func = l_func
+        # There are two unimportant parameters at the start of the l_func
+        # fingerprint, then we have to add one for sigma_f.
+        try:
+            num_params = len(inspect.getargspec(l_func)[0]) - 2 + 1
+        except TypeError:
+            # Need to remove self from the arg list for bound method:
+            num_params = len(inspect.getargspec(l_func.__call__)[0]) - 3 + 1
+        
+        super(GibbsKernel1d, self).__init__(1, num_params, **kwargs)
+    
+    def __call__(self, Xi, Xj, ni, nj, hyper_deriv=None, symmetric=False):
+        """Evaluate the covariance between points `Xi` and `Xj` with derivative order `ni`, `nj`.
+        
+        Parameters
+        ----------
+        Xi : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+            `M` inputs with dimension `N`.
+        Xj : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+            `M` inputs with dimension `N`.
+        ni : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+            `M` derivative orders for set `i`.
+        nj : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+            `M` derivative orders for set `j`.
+        hyper_deriv : Non-negative int or None, optional
+            The index of the hyperparameter to compute the first derivative
+            with respect to. If None, no derivatives are taken. Hyperparameter
+            derivatives are not supported at this point. Default is None.
+        symmetric : bool, optional
+            Whether or not the input `Xi`, `Xj` are from a symmetric matrix.
+            Default is False.
+        
+        Returns
+        -------
+        Kij : :py:class:`Array`, (`M`,)
+            Covariances for each of the `M` `Xi`, `Xj` pairs.
+        
+        Raises
+        ------
+        NotImplementedError
+            If the `hyper_deriv` keyword is not None.
+        
+        if hyper_deriv is not None:
+            raise NotImplementedError("Hyperparameter derivatives have not been implemented!")
+        """
+        n_combined = scipy.asarray(scipy.hstack((ni, nj)), dtype=int)
+        n_combined_unique = unique_rows(n_combined)
+        
+        x = scipy.asarray(Xi, dtype=float)
+        y = scipy.asarray(Xj, dtype=float)
+        
+        lx = self.l_func(x, 0, *self.params[1:])
+        ly = self.l_func(y, 0, *self.params[1:])
+        lx1 = self.l_func(x, 1, *self.params[1:])
+        ly1 = self.l_func(y, 1, *self.params[1:])
+        
+        x_y = x - y
+        lx2ly2 = lx**2 + ly**2
+        
+        k = scipy.zeros(Xi.shape[0], dtype=float)
+        for n_combined_state in n_combined_unique:
+            idxs = (n_combined == n_combined_state).all(axis=1)
+            # Derviative expressions evaluated with Mathematica, assuming l>0.
+            if (n_combined_state == scipy.asarray([0, 0])).all():
+                k[idxs] = (scipy.sqrt(2.0 * lx[idxs] * ly[idxs] / lx2ly2[idxs]) *
+                           scipy.exp(-x_y[idxs]**2 / lx2ly2[idxs]))
+            elif (n_combined_state == scipy.asarray([1, 0])).all():
+                k[idxs] = (
+                    (
+                        scipy.exp(-(x_y[idxs]**2 / lx2ly2[idxs])) *
+                        ly[idxs] * (
+                            -4 * x_y[idxs] * lx[idxs]**3 -
+                            4 * x_y[idxs] * lx[idxs] * ly[idxs]**2 +
+                            4 * x_y[idxs]**2 * lx[idxs]**2 * lx1[idxs] - 
+                            lx[idxs]**4 * lx1[idxs] +
+                            ly[idxs]**4 * lx1[idxs]
+                        )
+                    ) / (scipy.sqrt(2 * (lx[idxs] * ly[idxs]) / lx2ly2[idxs]) * lx2ly2[idxs]**3)
+                )
+            elif (n_combined_state == scipy.asarray([0, 1])).all():
+                k[idxs] = (
+                    (
+                        scipy.exp(-(x_y[idxs]**2 / lx2ly2[idxs])) *
+                        lx[idxs] * (
+                            4 * x_y[idxs] * ly[idxs]**3 +
+                            4 * x_y[idxs] * ly[idxs] * lx[idxs]**2 +
+                            4 * x_y[idxs]**2 * ly[idxs]**2 * ly1[idxs] - 
+                            ly[idxs]**4 * ly1[idxs] +
+                            lx[idxs]**4 * ly1[idxs]
+                        )
+                    ) / (scipy.sqrt(2 * (lx[idxs] * ly[idxs]) / lx2ly2[idxs]) * lx2ly2[idxs]**3)
+                )
+            elif (n_combined_state == scipy.asarray([1, 1])).all():
+                k[idxs] = (
+                    (
+                        scipy.exp(-(x_y[idxs]**2 / lx2ly2[idxs])) *
+                        (
+                            -lx[idxs]**8 * lx1[idxs] * ly1[idxs] +
+                            4 * lx[idxs]**7 * (2 * ly[idxs] - x_y[idxs] * ly1[idxs]) -
+                            4 * lx[idxs]**5 * ly[idxs] * (
+                                4 * x_y[idxs]**2 -
+                                6 * ly[idxs]**2 -
+                                3 * x_y[idxs] * ly[idxs] * ly1[idxs]
+                            ) + ly[idxs]**6 * lx1[idxs] * (
+                                4 * x_y[idxs] * ly[idxs] +
+                                4 * x_y[idxs]**2 * ly1[idxs] -
+                                ly[idxs]**2 * ly1[idxs]
+                            ) + 4 * lx[idxs]**6 * lx1[idxs] * (
+                                -5 * x_y[idxs] * ly[idxs] +
+                                x_y[idxs]**2 * ly1[idxs] +
+                                2 * ly[idxs]**2 * ly1[idxs]
+                            ) - 4 * lx[idxs] * ly[idxs]**4 * (
+                                4 * x_y[idxs]**2 * ly[idxs] -
+                                2 * ly[idxs]**3 +
+                                4 * x_y[idxs]**3 * ly1[idxs] -
+                                5 * x_y[idxs] * ly[idxs]**2 * ly1[idxs]
+                            ) - 4 * lx[idxs]**3 * ly[idxs]**2 * (
+                                8 * x_y[idxs]**2 * ly[idxs] -
+                                6 * ly[idxs]**3 +
+                                4 * x_y[idxs]**3 * ly1[idxs] -
+                                9 * x_y[idxs] * ly[idxs]**2 * ly1[idxs]
+                            ) + 2 * lx[idxs]**4 * ly[idxs] * lx1[idxs] * (
+                                8 * x_y[idxs]**3 -
+                                18 * x_y[idxs] * ly[idxs]**2 -
+                                18 * x_y[idxs]**2 * ly[idxs] * ly1[idxs] +
+                                9 * ly[idxs]**3 * ly1[idxs]
+                            ) + 4 * lx[idxs]**2 * ly[idxs]**2 * lx1[idxs] * (
+                                4 * x_y[idxs]**3 * ly[idxs] -
+                                3 * x_y[idxs] * ly[idxs]**3 +
+                                4 * x_y[idxs]**4 * ly1[idxs] -
+                                9 * x_y[idxs]**2 * ly[idxs]**2 * ly1[idxs] +
+                                2 * ly[idxs]**4 * ly1[idxs]
+                            )
+                        )
+                    ) / (2 * scipy.sqrt(2 * (lx[idxs] * ly[idxs]) / (lx[idxs]**2 + ly[idxs]**2)) * lx2ly2[idxs]**5)
+                )
+            else:
+                raise NotImplementedError("Derivatives greater than [1, 1] are not supported!")
+        k = self.params[0]**2 * k
+        return k
+
+def tanh_warp(x, n, l1, l2, lw, x0):
+    """Implements a tanh warping function and its derivative.
+    
+    .. math::
+    
+        l = \frac{l_1 + l_2}{2} - \frac{l_1 - l_2}{2}\tanh\frac{x-x_0}{l_w}
+    
+    Parameters
+    ----------
+    x : float or array of float
+        Locations to evaluate the function at.
+    n : int
+        Derivative order to take. Used for ALL of the points.
+    l1 : positive float
+        Left saturation value.
+    l2 : positive float
+        Right saturation value.
+    lw : positive float
+        Transition width.
+    x0 : float
+        Transition location.
+
+    Returns
+    -------
+    l : float or array
+        Warped length scale at the given locations.
+
+    Raises
+    ------
+    NotImplementedError
+        If `n` > 1.
+    """
+    if n == 0:
+        return (l1 + l2) / 2.0 - (l1 - l2) / 2.0 * scipy.tanh((x - x0) / lw)
+    elif n == 1:
+        return -(l1 - l2) / (2.0 * lw) * (scipy.cosh((x - x0) / lw))**(-2.0)
+    else:
+        raise NotImplementedError("Only derivatives up to order 1 are supported!")
+
+class GibbsKernel1dTanh(GibbsKernel1d):
+    r"""Gibbs warped squared exponential covariance function in 1d.
+    
+    Uses hard-coded implementation up to first derivatives.
+    
+    The covariance function is given by
+    
+    .. math::
+
+        k = \left ( \frac{2l(x)l(x')}{l^2(x)+l^2(x')} \right )^{1/2}\exp\left ( -\frac{(x-x')^2}{l^2(x)+l^2(x')} \right )
+    
+    Warps the length scale using a hyperbolic tangent:
+    
+    .. math::
+    
+        l = \frac{l_1 + l_2}{2} - \frac{l_1 - l_2}{2}\tanh\frac{x-x_0}{l_w}
+    
+    The order of the hyperparameters is:
+    
+    = ====== =======================================================================
+    0 sigmaf Amplitude of the covariance function
+    1 l1     Small-X saturation value of the length scale.
+    2 l2     Large-X saturation value of the length scale.
+    3 lw     Length scale of the transition between the two length scales.
+    4 x0     Location of the center of the transition between the two length scales.
+    = ====== =======================================================================
+    
+    Parameters
+    ----------
+    **kwargs
+        All parameters are passed to :py:class:`~gptools.kernel.core.Kernel`.
+    """
+    def __init__(self, **kwargs):
+        super(GibbsKernel1dTanh, self).__init__(tanh_warp, **kwargs)

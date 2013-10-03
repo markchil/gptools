@@ -20,10 +20,9 @@
 
 from __future__ import division
 
-from .core import Kernel, BinaryKernel, SumKernel, ProductKernel, ChainRuleKernel
-from .matern import MaternKernel
-from .noise import DiagonalNoiseKernel, ZeroKernel
-from .squared_exponential import SquaredExponentialKernel
-from .rational_quadratic import RationalQuadraticKernel
-from .gibbs import (GibbsKernel1dtanh, GibbsKernel1dSpline, GibbsKernel1dGauss,
-                    GibbsFunction1d, tanh_warp, spline_warp, gauss_warp)
+from .core import *
+from .matern import *
+from .noise import *
+from .squared_exponential import *
+from .rational_quadratic import *
+from .gibbs import *
