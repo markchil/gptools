@@ -221,6 +221,12 @@ class GibbsKernel1dGaussArb(ArbitraryKernel):
 class GibbsKernel1d(Kernel):
     """Univariate Gibbs kernel with arbitrary length scale warping for low derivatives.
     
+    The covariance function is given by
+    
+    .. math::
+    
+        k = \left ( \frac{2l(x)l(x')}{l^2(x)+l^2(x')} \right )^{1/2}\exp\left ( -\frac{(x-x')^2}{l^2(x)+l^2(x')} \right )
+    
     The derivatives are hard-coded using expressions obtained from Mathematica.
     
     Parameters
@@ -375,7 +381,7 @@ class GibbsKernel1d(Kernel):
         return k
 
 def tanh_warp(x, n, l1, l2, lw, x0):
-    """Implements a tanh warping function and its derivative.
+    r"""Implements a tanh warping function and its derivative.
     
     .. math::
     
