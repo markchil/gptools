@@ -196,14 +196,20 @@ gp.optimize_hyperparameters(
             # {'type': 'ineq', 'fun': pos_cf(4)},
             # {'type': 'ineq', 'fun': pos_cf(5)},
             {'type': 'ineq', 'fun': l_cf},
-            # {'type': 'ineq', 'fun': gptools.Constraint(
-            #     gp,
-            #     n=1,
-            #     type_='lt',
-            #     boundary_val=0.1,
-            #     loc='max',
-            #     bounds=[0.88, 0.93]
-            # )},
+            {'type': 'ineq', 'fun': gptools.Constraint(
+                gp,
+                n=1,
+                type_='lt',
+                boundary_val=0.1,
+                loc=0.902,
+            )},
+            {'type': 'ineq', 'fun': gptools.Constraint(
+                gp,
+                n=1,
+                type_='lt',
+                boundary_val=0.1,
+                loc=0.93,
+            )},
             # {'type': 'ineq', 'fun': gptools.Constraint(gp)},
         )
     }
