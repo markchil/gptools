@@ -224,7 +224,20 @@ gp.optimize_hyperparameters(
                 boundary_val=0.21,
                 loc=0.93,
             )},
-            
+            {'type': 'ineq', 'fun': gptools.Constraint(
+                gp,
+                n=0,
+                type_='gt',
+                boundary_val=0.0,
+                loc=0.902,
+            )},
+            {'type': 'ineq', 'fun': gptools.Constraint(
+                gp,
+                n=0,
+                type_='gt',
+                boundary_val=0.0,
+                loc=0.93,
+            )},
             # {'type': 'ineq', 'fun': gptools.Constraint(gp)},
         )
     }
