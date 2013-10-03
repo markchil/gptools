@@ -134,11 +134,10 @@ dev_R_mid_ETS_w = scipy.std(R_mid_ETS, axis=1, ddof=1)
 #                                     fixed_params=[False, False, False],
 #                                     param_bounds=[(0.0, 1000.0), (0.001, 100.0), (0.01, 1.0)],
 #                                     enforce_bounds=True)
-k = gptools.GibbsKernel1dtanh(
+k = gptools.GibbsKernel1dTanh(
     initial_params=[1.88, 0.09655, 0.05637, 0.002941, 0.8937],
     fixed_params=[False, False, False, False, False],
     param_bounds=[(0.0, 1000.0), (0.01, 10.0), (0.0001, 1.0), (0.0001, 0.1), (0.88, 0.91)],
-    num_proc=0,
     enforce_bounds=True
 )
 
@@ -266,7 +265,7 @@ a2.get_xaxis().set_visible(False)
 a2.set_ylabel('$dn_{e}/dR$\n[$10^{20}$m$^{-3}$/m]')
 
 a3 = f.add_subplot(3, 1, 3, sharex=a1)
-a3.plot(Rstar, gp.k.cov_func.warp_function(Rstar, *gp.k.params[1:]), linewidth=3)
+a3.plot(Rstar, gp.k.l_func(Rstar, 0, *gp.k.params[1:]), linewidth=3)
 a3.set_xlabel('$R$ [m]')
 a3.set_ylabel('$l$ [m]')
 
