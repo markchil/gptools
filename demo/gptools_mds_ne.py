@@ -86,7 +86,7 @@ dev_ne_ETS_w = dev_ne_ETS[:, idx]
 dev_ne_ETS_w = dev_ne_ETS_w[good_idxs]
 R_mid_ETS_w = R_mid_ETS[:, idx]
 R_mid_ETS_w = R_mid_ETS_w[good_idxs]
-dev_R_mid_w = scipy.zeros_like(R_mid_ETS_w)
+dev_R_mid_ETS_w = scipy.zeros_like(R_mid_ETS_w)
 
 R_mag_mean = R_mag[idx]
 R_mag_std = 0.0
