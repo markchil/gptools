@@ -257,7 +257,7 @@ gp.optimize_hyperparameters(
 opt_elapsed = time.time() - opt_start
 
 # Make predictions:
-Rstar = scipy.linspace(0.63, 0.93, 24*5)
+Rstar = scipy.linspace(0.63, 0.93, 24*30)
 
 mean_start = time.time()
 mean, cov = gp.predict(Rstar, noise=False)
