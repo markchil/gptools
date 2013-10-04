@@ -73,7 +73,7 @@ R_out_std = scipy.std(R_out)
 
 # Compute weighted mean and weighted corected sample standard deviation:
 # Single time slice:
-idx = 44
+idx = 15
 ne_TS_w = ne_TS[:, idx]
 dev_ne_TS_w = dev_ne_TS[:, idx]
 R_mid_w = R_mid_CTS[:, idx]
