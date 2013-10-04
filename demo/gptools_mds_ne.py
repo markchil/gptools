@@ -250,6 +250,7 @@ gp.optimize_hyperparameters(
             #     loc=0.93,
             # )},
             # {'type': 'ineq', 'fun': gptools.Constraint(gp)},
+            {'type': 'ineq', 'fun': lambda p: p[1] - p[2]},
         )
     }
 )
