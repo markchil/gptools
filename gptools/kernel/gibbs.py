@@ -453,3 +453,186 @@ class GibbsKernel1dTanh(GibbsKernel1d):
     """
     def __init__(self, **kwargs):
         super(GibbsKernel1dTanh, self).__init__(tanh_warp, **kwargs)
+
+def cubic_bucket_warp(x, n, l1, l2, l3, x0, w1, w2, w3):
+    """Warps the length scale with a piecewise cubic "bucket" shape.
+    
+    Parameters
+    ----------
+    x : float or array-like of float
+        Locations to evaluate length scale at.
+    n : non-negative int
+        Derivative order to evaluate. Only first derivatives are supported.
+    l1 : positive float
+        Length scale to the left of the bucket.
+    l2 : positive float
+        Length scale in the bucket.
+    l3 : positive float
+        Length scale to the right of the bucket.
+    x0 : float
+        Location of the center of the bucket.
+    w1 : positive float
+        Width of the left side cubic section.
+    w2 : positive float
+        Width of the bucket.
+    w3 : positive float
+        Width of the right side cubic section.
+    """
+    x1 = x0 - w2 / 2.0 - w1 / 2.0
+    x2 = x0 + w2 / 2.0 + w3 / 2.0
+    x_shift_1 = (x - x1 + w1 / 2.0) / w1
+    x_shift_2 = (x - x2 + w3 / 2.0) / w3
+    if n == 0:
+        return (
+            l1 * (x <= (x1 - w1 / 2.0)) + (
+                -2.0 * (l2 - l1) * (x_shift_1**3 - 3.0 / 2.0 * x_shift_1**2) + l1
+            ) * ((x > (x1 - w1 / 2.0)) & (x < (x1 + w1 / 2.0))) +
+            l2 * ((x >= (x1 + w1 / 2.0)) & (x <= x2 - w3 / 2.0)) + (
+                -2.0 * (l3 - l2) * (x_shift_2**3 - 3.0 / 2.0 * x_shift_2**2) + l2
+            ) * ((x > (x2 - w3 / 2.0)) & (x < (x2 + w3 / 2.0))) +
+            l3 * (x >= (x2 + w3 / 2.0))
+        )
+    elif n == 1:
+        return (
+            (
+                -2.0 * (l2 - l1) * (3 * x_shift_1**2 - 3.0 * x_shift_1) / w1
+            ) * ((x > (x1 - w1 / 2.0)) & (x < (x1 + w1 / 2.0))) +
+            (
+                -2.0 * (l3 - l2) * (3 * x_shift_2**2 - 3.0 * x_shift_2) / w3
+            ) * ((x > (x2 - w3 / 2.0)) & (x < (x2 + w3 / 2.0)))
+        )
+    else:
+        raise NotImplementedError("Only up to first derivatives are supported!")
+
+class GibbsKernel1dCubicBucket(GibbsKernel1d):
+    r"""Gibbs warped squared exponential covariance function in 1d.
+
+    Uses hard-coded implementation up to first derivatives.
+
+    The covariance function is given by
+
+    .. math::
+
+        k = \left ( \frac{2l(x)l(x')}{l^2(x)+l^2(x')} \right )^{1/2}\exp\left ( -\frac{(x-x')^2}{l^2(x)+l^2(x')} \right )
+
+    Warps the length scale using a "bucket" function with cubic joins.
+    
+    The order of the hyperparameters is:
+
+    = ====== ========================================
+    0 sigmaf Amplitude of the covariance function
+    1 l1     Length scale to the left of the bucket.
+    2 l2     Length scale in the bucket.
+    3 l3     Length scale to the right of the bucket.
+    4 x0     Location of the center of the bucket.
+    5 w1     Width of the left side cubic section.
+    6 w2     Width of the bucket.
+    7 w3     Width of the right side cubic section.
+    = ====== ========================================
+
+    Parameters
+    ----------
+    **kwargs
+        All parameters are passed to :py:class:`~gptools.kernel.core.Kernel`.
+    """
+    def __init__(self, **kwargs):
+        super(GibbsKernel1dBucket, self).__init__(cubic_bucket_warp, **kwargs)
+
+def quintic_bucket_warp(x, n, l1, l2, l3, x0, w1, w2, w3):
+    """Warps the length scale with a piecewise quintic "bucket" shape.
+
+    Parameters
+    ----------
+    x : float or array-like of float
+        Locations to evaluate length scale at.
+    n : non-negative int
+        Derivative order to evaluate. Only first derivatives are supported.
+    l1 : positive float
+        Length scale to the left of the bucket.
+    l2 : positive float
+        Length scale in the bucket.
+    l3 : positive float
+        Length scale to the right of the bucket.
+    x0 : float
+        Location of the center of the bucket.
+    w1 : positive float
+        Width of the left side quintic section.
+    w2 : positive float
+        Width of the bucket.
+    w3 : positive float
+        Width of the right side quintic section.
+    """
+    x1 = x0 - w2 / 2.0 - w1 / 2.0
+    x2 = x0 + w2 / 2.0 + w3 / 2.0
+    x_shift_1 = 2.0 * (x - x1) / w1
+    x_shift_3 = 2.0 * (x - x2) / w3
+    if n == 0:
+        return (
+            l1 * (x <= (x1 - w1 / 2.0)) + (
+                0.5 * (l2 - l1) * (
+                    3.0 / 8.0 * x_shift_1**5 -
+                    5.0 / 4.0 * x_shift_1**3 +
+                    15.0 / 8.0 * x_shift_1
+                ) + (l1 + l2) / 2.0
+            ) * ((x > (x1 - w1 / 2.0)) & (x < (x1 + w1 / 2.0))) +
+            l2 * ((x >= (x1 + w1 / 2.0)) & (x <= x2 - w3 / 2.0)) + (
+                0.5 * (l3 - l2) * (
+                    3.0 / 8.0 * x_shift_3**5 -
+                    5.0 / 4.0 * x_shift_3**3 +
+                    15.0 / 8.0 * x_shift_3
+                ) + (l2 + l3) / 2.0
+            ) * ((x > (x2 - w3 / 2.0)) & (x < (x2 + w3 / 2.0))) +
+            l3 * (x >= (x2 + w3 / 2.0))
+        )
+    elif n == 1:
+        return (
+            (
+                0.5 * (l2 - l1) * (
+                    5.0 * 3.0 / 8.0 * x_shift_1**4 -
+                    3.0 * 5.0 / 4.0 * x_shift_1**2 +
+                    15.0 / 8.0
+                ) / w1
+            ) * ((x > (x1 - w1 / 2.0)) & (x < (x1 + w1 / 2.0))) + (
+                0.5 * (l3 - l2) * (
+                    5.0 * 3.0 / 8.0 * x_shift_3**4 -
+                    3.0 * 5.0 / 4.0 * x_shift_3**2 +
+                    15.0 / 8.0
+                ) / w3
+            ) * ((x > (x2 - w3 / 2.0)) & (x < (x2 + w3 / 2.0)))
+        )
+    else:
+        raise NotImplementedError("Only up to first derivatives are supported!")
+
+class GibbsKernel1dQuinticBucket(GibbsKernel1d):
+    r"""Gibbs warped squared exponential covariance function in 1d.
+
+    Uses hard-coded implementation up to first derivatives.
+
+    The covariance function is given by
+
+    .. math::
+
+        k = \left ( \frac{2l(x)l(x')}{l^2(x)+l^2(x')} \right )^{1/2}\exp\left ( -\frac{(x-x')^2}{l^2(x)+l^2(x')} \right )
+
+    Warps the length scale using a "bucket" function with quintic joins.
+
+    The order of the hyperparameters is:
+
+    = ====== ========================================
+    0 sigmaf Amplitude of the covariance function
+    1 l1     Length scale to the left of the bucket.
+    2 l2     Length scale in the bucket.
+    3 l3     Length scale to the right of the bucket.
+    4 x0     Location of the center of the bucket.
+    5 w1     Width of the left side quintic section.
+    6 w2     Width of the bucket.
+    7 w3     Width of the right side quintic section.
+    = ====== ========================================
+
+    Parameters
+    ----------
+    **kwargs
+        All parameters are passed to :py:class:`~gptools.kernel.core.Kernel`.
+    """
+    def __init__(self, **kwargs):
+        super(GibbsKernel1dQuinticBucket, self).__init__(quintic_bucket_warp, **kwargs)
