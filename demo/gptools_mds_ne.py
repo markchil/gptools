@@ -72,35 +72,37 @@ R_out_mean = scipy.mean(R_out)
 R_out_std = scipy.std(R_out)
 
 # Compute weighted mean and weighted corected sample standard deviation:
-# # Single time slice:
-# idx = 44
-# ne_TS_w = ne_TS[:, idx]
-# dev_ne_TS_w = dev_ne_TS[:, idx]
-# R_mid_w = R_mid_CTS[:, idx]
-# 
-# ne_ETS_w = ne_ETS[:, idx]
-# good_idxs = ~scipy.isnan(ne_ETS_w)
-# ne_ETS_w = ne_ETS_w[good_idxs]
-# dev_ne_ETS_w = dev_ne_ETS[:, idx]
-# dev_ne_ETS_w = dev_ne_ETS_w[good_idxs]
-# R_mid_ETS_w = R_mid_ETS[:, idx]
-# R_mid_ETS_w = R_mid_ETS_w[good_idxs]
-# 
-# R_mag_mean = R_mag[idx]
-# R_mag_std = 0.0
-# R_out_mean = R_out[idx]
-# R_out_std = 0.0
+# Single time slice:
+idx = 44
+ne_TS_w = ne_TS[:, idx]
+dev_ne_TS_w = dev_ne_TS[:, idx]
+R_mid_w = R_mid_CTS[:, idx]
+dev_R_mid_w = scipy.zeros_like(R_mid_w)
 
-# Average over entire data set:
-ne_TS_w = scipy.mean(ne_TS, axis=1)
-dev_ne_TS_w = scipy.std(ne_TS, axis=1, ddof=1)
-R_mid_w = scipy.mean(R_mid_CTS, axis=1)
-dev_R_mid_w = scipy.std(R_mid_CTS, axis=1, ddof=1)
+ne_ETS_w = ne_ETS[:, idx]
+good_idxs = ~scipy.isnan(ne_ETS_w)
+ne_ETS_w = ne_ETS_w[good_idxs]
+dev_ne_ETS_w = dev_ne_ETS[:, idx]
+dev_ne_ETS_w = dev_ne_ETS_w[good_idxs]
+R_mid_ETS_w = R_mid_ETS[:, idx]
+R_mid_ETS_w = R_mid_ETS_w[good_idxs]
+dev_R_mid_w = scipy.zeros_like(R_mid_ETS_w)
 
-ne_ETS_w = scipy.stats.nanmean(ne_ETS, axis=1)
-dev_ne_ETS_w = scipy.stats.nanstd(ne_ETS, axis=1)
-R_mid_ETS_w = scipy.mean(R_mid_ETS, axis=1)
-dev_R_mid_ETS_w = scipy.std(R_mid_ETS, axis=1, ddof=1)
+R_mag_mean = R_mag[idx]
+R_mag_std = 0.0
+R_out_mean = R_out[idx]
+R_out_std = 0.0
+
+# # Average over entire data set:
+# ne_TS_w = scipy.mean(ne_TS, axis=1)
+# dev_ne_TS_w = scipy.std(ne_TS, axis=1, ddof=1)
+# R_mid_w = scipy.mean(R_mid_CTS, axis=1)
+# dev_R_mid_w = scipy.std(R_mid_CTS, axis=1, ddof=1)
+# 
+# ne_ETS_w = scipy.stats.nanmean(ne_ETS, axis=1)
+# dev_ne_ETS_w = scipy.stats.nanstd(ne_ETS, axis=1)
+# R_mid_ETS_w = scipy.mean(R_mid_ETS, axis=1)
+# dev_R_mid_ETS_w = scipy.std(R_mid_ETS, axis=1, ddof=1)
 
 # # Use entire data set, taking every skip-th point:
 # skip = 1
@@ -250,7 +252,7 @@ gp.optimize_hyperparameters(
             #     loc=0.93,
             # )},
             # {'type': 'ineq', 'fun': gptools.Constraint(gp)},
-            {'type': 'ineq', 'fun': lambda p: p[1] - p[2]},
+            # {'type': 'ineq', 'fun': lambda p: p[1] - p[2]},
         )
     }
 )
@@ -278,8 +280,8 @@ print("Optimization took: %.2fs\nMean prediction took: %.2fs\nGradient "
 
 f = plt.figure()
 
-# f.suptitle('Univariate GPR on TS data')
-f.suptitle('Univariate GPR on time-averaged data')
+f.suptitle('Univariate GPR on TS data')
+# f.suptitle('Univariate GPR on time-averaged data')
 # f.suptitle('Univariate GPR on single frame of TS data, $t=%.2fs$' % t_ne_TS[idx])
 # f.suptitle('With slope constraint')
 
