@@ -121,16 +121,17 @@ t_R_GPC = t_R_GPC[ok_idxs]
 R_mid_GPC = scipy.asarray(R_mid_GPC, dtype=float)[:, ok_idxs]
 
 # Get magnetic axis location:
+ok_idxs = (t_EFIT >= flat_start) & (t_EFIT <= flat_stop)
 R_mag = efit_tree.getMagR()
 R_mag_TS = scipy.interpolate.InterpolatedUnivariateSpline(t_EFIT, R_mag)(t_Te_TS)
-R_mag_mean = scipy.mean(R_mag)
-R_mag_std = scipy.std(R_mag)
+R_mag_mean = scipy.mean(R_mag[ok_idxs])
+R_mag_std = scipy.std(R_mag[ok_idxs])
 
 # Get LCFS outboard midplane location:
 R_out = efit_tree.getRmidOut()
 R_out_TS = scipy.interpolate.InterpolatedUnivariateSpline(t_EFIT, R_out)(t_Te_TS)
-R_out_mean = scipy.mean(R_out)
-R_out_std = scipy.std(R_out)
+R_out_mean = scipy.mean(R_out[ok_idxs])
+R_out_std = scipy.std(R_out[ok_idxs])
 
 # Compute weighted mean and weighted corected sample standard deviation:
 # # Single time slice:

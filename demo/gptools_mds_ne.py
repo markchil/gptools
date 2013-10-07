@@ -60,16 +60,17 @@ R_mid_ETS = efit_tree.rz2rmid(R_grid, Z_grid, t_grid, each_t=False)
 ne_ETS[(ne_ETS == 0) & (dev_ne_ETS == 2)] = scipy.nan
 
 # Get magnetic axis location:
+ok_idxs = (t_EFIT >= flat_start) & (t_EFIT <= flat_stop)
 R_mag = efit_tree.getMagR()
 R_mag_TS = scipy.interpolate.InterpolatedUnivariateSpline(t_EFIT, R_mag)(t_ne_TS)
-R_mag_mean = scipy.mean(R_mag)
-R_mag_std = scipy.std(R_mag)
+R_mag_mean = scipy.mean(R_mag[ok_idxs])
+R_mag_std = scipy.std(R_mag[ok_idxs])
 
 # Get LCFS outboard midplane location:
 R_out = efit_tree.getRmidOut()
 R_out_TS = scipy.interpolate.InterpolatedUnivariateSpline(t_EFIT, R_out)(t_ne_TS)
-R_out_mean = scipy.mean(R_out)
-R_out_std = scipy.std(R_out)
+R_out_mean = scipy.mean(R_out[ok_idxs])
+R_out_std = scipy.std(R_out[ok_idxs])
 
 # Compute weighted mean and weighted corected sample standard deviation:
 # # Single time slice:
