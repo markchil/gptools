@@ -126,11 +126,11 @@ dev_R_mid_ETS_w = scipy.asarray([scipy.stats.scoreatpercentile(ch, 75) -
 
 # Make Q-Q plots with the robust statistics dictating the distribution:
 for k in xrange(0, ne_CTS.shape[0]):
-    ne_ch = ne_CTS[k, :]
+    ne_ch = ne_TS[k, :]
     ne_ch = ne_ch[~scipy.isnan(ne_ch)]
     f = plt.figure()
-    scipy.stats.probplot(ne_ch, sparams=(ne_CTS_w[k], dev_ne_CTS_w[k]), plot=plt)
-    f.suptitle('CTS: idx=%d, R=%.3fm' % (k, R_mid_CTS_w[k]))
+    scipy.stats.probplot(ne_ch, sparams=(ne_TS_w[k], dev_ne_TS_w[k]), plot=plt)
+    f.suptitle('CTS: idx=%d, R=%.3fm' % (k, R_mid_TS_w[k]))
 for k in xrange(0, ne_ETS.shape[0]):
     ne_ch = ne_ETS[k, :]
     ne_ch = ne_ch[~scipy.isnan(ne_ch)]
