@@ -358,7 +358,7 @@ a1.axvline(x=R_out_mean, color='g')
 a1.axvspan(R_out_mean-R_out_std, R_out_mean+R_out_std, alpha=0.375, facecolor='g')
 # a2.set_xlabel('$R$ [m]')
 a2.get_xaxis().set_visible(False)
-a2.set_ylabel('$dn_{e}/dR$\n[$10^{20}$m$^{-3}$/m]')
+a2.set_ylabel('$dn_{e}/dR$\n[$10^{20}$m$^{-4}$]')
 
 a3 = f.add_subplot(3, 1, 3, sharex=a1)
 a3.plot(Rstar, gp.k.l_func(Rstar, 0, *gp.k.params[1:]), linewidth=3)
