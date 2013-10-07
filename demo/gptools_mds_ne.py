@@ -124,19 +124,19 @@ dev_R_mid_ETS_w = scipy.asarray([scipy.stats.scoreatpercentile(ch, 75) -
                                  scipy.stats.scoreatpercentile(ch, 25)
                                  for ch in R_mid_ETS]) / IQR_to_std
 
-# Make Q-Q plots with the robust statistics dictating the distribution:
-for k in xrange(0, ne_TS.shape[0]):
-    ne_ch = ne_TS[k, :]
-    ne_ch = ne_ch[~scipy.isnan(ne_ch)]
-    f = plt.figure()
-    scipy.stats.probplot(ne_ch, sparams=(ne_TS_w[k], dev_ne_TS_w[k]), plot=plt)
-    f.suptitle('CTS: idx=%d, R=%.3fm' % (k, R_mid_w[k]))
-for k in xrange(0, ne_ETS.shape[0]):
-    ne_ch = ne_ETS[k, :]
-    ne_ch = ne_ch[~scipy.isnan(ne_ch)]
-    f = plt.figure()
-    scipy.stats.probplot(ne_ch, sparams=(ne_ETS_w[k], dev_ne_ETS_w[k]), plot=plt)
-    f.suptitle('ETS: idx=%d, R=%.3fm' % (k, R_mid_ETS_w[k]))
+# # Make Q-Q plots with the robust statistics dictating the distribution:
+# for k in xrange(0, ne_TS.shape[0]):
+#     ne_ch = ne_TS[k, :]
+#     ne_ch = ne_ch[~scipy.isnan(ne_ch)]
+#     f = plt.figure()
+#     scipy.stats.probplot(ne_ch, sparams=(ne_TS_w[k], dev_ne_TS_w[k]), plot=plt)
+#     f.suptitle('CTS: idx=%d, R=%.3fm' % (k, R_mid_w[k]))
+# for k in xrange(0, ne_ETS.shape[0]):
+#     ne_ch = ne_ETS[k, :]
+#     ne_ch = ne_ch[~scipy.isnan(ne_ch)]
+#     f = plt.figure()
+#     scipy.stats.probplot(ne_ch, sparams=(ne_ETS_w[k], dev_ne_ETS_w[k]), plot=plt)
+#     f.suptitle('ETS: idx=%d, R=%.3fm' % (k, R_mid_ETS_w[k]))
 
 # # Use entire data set, taking every skip-th point:
 # skip = 1
