@@ -72,26 +72,26 @@ R_out_mean = scipy.mean(R_out)
 R_out_std = scipy.std(R_out)
 
 # Compute weighted mean and weighted corected sample standard deviation:
-# Single time slice:
-idx = 15
-ne_TS_w = ne_TS[:, idx]
-dev_ne_TS_w = dev_ne_TS[:, idx]
-R_mid_w = R_mid_CTS[:, idx]
-dev_R_mid_w = scipy.zeros_like(R_mid_w)
-
-ne_ETS_w = ne_ETS[:, idx]
-good_idxs = ~scipy.isnan(ne_ETS_w)
-ne_ETS_w = ne_ETS_w[good_idxs]
-dev_ne_ETS_w = dev_ne_ETS[:, idx]
-dev_ne_ETS_w = dev_ne_ETS_w[good_idxs]
-R_mid_ETS_w = R_mid_ETS[:, idx]
-R_mid_ETS_w = R_mid_ETS_w[good_idxs]
-dev_R_mid_ETS_w = scipy.zeros_like(R_mid_ETS_w)
-
-R_mag_mean = R_mag[idx]
-R_mag_std = 0.0
-R_out_mean = R_out[idx]
-R_out_std = 0.0
+# # Single time slice:
+# idx = 15
+# ne_TS_w = ne_TS[:, idx]
+# dev_ne_TS_w = dev_ne_TS[:, idx]
+# R_mid_w = R_mid_CTS[:, idx]
+# dev_R_mid_w = scipy.zeros_like(R_mid_w)
+# 
+# ne_ETS_w = ne_ETS[:, idx]
+# good_idxs = ~scipy.isnan(ne_ETS_w)
+# ne_ETS_w = ne_ETS_w[good_idxs]
+# dev_ne_ETS_w = dev_ne_ETS[:, idx]
+# dev_ne_ETS_w = dev_ne_ETS_w[good_idxs]
+# R_mid_ETS_w = R_mid_ETS[:, idx]
+# R_mid_ETS_w = R_mid_ETS_w[good_idxs]
+# dev_R_mid_ETS_w = scipy.zeros_like(R_mid_ETS_w)
+# 
+# R_mag_mean = R_mag[idx]
+# R_mag_std = 0.0
+# R_out_mean = R_out[idx]
+# R_out_std = 0.0
 
 # # Average over entire data set:
 # ne_TS_w = scipy.mean(ne_TS, axis=1)
@@ -103,6 +103,23 @@ R_out_std = 0.0
 # dev_ne_ETS_w = scipy.stats.nanstd(ne_ETS, axis=1)
 # R_mid_ETS_w = scipy.mean(R_mid_ETS, axis=1)
 # dev_R_mid_ETS_w = scipy.std(R_mid_ETS, axis=1, ddof=1)
+
+# Average over entire data set, try using roubust estimators:
+IQR_to_std = 1.349
+ne_TS_w = scipy.median(ne_TS, axis=1)
+dev_ne_TS_w = (scipy.stats.scoreatpercentile(ne_TS, 75, axis=1) - 
+               scipy.stats.scoreatpercentile(ne_TS, 25, axis=1)) / IQR_to_std
+R_mid_w = scipy.median(R_mid_CTS, axis=1)
+dev_R_mid_w = (scipy.stats.scoreatpercentile(R_mid_CTS, 75, axis=1) - 
+               scipy.stats.scoreatpercentile(R_mid_CTS, 25, axis=1)) / IQR_to_std
+
+ne_ETS_w = scipy.stats.nanmedian(ne_ETS, axis=1)
+dev_ne_ETS_w = [scipy.stats.scoreatpercentile(ne_ch[~scipy.isnan(ne_ch)], 75) -
+                scipy.stats.scoreatpercentile(ne_ch[~scipy.isnan(ne_ch)], 25)
+                for ne_ch in ne_ETS] / IQR_to_std
+R_mid_ETS_w = scipy.median(R_mid_ETS, axis=1)
+dev_R_mid_ETS_w = (scipy.stats.scoreatpercentile(R_mid_ETS, 75, axis=1) - 
+                   scipy.stats.scoreatpercentile(R_mid_ETS, 25, axis=1)) / IQR_to_std
 
 # # Use entire data set, taking every skip-th point:
 # skip = 1
