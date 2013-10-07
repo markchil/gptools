@@ -232,7 +232,6 @@ k = gptools.GibbsKernel1dTanh(
     initial_params=[1.88, 0.09655, 0.05637, 0.002941, 0.8937],
     fixed_params=[False, False, False, False, False],
     param_bounds=[(0.0, 1000.0), (0.01, 10.0), (0.0001, 1.0), (0.0001, 0.1), (0.88, 0.91)],
-    num_proc=0,
     enforce_bounds=True
 )
 
