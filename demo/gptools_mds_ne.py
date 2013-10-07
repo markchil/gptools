@@ -124,6 +124,11 @@ dev_R_mid_ETS_w = scipy.asarray([scipy.stats.scoreatpercentile(ch, 75) -
                                  scipy.stats.scoreatpercentile(ch, 25)
                                  for ch in R_mid_ETS]) / IQR_to_std
 
+# Make Q-Q plots with the robust statistics dictating the distribution:
+for k in xrange(0, ne_ETS.shape[0]):
+    plt.figure()
+    scipy.stats.probplot(ne_ETS[k, :], sparams=(ne_ETS_w[k], dev_ne_ETS_w[k]), plot=plt)
+
 # # Use entire data set, taking every skip-th point:
 # skip = 1
 # R_mid_w = R_mid_CTS.flatten()[::skip]
