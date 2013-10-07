@@ -182,7 +182,7 @@ gp = gptools.GaussianProcess(k, noise_k=nk)
 gp.add_data(R_mid_w, ne_TS_w, err_y=dev_ne_TS_w)
 gp.add_data(R_mid_ETS_w, ne_ETS_w, err_y=dev_ne_ETS_w)
 gp.add_data(R_mag_mean, 0, n=1)
-# gp.add_data(0.902, 0)
+gp.add_data(0.91, 0, err_y=0.2)
 # gp.add_data(0.902, 0, n=1)
 
 # Make constraint functions:
@@ -257,20 +257,20 @@ gp.optimize_hyperparameters(
             #     boundary_val=0.0,
             #     loc=0.909,
             # )},
-            {'type': 'ineq', 'fun': gptools.Constraint(
-                gp,
-                n=0,
-                type_='lt',
-                boundary_val=0.02,
-                loc=0.912,
-            )},
-            {'type': 'ineq', 'fun': gptools.Constraint(
-                gp,
-                n=0,
-                type_='gt',
-                boundary_val=0.0,
-                loc=0.912,
-            )},
+            # {'type': 'ineq', 'fun': gptools.Constraint(
+            #     gp,
+            #     n=0,
+            #     type_='lt',
+            #     boundary_val=0.02,
+            #     loc=0.912,
+            # )},
+            # {'type': 'ineq', 'fun': gptools.Constraint(
+            #     gp,
+            #     n=0,
+            #     type_='gt',
+            #     boundary_val=0.0,
+            #     loc=0.912,
+            # )},
             # {'type': 'ineq', 'fun': gptools.Constraint(
             #     gp,
             #     n=0,
