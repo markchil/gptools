@@ -128,8 +128,9 @@ dev_R_mid_ETS_w = scipy.asarray([scipy.stats.scoreatpercentile(ch, 75) -
 for k in xrange(0, ne_ETS.shape[0]):
     ne_ch = ne_ETS[k, :]
     ne_ch = ne_ch[~scipy.isnan(ne_ch)]
-    plt.figure()
+    f = plt.figure()
     scipy.stats.probplot(ne_ch, sparams=(ne_ETS_w[k], dev_ne_ETS_w[k]), plot=plt)
+    f.suptitle('ETS: idx=%d, R=%.2fm' % (k, R_mid_ETS_w[k]))
 
 # # Use entire data set, taking every skip-th point:
 # skip = 1
