@@ -130,7 +130,7 @@ for k in xrange(0, ne_ETS.shape[0]):
     ne_ch = ne_ch[~scipy.isnan(ne_ch)]
     f = plt.figure()
     scipy.stats.probplot(ne_ch, sparams=(ne_ETS_w[k], dev_ne_ETS_w[k]), plot=plt)
-    f.suptitle('ETS: idx=%d, R=%.2fm' % (k, R_mid_ETS_w[k]))
+    f.suptitle('ETS: idx=%d, R=%.3fm' % (k, R_mid_ETS_w[k]))
 
 # # Use entire data set, taking every skip-th point:
 # skip = 1
