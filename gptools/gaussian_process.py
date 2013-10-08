@@ -696,10 +696,10 @@ class GaussianProcess(object):
                   matrix: :math:`K=Q \\Lambda Q^{-1}`, use :math:`Q\\Lambda^{1/2}`
                   as the matrix square root.
         num_eig : int or None, optional
-            Number of eigenvalues to compute. Can range from 0 to the number
-            of elements in `Xstar` minus 1. If it is None, then all eigenvalues
-            are computed. Default is None (compute all eigenvalues). This
-            keyword only has an effect if `method` is 'eig'.
+            Number of eigenvalues to compute. Can range from 1 to `M` (the
+            number of test points). If it is None, then all eigenvalues are
+            computed. Default is None (compute all eigenvalues). This keyword
+            only has an effect if `method` is 'eig'.
         
         Returns
         -------
@@ -715,9 +715,15 @@ class GaussianProcess(object):
         
         # All of the input processing for Xstar and n will be done in here:
         mean, cov = self.predict(Xstar, n=n, noise=noise)
-        if rand_vars is None:
+        if rand_vars is None and method != 'eig':
             return scipy.asarray(numpy.random.multivariate_normal(scipy.asarray(mean).flatten(), cov, num_samp)).T
         else:
+            if num_eig is None or num_eig > len(mean):
+                num_eig = len(mean)
+            elif num_eig < 1:
+                num_eig = 1
+            if rand_vars is None:
+                rand_vars = numpy.random.standard_normal((num_eig, num_samp))
             valid_types = ('standard normal', 'uniform')
             if rand_type not in valid_types:
                 raise ValueError("rand_type %s not recognized! Valid options are: %s." % (rand_type, valid_types,))
@@ -733,12 +739,13 @@ class GaussianProcess(object):
                                    dtype=float)
             elif method == 'eig':
                 # Not technically lower triangular, but we'll keep the name L:
-                eig, Q = scipy.linalg.eigh(cov + diag_factor * sys.float_info.epsilon * scipy.eye(cov.shape[0]))
+                eig, Q = scipy.linalg.eigh(cov + diag_factor * sys.float_info.epsilon * scipy.eye(cov.shape[0]),
+                                           eigvals=(len(mean) - 1 - (num_eig - 1), len(mean) - 1))
                 Lam_1_2 = scipy.asmatrix(scipy.diag(scipy.sqrt(eig)))
                 L = scipy.asmatrix(Q) * Lam_1_2
             else:
                 raise ValueError("method %s not recognized!" % (method,))
-            return mean + L * scipy.asmatrix(rand_vars, dtype=float)
+            return mean + L * scipy.asmatrix(rand_vars[:num_eig, :], dtype=float)
 
 class Constraint(object):
     """Implements an inequality constraint on the value of the mean or its derivatives.
