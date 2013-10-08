@@ -250,7 +250,7 @@ f.subplots_adjust(hspace=0)
 
 # Draw samples:
 rand_vars = numpy.random.standard_normal((len(Rstar), 4))
-samps = gp.draw_sample(Rstar, rand_vars=rand_vars, method='eig', num_eig=1)
+samps = gp.draw_sample(Rstar, rand_vars=rand_vars, method='eig', num_eig=None)
 a1.plot(Rstar, samps, linewidth=2)
 
 deriv_samps = gp.draw_sample(Rstar, n=1, rand_vars=rand_vars, diag_factor=1e5)

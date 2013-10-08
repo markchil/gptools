@@ -711,8 +711,6 @@ class GaussianProcess(object):
         ValueError
             If rand_type or method is invalid.
         """
-        # TODO: Add support for eigenvalue truncation!
-        
         # All of the input processing for Xstar and n will be done in here:
         mean, cov = self.predict(Xstar, n=n, noise=noise)
         if rand_vars is None and method != 'eig':
@@ -738,6 +736,7 @@ class GaussianProcess(object):
                                                          check_finite=False),
                                    dtype=float)
             elif method == 'eig':
+                # TODO: Add support for specifying cutoff eigenvalue:
                 # Not technically lower triangular, but we'll keep the name L:
                 eig, Q = scipy.linalg.eigh(cov + diag_factor * sys.float_info.epsilon * scipy.eye(cov.shape[0]),
                                            eigvals=(len(mean) - 1 - (num_eig - 1), len(mean) - 1))

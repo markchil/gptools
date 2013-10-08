@@ -10,3 +10,9 @@ Developed and tested using Python 2.7 and scipy 0.12.0. Catches have been includ
 Full package documentation is located at http://gptools.readthedocs.org/
 
 A printable PDF is available at https://media.readthedocs.org/pdf/gptools/latest/gptools.pdf
+
+If you find this software useful, please be sure to cite it:
+
+M.A. Chilenski (2013). gptools: Gaussian processes with arbitrary derivative constraints and predictions, GNU General Public License. github.com/markchil/gptools
+
+Once I put together a formal publication on this software and its applications, this readme will be updated.
