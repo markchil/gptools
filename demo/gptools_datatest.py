@@ -248,12 +248,13 @@ a3.text(1,
 
 f.subplots_adjust(hspace=0)
 
-# rand_vars = numpy.random.standard_normal((len(Rstar), 4))
-# samps = gp.draw_sample(Rstar, rand_vars=rand_vars)
-# a1.plot(Rstar, samps, linewidth=2)
-# 
-# deriv_samps = gp.draw_sample(Rstar, n=1, rand_vars=rand_vars, diag_factor=1e4)
-# a2.plot(Rstar, deriv_samps, linewidth=2)
+# Draw samples:
+rand_vars = numpy.random.standard_normal((len(Rstar), 4))
+samps = gp.draw_sample(Rstar, rand_vars=rand_vars, method='eig')
+a1.plot(Rstar, samps, linewidth=2)
+
+deriv_samps = gp.draw_sample(Rstar, n=1, rand_vars=rand_vars, diag_factor=1e5)
+a2.plot(Rstar, deriv_samps, linewidth=2)
 
 a2.yaxis.get_major_ticks()[-1].label.set_visible(False)
 a2.yaxis.get_major_ticks()[0].label.set_visible(False)

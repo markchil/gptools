@@ -644,7 +644,9 @@ class GaussianProcess(object):
                 vals[k] = self._compute_ll_matrix(idx + 1, specific_param_vals, num_pts)
             return vals
     
-    def draw_sample(self, Xstar, n=0, noise=False, num_samp=1, rand_vars=None, rand_type='standard normal', diag_factor=1e3):
+    def draw_sample(self, Xstar, n=0, noise=False, num_samp=1, rand_vars=None,
+                    rand_type='standard normal', diag_factor=1e3, method='cholesky',
+                    num_eig=None):
         """Draw a sample evaluated at the given points `Xstar`.
         
         Parameters
@@ -683,11 +685,31 @@ class GaussianProcess(object):
             If you are getting errors from :py:func:`scipy.linalg.cholesky`, try increasing
             this an order of magnitude at a time. This parameter only has an
             effect when using rand_vars. Default value is 1e3. 
+        method : {'cholesky', 'eig'}, optional
+            Method to use for constructing the matrix square root. Default is
+            'cholesky' (use lower-triangular Cholesky decomposition).
+            
+                * 'cholesky': Perform Cholesky decomposition on the covariance
+                  matrix: :math:`K=LL^T`, use :math:`L` as the matrix square
+                  root.
+                * 'eig': Perform an eigenvalue decomposition on the covariance
+                  matrix: :math:`K=Q \\Lambda Q^{-1}`, use :math:`Q\\Lambda^{1/2}`
+                  as the matrix square root.
+        num_eig : int or None, optional
+            Number of eigenvalues to compute. Can range from 0 to the number
+            of elements in `Xstar` minus 1. If it is None, then all eigenvalues
+            are computed. Default is None (compute all eigenvalues). This
+            keyword only has an effect if `method` is 'eig'.
         
         Returns
         -------
             samples : :py:class:`Array` (`M`, `P`) or (`M`, `num_samp`)
                 Samples evaluated at the `M` points.
+        
+        Raises
+        ------
+        ValueError
+            If rand_type or method is invalid.
         """
         # TODO: Add support for eigenvalue truncation!
         
@@ -704,10 +726,18 @@ class GaussianProcess(object):
             
             # TODO: Should probably do some shape-checking first...
             
-            L = scipy.asmatrix(scipy.linalg.cholesky(cov + diag_factor * sys.float_info.epsilon * scipy.eye(cov.shape[0]),
-                                                     lower=True,
-                                                     check_finite=False),
-                               dtype=float)
+            if method == 'cholesky':
+                L = scipy.asmatrix(scipy.linalg.cholesky(cov + diag_factor * sys.float_info.epsilon * scipy.eye(cov.shape[0]),
+                                                         lower=True,
+                                                         check_finite=False),
+                                   dtype=float)
+            elif method == 'eig':
+                # Not technically lower triangular, but we'll keep the name L:
+                eig, Q = scipy.linalg.eigh(cov + diag_factor * sys.float_info.epsilon * scipy.eye(cov.shape[0]))
+                Lam_1_2 = scipy.asmatrix(scipy.diag(scipy.sqrt(eig)))
+                L = scipy.asmatrix(Q) * Lam_1_2
+            else:
+                raise ValueError("method %s not recognized!" % (method,))
             return mean + L * scipy.asmatrix(rand_vars, dtype=float)
 
 class Constraint(object):
