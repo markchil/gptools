@@ -736,7 +736,7 @@ class GaussianProcess(object):
                                                          check_finite=False),
                                    dtype=float)
             elif method == 'eig':
-                # TODO: Add support for specifying cutoff eigenvalue:
+                # TODO: Add support for specifying cutoff eigenvalue!
                 # Not technically lower triangular, but we'll keep the name L:
                 eig, Q = scipy.linalg.eigh(cov + diag_factor * sys.float_info.epsilon * scipy.eye(cov.shape[0]),
                                            eigvals=(len(mean) - 1 - (num_eig - 1), len(mean) - 1))

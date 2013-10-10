@@ -82,10 +82,10 @@ dev_R_mid_ETS_w = scipy.std(R_mid_ETS, axis=1)
 #                                      initial_params=[1, 0.15],
 #                                      fixed_params=[False, False],
 #                                      param_bounds=[(0.0, 1000.0), (0.01, 1.0)])
-# k = gptools.MaternKernel(1,
-#                          initial_params=[1, 3.0/2.0, 0.15],
-#                          fixed_params=[False, False, False],
-#                          param_bounds=[(0.0, 1000.0), (0.51, 10.0), (0.01, 1.0)])
+k = gptools.MaternKernel(1,
+                         initial_params=[1, 5.0/2.0, 0.15],
+                         fixed_params=[False, True, False],
+                         param_bounds=[(0.0, 1000.0), (0.51, 10.0), (0.01, 1.0)])
 # k = gptools.RationalQuadraticKernel(1,
 #                                     initial_params=[1, 20.0, 0.15],
 #                                     fixed_params=[False, False, False],
@@ -106,17 +106,17 @@ dev_R_mid_ETS_w = scipy.std(R_mid_ETS, axis=1)
 #                                                    (0.0001, 0.1),
 #                                                    (0.0001, 0.1)],
 #                                      enforce_bounds=True)
-k = gptools.GibbsKernel1dQuinticBucket(initial_params=[1, 0.15, 0.01, 0.15, 0.9, 0.001, 0.001, 0.001],
-                                       fixed_params=[False, False, False, False, False, False, False, False],
-                                       param_bounds=[(0.0, 1000.0),
-                                                     (0.01, 10.0),
-                                                     (0.0001, 1.0),
-                                                     (0.01, 10.0),
-                                                     (0.84, 0.95),
-                                                     (0.0001, 0.1),
-                                                     (0.0001, 0.1),
-                                                     (0.0001, 0.1)],
-                                       enforce_bounds=True)
+# k = gptools.GibbsKernel1dQuinticBucket(initial_params=[1, 0.15, 0.01, 0.15, 0.9, 0.001, 0.001, 0.001],
+#                                        fixed_params=[False, False, False, False, False, False, False, False],
+#                                        param_bounds=[(0.0, 1000.0),
+#                                                      (0.01, 10.0),
+#                                                      (0.0001, 1.0),
+#                                                      (0.01, 10.0),
+#                                                      (0.84, 0.95),
+#                                                      (0.0001, 0.1),
+#                                                      (0.0001, 0.1),
+#                                                      (0.0001, 0.1)],
+#                                        enforce_bounds=True)
 
 
 nk = gptools.DiagonalNoiseKernel(1, n=0, initial_noise=0.0, fixed_noise=True, noise_bound=(0.0001, 10.0))
@@ -125,7 +125,7 @@ nk = gptools.DiagonalNoiseKernel(1, n=0, initial_noise=0.0, fixed_noise=True, no
       gptools.SquaredExponentialKernel(1, initial_params=[1, 0.01], fixed_params=[False, False]))"""
 
 gp = gptools.GaussianProcess(k, noise_k=nk, X=R_mid_w, y=Te_TS_w, err_y=dev_Te_TS_w)
-gp.add_data(R_mid_ETS_w, Te_ETS_w, err_y=dev_Te_ETS_w)
+# gp.add_data(R_mid_ETS_w, Te_ETS_w, err_y=dev_Te_ETS_w)
 gp.add_data(R_mag_mean, 0, n=1)
 #gp.add_data(R_mag_mean, 0, n=2)
 #gp.add_data(R_mag_mean, 0, n=3)
@@ -157,7 +157,7 @@ gp.optimize_hyperparameters(
            # {'type': 'ineq', 'fun': l_cf},
            # {'type': 'ineq', 'fun': gptools.Constraint(gp, n=1, type_='lt', loc='max')},
            # {'type': 'ineq', 'fun': gptools.Constraint(gp)},
-           {'type': 'ineq', 'fun': lambda p: p[1] - p[2]},
+           # {'type': 'ineq', 'fun': lambda p: p[1] - p[2]},
            # {'type': 'eq', 'fun': lambda p: p[1] - p[3]},
            # {'type': 'ineq', 'fun': lambda p: p[3] - p[2]},
            # {'type': 'ineq', 'fun': lambda p: p[5] - p[4]},
@@ -181,12 +181,15 @@ meand_elapsed = time.time() - meand_start
 meand = scipy.asarray(meand).flatten()
 stdd = scipy.sqrt(scipy.diagonal(covd))
 
-print("Optimization took: %.2fs\nMean prediction took: %.2fs\nGradient prediction took: %.2fs\n"  % (opt_elapsed, mean_elapsed, meand_elapsed))
+print("Optimization took: %.2fs\nMean prediction took: %.2fs\nGradient prediction took: %.2fs"  % (opt_elapsed, mean_elapsed, meand_elapsed))
 
-"""meandd, covdd = gp.predict(Rstar, noise=False, n=2)
+meandd_start = time.time()
+meandd, covdd = gp.predict(Rstar, noise=False, n=2)
+meandd_elapsed = time.time() - meandd_start
 meandd = scipy.asarray(meandd).flatten()
-stddd = scipy.sqrt(scipy.diagonal(covdd))"""
+stddd = scipy.sqrt(scipy.diagonal(covdd))
 
+print("Second derivative prediction took: %.2fs" % (meandd_elapsed,))
 
 meand_approx = scipy.gradient(mean, Rstar[1] - Rstar[0])
 meandd_approx = scipy.gradient(meand, Rstar[1] - Rstar[0])
@@ -220,19 +223,19 @@ a2.axvspan(R_mag_mean-R_mag_std, R_mag_mean+R_mag_std, alpha=0.375, facecolor='r
 a2.get_xaxis().set_visible(False)
 a2.set_ylabel('$dT_{e}/dR$\n[keV/m]')
 
-a3 = f.add_subplot(3, 1, 3, sharex=a1)
-a3.plot(Rstar, gp.k.l_func(Rstar, 0, *gp.k.params[1:]), linewidth=3)
-a3.set_xlabel('$R$ [m]')
-a3.set_ylabel('$l$ [m]')
+# a3 = f.add_subplot(3, 1, 3, sharex=a1)
+# a3.plot(Rstar, gp.k.l_func(Rstar, 0, *gp.k.params[1:]), linewidth=3)
+# a3.set_xlabel('$R$ [m]')
+# a3.set_ylabel('$l$ [m]')
 
-"""a3 = f.add_subplot(3, 1, 3, sharex=a1)
+a3 = f.add_subplot(3, 1, 3, sharex=a1)
 a3.plot(Rstar, meandd, 'k', linewidth=3)
 a3.plot(Rstar, meandd_approx)
 a3.fill_between(Rstar, (meandd-stddd), (meandd+stddd), alpha=0.375, facecolor='k')
 a3.axvline(x=R_mag_mean, color='r')
 a3.axvspan(R_mag_mean-R_mag_std, R_mag_mean+R_mag_std, alpha=0.375, facecolor='r')
 a3.set_xlabel('$R$ [m]')
-a3.set_ylabel('$d^2T_{e}/dR^2$ [keV/m$^2$]')"""
+a3.set_ylabel('$d^2T_{e}/dR^2$ [keV/m$^2$]')
 
 a1.set_xlim(0.69, 0.92)
 a3.set_ylim(bottom=0.0)
@@ -248,18 +251,18 @@ a3.text(1,
 
 f.subplots_adjust(hspace=0)
 
-# Draw samples:
-rand_vars = numpy.random.standard_normal((len(Rstar), 4))
-samps = gp.draw_sample(Rstar, rand_vars=rand_vars, method='eig', num_eig=None)
-a1.plot(Rstar, samps, linewidth=2)
-
-deriv_samps = gp.draw_sample(Rstar, n=1, rand_vars=rand_vars, diag_factor=1e5)
-a2.plot(Rstar, deriv_samps, linewidth=2)
-
-a2.yaxis.get_major_ticks()[-1].label.set_visible(False)
-a2.yaxis.get_major_ticks()[0].label.set_visible(False)
-# a3.yaxis.get_major_ticks()[-1].label.set_visible(False)
-f.canvas.draw()
+# # Draw samples:
+# rand_vars = numpy.random.standard_normal((len(Rstar), 4))
+# samps = gp.draw_sample(Rstar, rand_vars=rand_vars, method='eig', num_eig=1)
+# a1.plot(Rstar, samps, linewidth=2)
+# 
+# deriv_samps = gp.draw_sample(Rstar, n=1, rand_vars=rand_vars, diag_factor=1e4, method='eig', num_eig=1)
+# a2.plot(Rstar, deriv_samps, linewidth=2)
+# 
+# a2.yaxis.get_major_ticks()[-1].label.set_visible(False)
+# a2.yaxis.get_major_ticks()[0].label.set_visible(False)
+# # a3.yaxis.get_major_ticks()[-1].label.set_visible(False)
+# f.canvas.draw()
 
 """print("Computing LL matrix...this could take a while!")
 

@@ -46,8 +46,8 @@ class MaternKernel(ChainRuleKernel):
     .. math::
     
         k_M = \sigma^2 \frac{2^{1-\nu}}{\Gamma(\nu)}
-        \left (\sqrt{2\nu} \sum_i\left (\frac{\tau_i^2}{l_i^2}\right )\right )^\nu
-        K_\nu\left(\sqrt{2\nu} \sum_i\left(\frac{\tau_i^2}{l_i^2}\right)\right)
+        \left (\sqrt{2\nu \sum_i\left (\frac{\tau_i^2}{l_i^2}\right )}\right )^\nu
+        K_\nu\left(\sqrt{2\nu \sum_i\left(\frac{\tau_i^2}{l_i^2}\right)}\right)
 
     Parameters
     ----------
@@ -178,9 +178,23 @@ class MaternKernel(ChainRuleKernel):
         if n >= 2 * self.nu:
             warnings.warn("n >= 2*nu can yield inaccurate results.", RuntimeWarning)
         
-        core_expr = lambda x: x**self.nu * mpmath.besselk(self.nu, x)
-        deriv = mpmath.chop(mpmath.diff(core_expr, 0, n=n, singular=True, direction=1))
-        dk_dy[~non_zero_idxs] = deriv
+        # Use John Wright's expression for n < 2 * nu:
+        if n < 2.0 * self.nu:
+            if n % 2 == 1:
+                dk_dy[~non_zero_idxs] = 0.0
+            else:
+                m = n / 2.0
+                dk_dy[~non_zero_idxs] = (
+                    (-1.0)**m *
+                    2.0**(self.nu - 1.0 - n) *
+                    scipy.special.gamma(self.nu - m) *
+                    scipy.misc.factorial(n) / scipy.misc.factorial(m)
+                )
+        else:
+            # Fall back to mpmath to handle n >= 2 * nu:
+            core_expr = lambda x: x**self.nu * mpmath.besselk(self.nu, x)
+            deriv = mpmath.chop(mpmath.diff(core_expr, 0, n=n, singular=True, direction=1))
+            dk_dy[~non_zero_idxs] = deriv
         
         dk_dy *= 2.0**(1 - self.nu) / (scipy.special.gamma(self.nu))
         
