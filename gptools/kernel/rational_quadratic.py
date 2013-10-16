@@ -85,7 +85,7 @@ class RationalQuadraticKernel(ChainRuleKernel):
         return y**(-self.params[1])
     
     def _compute_y(self, tau, return_r2l2=False):
-        r"""Covert tau to :math:`y=\sqrt{2\nu\sum_i(\tau_i^2/l_i^2)}`.
+        r"""Covert tau to :math:`y = 1 + \frac{1}{2\alpha} \sum_i \frac{\tau_i^2}{l_i^2}`.
         
         Parameters
         ----------
@@ -143,7 +143,7 @@ class RationalQuadraticKernel(ChainRuleKernel):
         
         .. math::
         
-            y = \sqrt{2 \nu \sum_i\frac{\tau_i^2}{l_i^2}}
+            y = 1 + \frac{1}{2\alpha}\sum_i(\tau_i^2/l_i^2)}`.
         
         Parameters
         ----------
