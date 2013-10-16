@@ -5,6 +5,7 @@ import MDSplus
 import time
 import scipy
 import scipy.stats
+import scipy.io
 import numpy.random
 import matplotlib
 matplotlib.rcParams.update({'font.size': 22})
@@ -310,7 +311,10 @@ gp.optimize_hyperparameters(
 opt_elapsed = time.time() - opt_start
 
 # Make predictions:
-Rstar = scipy.linspace(0.63, 0.93, 24*30)
+# Rstar = scipy.linspace(0.63, 0.93, 24*30)
+# Get Rstar from a fits savefile:
+fits_file = scipy.io.readsav('/home/markchil/origfit_1101014006.save')
+Rstar = fits_file.ne_fit.rmajor[0][:, 0]
 
 mean_start = time.time()
 mean, cov = gp.predict(Rstar, noise=False)
@@ -368,7 +372,7 @@ a3.plot(Rstar, gp.k.l_func(Rstar, 0, *gp.k.params[1:]), linewidth=3)
 a3.set_xlabel('$R$ [m]')
 a3.set_ylabel('$l$ [m]')
 
-a1.set_xlim(0.63, 0.93)
+# a1.set_xlim(0.63, 0.93)
 a3.set_ylim(bottom=0.0)
 
 a3.text(1,
