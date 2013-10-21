@@ -206,7 +206,7 @@ gp.add_data(R_mag_mean, 0, n=1)
 # gp.add_data(0.95, 0, n=1, err_y=0.1)
 
 # Try block constraint:
-R_out = scipy.linspace(0.92, 0.95, 5)
+R_out = scipy.linspace(0.93, 0.95, 5)
 zeros_out = scipy.zeros_like(R_out)
 gp.add_data(R_out, zeros_out, err_y=0.001)
 gp.add_data(R_out, zeros_out, err_y=0.1, n=1)
