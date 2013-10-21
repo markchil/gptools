@@ -202,8 +202,8 @@ gp.add_data(0.904, 0, err_y=0.1)
 gp.add_data(0.904, 0, n=1, err_y=1)
 gp.add_data(0.91, 0, err_y=0.05)
 gp.add_data(0.91, 0, n=1, err_y=1)
-gp.add_data(0.95, 0, err_y=0.01)
-gp.add_data(0.95, 0, n=1, err_y=1)
+gp.add_data(0.95, 0, err_y=0.001)
+gp.add_data(0.95, 0, n=1, err_y=0.1)
 
 # Make constraint functions:
 def l_cf(params):
