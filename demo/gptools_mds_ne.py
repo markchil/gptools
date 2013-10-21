@@ -178,7 +178,7 @@ dev_R_mid_ETS_w = scipy.asarray([scipy.stats.scoreatpercentile(ch, 75) -
 #     param_bounds=[(0.0, 1000.0), (0.01, 10.0), (0.0001, 1.0), (0.0001, 0.1), (0.88, 0.91)],
 #     enforce_bounds=True
 # )
-k = gptools.GibbsKernel1dQuinticBucket(initial_params=[1, 0.15, 0.15, 0.01, 0.8, 0.01, 0.1, 0.01],
+k = gptools.GibbsKernel1dQuinticBucket(initial_params=[1, 0.15, 0.15, 0.1, 0.75, 0.1, 0.1, 0.1],
                                        fixed_params=[False, False, False, False, False, False, False, False],
                                        param_bounds=[(0.0, 1000.0),  # sigmaf
                                                      (0.01, 10.0),   # l1
