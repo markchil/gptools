@@ -172,23 +172,23 @@ dev_R_mid_ETS_w = scipy.asarray([scipy.stats.scoreatpercentile(ch, 75) -
 #                                     fixed_params=[False, False, False],
 #                                     param_bounds=[(0.0, 1000.0), (0.001, 100.0), (0.01, 1.0)],
 #                                     enforce_bounds=True)
-# k = gptools.GibbsKernel1dTanh(
-#     initial_params=[1.88, 0.09655, 0.05637, 0.002941, 0.8937],
-#     fixed_params=[False, False, False, False, False],
-#     param_bounds=[(0.0, 1000.0), (0.01, 10.0), (0.0001, 1.0), (0.0001, 0.1), (0.88, 0.91)],
-#     enforce_bounds=True
-# )
-k = gptools.GibbsKernel1dQuinticBucket(initial_params=[1, 0.15, 0.15, 0.1, 0.75, 0.1, 0.1, 0.1],
-                                       fixed_params=[False, False, False, False, False, False, False, False],
-                                       param_bounds=[(0.0, 1000.0),  # sigmaf
-                                                     (0.01, 10.0),   # l1
-                                                     (0.01, 10.0),   # l2
-                                                     (0.001, 10.0),  # l3
-                                                     (0.7, 0.95),    # x0
-                                                     (0.0001, 0.1),  # w1
-                                                     (0.0001, 1.0),  # w2 (bucket width)
-                                                     (0.0001, 0.1)], # w3
-                                       enforce_bounds=True)
+k = gptools.GibbsKernel1dTanh(
+    initial_params=[1.88, 0.09655, 0.05637, 0.002941, 0.8937],
+    fixed_params=[False, False, False, False, False],
+    param_bounds=[(0.0, 1000.0), (0.01, 10.0), (0.0001, 1.0), (0.0001, 0.1), (0.88, 0.91)],
+    enforce_bounds=True
+)
+# k = gptools.GibbsKernel1dQuinticBucket(initial_params=[1, 0.15, 0.15, 0.1, 0.75, 0.1, 0.1, 0.1],
+#                                        fixed_params=[False, False, False, False, False, False, False, False],
+#                                        param_bounds=[(0.0, 1000.0),  # sigmaf
+#                                                      (0.01, 10.0),   # l1
+#                                                      (0.01, 10.0),   # l2
+#                                                      (0.001, 10.0),  # l3
+#                                                      (0.7, 0.95),    # x0
+#                                                      (0.0001, 0.1),  # w1
+#                                                      (0.0001, 1.0),  # w2 (bucket width)
+#                                                      (0.0001, 0.1)], # w3
+#                                        enforce_bounds=True)
 
 # Set noise kernel:
 nk = gptools.DiagonalNoiseKernel(1, n=0, initial_noise=0.0, fixed_noise=True, noise_bound=(0.0, 10.0))
