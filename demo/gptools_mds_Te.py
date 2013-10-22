@@ -14,8 +14,8 @@ plt.ion()
 
 shot = 1101014006
 # Start and end times of flat top:
-flat_start = 0.5
-flat_stop = 1.5
+flat_start = 0.965#0.5
+flat_stop = 1.365#1.5
 
 efit_tree = eqtools.CModEFITTree(shot)
 t_EFIT = efit_tree.getTimeBase()
@@ -97,6 +97,7 @@ R_mid_GPC2 = R_mid_GPC2[:, ok_idxs]
 
 # Flag bad points for exclusion:
 Te_GPC2[(Te_GPC2 == 0.0)] = scipy.nan
+Te_GPC2[(R_mid_GPC2 < 0.68)] = scipy.nan
 
 # Get GPC data:
 Te_GPC = []
@@ -248,6 +249,12 @@ gp.add_data(R_mid_GPC2_w, Te_GPC2_w, err_y=dev_Te_GPC2_w)
 gp.add_data(R_mid_GPC_w, Te_GPC_w, err_y=dev_Te_GPC_w)
 gp.add_data(R_mag_mean, 0, n=1)
 
+# Try block constraint:
+R_out = scipy.linspace(0.91, 0.95, 5)
+zeros_out = scipy.zeros_like(R_out)
+gp.add_data(R_out, zeros_out, err_y=0.001)
+gp.add_data(R_out, zeros_out, err_y=0.1, n=1)
+
 # Make constraint functions:
 def l_cf(params):
     return params[1] - params[2]
@@ -291,7 +298,7 @@ gp.optimize_hyperparameters(
             # {'type': 'ineq', 'fun': pos_cf(3)},
             # {'type': 'ineq', 'fun': pos_cf(4)},
             # {'type': 'ineq', 'fun': pos_cf(5)},
-            {'type': 'ineq', 'fun': l_cf},
+            # {'type': 'ineq', 'fun': l_cf},
             # {'type': 'ineq', 'fun': gptools.Constraint(gp, n=1, type_='lt', loc='max')},
             # {'type': 'ineq', 'fun': gptools.Constraint(gp)},
         )
