@@ -203,7 +203,7 @@ IQR_to_std = 1.349
 
 robust = True
 Te_TS_w, dev_Te_TS_w = gptools.compute_stats(Te_TS, robust=robust)
-R_mid_w, dev_R_mid_w = gptools.compute_stats(R_mid, robust=robust)
+R_mid_w, dev_R_mid_w = gptools.compute_stats(R_mid_CTS, robust=robust)
 
 Te_ETS_w, dev_Te_ETS_w = gptools.compute_stats(Te_ETS, robust=robust, check_nan=True)
 R_mid_ETS_w, dev_R_mid_ETS_w = gptools.compute_stats(R_mid_ETS, robust=robust)
