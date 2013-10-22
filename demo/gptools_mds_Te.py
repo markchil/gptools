@@ -337,7 +337,8 @@ gp.optimize_hyperparameters(
             # {'type': 'ineq', 'fun': l_cf},
             # {'type': 'ineq', 'fun': gptools.Constraint(gp, n=1, type_='lt', loc='max')},
             # {'type': 'ineq', 'fun': gptools.Constraint(gp)},
-        )
+        ),
+        acc=1e-8
     }
 )
 opt_elapsed = time.time() - opt_start
