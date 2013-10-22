@@ -97,7 +97,6 @@ R_mid_GPC2 = R_mid_GPC2[:, ok_idxs]
 
 # Flag bad points for exclusion:
 Te_GPC2[(Te_GPC2 == 0.0)] = scipy.nan
-Te_GPC2[(R_mid_GPC2 < 0.68)] = scipy.nan
 
 # Get GPC data:
 Te_GPC = []
@@ -220,7 +219,7 @@ dev_R_mid_FRC_w = dev_R_mid_FRC_w[good_idxs]
 Te_GPC2_w, dev_Te_GPC2_w = gptools.compute_stats(Te_GPC2, robust=robust, check_nan=True)
 R_mid_GPC2_w, dev_R_mid_GPC2_w = gptools.compute_stats(R_mid_GPC2, robust=robust)
 # Get rid of bad channels and channels outside the pedestal:
-bad_idxs = scipy.where(scipy.isnan(Te_GPC2_w) | (R_mid_GPC2_w >= 0.9))[0]
+bad_idxs = scipy.where(scipy.isnan(Te_GPC2_w) | (R_mid_GPC2_w >= 0.9) | (R_mid_GPC2_w <= R_mag_mean))[0]
 Te_GPC2_w = scipy.delete(Te_GPC2_w, bad_idxs)
 dev_Te_GPC2_w = scipy.delete(dev_Te_GPC2_w, bad_idxs)
 R_mid_GPC2_w = scipy.delete(R_mid_GPC2_w, bad_idxs)
