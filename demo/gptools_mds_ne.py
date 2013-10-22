@@ -15,8 +15,8 @@ plt.ion()
 
 shot = 1101014006
 # Start and end times of flat top:
-flat_start = 1.0
-flat_stop = 1.5
+flat_start = 0.965#1.0
+flat_stop = 1.365#1.5
 
 efit_tree = eqtools.CModEFITTree(shot)
 t_EFIT = efit_tree.getTimeBase()
