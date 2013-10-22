@@ -269,12 +269,12 @@ dev_R_mid_GPC_w = dev_R_mid_GPC_w[good_idxs]
 k = gptools.GibbsKernel1dTanh(
     initial_params=[100.0, 0.09655, 0.05637, 0.002941, 0.8937],
     fixed_params=[False, False, False, False, False],
-    param_bounds=[(0.0, 1000.0), (0.01, 10.0), (0.0001, 1.0), (0.0001, 0.1), (0.88, 0.91)],
+    param_bounds=[(0.0, 10000.0), (0.01, 10.0), (0.0001, 1.0), (0.0001, 0.1), (0.88, 0.91)],
     enforce_bounds=True
 )
 
 # Set noise kernel:
-nk = gptools.DiagonalNoiseKernel(1, n=0, initial_noise=0.0, fixed_noise=True, noise_bound=(0.0, 10.0))
+nk = gptools.DiagonalNoiseKernel(1, n=0, initial_noise=0.0, fixed_noise=False, noise_bound=(0.0, 10.0))
 
 # Create and populate GP:
 gp = gptools.GaussianProcess(k, noise_k=nk)
