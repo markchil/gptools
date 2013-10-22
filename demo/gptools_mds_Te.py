@@ -201,32 +201,15 @@ R_out_std = scipy.std(R_out[ok_idxs])
 # Average over entire data set, use robust estimators:
 IQR_to_std = 1.349
 
-Te_TS_w = scipy.median(Te_TS, axis=1)
-dev_Te_TS_w = scipy.asarray([scipy.stats.scoreatpercentile(ch, 75) -
-                             scipy.stats.scoreatpercentile(ch, 25)
-                             for ch in Te_TS]) / IQR_to_std
-R_mid_w = scipy.median(R_mid_CTS, axis=1)
-dev_R_mid_w = scipy.asarray([scipy.stats.scoreatpercentile(ch, 75) -
-                             scipy.stats.scoreatpercentile(ch, 25)
-                             for ch in R_mid_CTS]) / IQR_to_std
+robust = True
+Te_TS_w, dev_Te_TS_w = gptools.compute_stats(Te_TS, robust=robust)
+R_mid_w, dev_R_mid_w = gptools.compute_stats(R_mid, robust=robust)
 
-Te_ETS_w = scipy.stats.nanmedian(Te_ETS, axis=1)
-dev_Te_ETS_w = scipy.asarray([scipy.stats.scoreatpercentile(ch[~scipy.isnan(ch)], 75) -
-                              scipy.stats.scoreatpercentile(ch[~scipy.isnan(ch)], 25)
-                              for ch in Te_ETS]) / IQR_to_std
-R_mid_ETS_w = scipy.median(R_mid_ETS, axis=1)
-dev_R_mid_ETS_w = scipy.asarray([scipy.stats.scoreatpercentile(ch, 75) -
-                                 scipy.stats.scoreatpercentile(ch, 25)
-                                 for ch in R_mid_ETS]) / IQR_to_std
+Te_ETS_w, dev_Te_ETS_w = gptools.compute_stats(Te_ETS, robust=robust, check_nan=True)
+R_mid_ETS_w, dev_R_mid_ETS_w = gptools.compute_stats(R_mid_ETS, robust=robust)
 
-Te_FRC_w = scipy.median(Te_FRC, axis=1)
-dev_Te_FRC_w = scipy.asarray([scipy.stats.scoreatpercentile(ch, 75) -
-                              scipy.stats.scoreatpercentile(ch, 25)
-                              for ch in Te_FRC]) / IQR_to_std
-R_mid_FRC_w = scipy.median(R_mid_FRC, axis=1)
-dev_R_mid_FRC_w = scipy.asarray([scipy.stats.scoreatpercentile(ch, 75) -
-                                 scipy.stats.scoreatpercentile(ch, 25)
-                                 for ch in R_mid_FRC]) / IQR_to_std
+Te_FRC_w, dev_Te_FRC_ETS_w = gptools.compute_stats(Te_FRC, robust=robust)
+R_mid_FRC_w, dev_R_mid_FRC_w = gptools.compute_stats(R_mid_FRC, robust=robust)
 # Get rid of clearly too small points (Why do these happen?)
 good_idxs = (Te_FRC_w >= 0.1)
 Te_FRC_w = Te_FRC_w[good_idxs]
@@ -234,14 +217,8 @@ dev_Te_FRC_w = dev_Te_FRC_w[good_idxs]
 R_mid_FRC_w = R_mid_FRC_w[good_idxs]
 dev_R_mid_FRC_w = dev_R_mid_FRC_w[good_idxs]
 
-Te_GPC2_w = scipy.stats.nanmedian(Te_GPC2, axis=1)
-dev_Te_GPC2_w = scipy.asarray([scipy.stats.scoreatpercentile(ch[~scipy.isnan(ch)], 75) -
-                               scipy.stats.scoreatpercentile(ch[~scipy.isnan(ch)], 25)
-                               for ch in Te_GPC2]) / IQR_to_std
-R_mid_GPC2_w = scipy.median(R_mid_GPC2, axis=1)
-dev_R_mid_GPC2_w = scipy.asarray([scipy.stats.scoreatpercentile(ch, 75) -
-                                  scipy.stats.scoreatpercentile(ch, 25)
-                                  for ch in R_mid_GPC2]) / IQR_to_std
+Te_GPC2_w, dev_Te_GPC2_w = gptools.compute_stats(Te_GPC2, robust=robust, check_nan=True)
+R_mid_GPC2_w, dev_R_mid_GPC2_w = gptools.compute_stats(R_mid_GPC2, robust=robust)
 # Get rid of bad channels and channels outside the pedestal:
 bad_idxs = scipy.where(scipy.isnan(Te_GPC2_w) | (R_mid_GPC2_w >= 0.9))[0]
 Te_GPC2_w = scipy.delete(Te_GPC2_w, bad_idxs)
@@ -249,14 +226,8 @@ dev_Te_GPC2_w = scipy.delete(dev_Te_GPC2_w, bad_idxs)
 R_mid_GPC2_w = scipy.delete(R_mid_GPC2_w, bad_idxs)
 dev_R_mid_GPC2_w = scipy.delete(dev_R_mid_GPC2_w, bad_idxs)
 
-Te_GPC_w = scipy.median(Te_GPC, axis=1)
-dev_Te_GPC_w = scipy.asarray([scipy.stats.scoreatpercentile(ch, 75) -
-                              scipy.stats.scoreatpercentile(ch, 25)
-                              for ch in Te_GPC]) / IQR_to_std
-R_mid_GPC_w = scipy.median(R_mid_GPC, axis=1)
-dev_R_mid_GPC_w = scipy.asarray([scipy.stats.scoreatpercentile(ch, 75) -
-                                 scipy.stats.scoreatpercentile(ch, 25)
-                                 for ch in R_mid_GPC]) / IQR_to_std
+Te_GPC_w, dev_Te_GPC_w = gptools.compute_stats(Te_GPC, robust=robust)
+R_mid_GPC_w, dev_R_mid_GPC_w = gptools.compute_stats(R_mid_GPC, robust=robust)
 # Get rid of clearly too small points (Why do these happen?)
 good_idxs = (Te_GPC_w >= 0.1)
 Te_GPC_w = Te_GPC_w[good_idxs]

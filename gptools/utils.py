@@ -26,6 +26,7 @@ from .error_handling import GPArgumentError
 import multiprocessing
 import scipy
 import scipy.special
+import scipy.stats
 import matplotlib.pyplot as plt
 import matplotlib.widgets as mplw
 import matplotlib.gridspec as mplgs
@@ -540,3 +541,76 @@ def wrap_fmin_slsqp(fun, guess, opt_kwargs={}):
                   x=out,
                   message=smode,
                   nit=its)
+
+# Conversion factor to get from interquartile range to standard deviation:
+IQR_TO_STD = 2.0 * scipy.stats.norm.isf(0.25)
+
+def compute_stats(vals, check_nan=False, robust=False, axis=1, plot_QQ=False):
+    """Compute the average statistics (mean, std dev) for the given values.
+    
+    Parameters
+    ----------
+    vals : array-like, (`M`, `N`)
+        Values to compute the average statistics along the specified axis of.
+    check_nan : bool, optional
+        Whether or not to check for (and exclude) NaN's. Default is False (do
+        not attempt to handle NaN's).
+    robust : bool, optional
+        Whether or not to use robust estimators (median for mean, IQR for
+        standard deviation). Default is False (use non-robust estimators).
+    axis : int, optional
+        Axis to compute the statistics along. Presently only supported if
+        `robust` is False. Default is 1.
+    plot_QQ : bool, optional
+        Whether or not a QQ plot should be drawn for each channel. Default is
+        False (do not draw QQ plots).
+    
+    Returns
+    -------
+    mean : ndarray, (`M`,)
+        Estimator for the mean of `vals`.
+    std : ndarray, (`M`,)
+        Estimator for the standard deviation of `vals`.
+    
+    Raises
+    ------
+    NotImplementedError
+        If `axis` != 1 when `robust` is True.
+    NotImplementedError
+        If `plot_QQ` is True.
+    """
+    if axis != 1 and robust:
+        raise NotImplementedError("Values of axis other than 1 are not supported "
+                                  "with the robust keyword at this time!")
+    if robust:
+        # TODO: This stuff should really be vectorized if there is something that allows it!
+        if check_nan:
+            mean = scipy.stats.nanmedian(vals, axis=axis)
+            # TODO: HANDLE AXIS PROPERLY!
+            std = scipy.zeros(vals.shape[0], dtype=float)
+            for k in xrange(0, len(vals)):
+                ch = vals[k]
+                ok_idxs = ~scipy.isnan(ch)
+                if ok_idxs.any():
+                    std[k] = (scipy.stats.scoreatpercentile(ch[ok_idxs], 75) -
+                              scipy.stats.scoreatpercentile(ch[ok_idxs], 25))
+                else:
+                    # Leave a nan where there are no non-nan values:
+                    std[k] = scipy.nan
+            std /= IQR_TO_STD
+        else:
+            mean = scipy.median(vals, axis=axis)
+            # TODO: HANDLE AXIS PROPERLY!
+            std = scipy.asarray([scipy.stats.scoreatpercentile(ch, 75.0) -
+                                 scipy.stats.scoreatpercentile(ch, 25.0)
+                                 for ch in vals]) / IQR_TO_STD
+    else:
+        if check_nan:
+            mean = scipy.stats.nanmean(vals, axis=axis)
+            std = scipy.stats.nanstd(vals, axis=axis)
+        else:
+            mean = scipy.mean(vals, axis=axis)
+            std = scipy.std(vals, axis=axis)
+    if plot_QQ:
+        raise NotImplementedError("Not implemented yet!")
+    return (mean, std)
