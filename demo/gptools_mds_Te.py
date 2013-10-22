@@ -208,7 +208,7 @@ R_mid_w, dev_R_mid_w = gptools.compute_stats(R_mid_CTS, robust=robust)
 Te_ETS_w, dev_Te_ETS_w = gptools.compute_stats(Te_ETS, robust=robust, check_nan=True)
 R_mid_ETS_w, dev_R_mid_ETS_w = gptools.compute_stats(R_mid_ETS, robust=robust)
 
-Te_FRC_w, dev_Te_FRC_ETS_w = gptools.compute_stats(Te_FRC, robust=robust)
+Te_FRC_w, dev_Te_FRC_w = gptools.compute_stats(Te_FRC, robust=robust)
 R_mid_FRC_w, dev_R_mid_FRC_w = gptools.compute_stats(R_mid_FRC, robust=robust)
 # Get rid of clearly too small points (Why do these happen?)
 good_idxs = (Te_FRC_w >= 0.1)
