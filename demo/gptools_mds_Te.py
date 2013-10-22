@@ -154,21 +154,79 @@ R_out_std = scipy.std(R_out[ok_idxs])
 # R_out_mean = R_out[idx]
 # R_out_std = 0.0
 
-# Average over entire data set:
-Te_TS_w = scipy.mean(Te_TS, axis=1)
-dev_Te_TS_w = scipy.std(Te_TS, axis=1, ddof=1)
-R_mid_w = scipy.mean(R_mid_CTS, axis=1)
-dev_R_mid_w = scipy.std(R_mid_CTS, axis=1, ddof=1)
+# # Average over entire data set:
+# Te_TS_w = scipy.mean(Te_TS, axis=1)
+# dev_Te_TS_w = scipy.std(Te_TS, axis=1, ddof=1)
+# R_mid_w = scipy.mean(R_mid_CTS, axis=1)
+# dev_R_mid_w = scipy.std(R_mid_CTS, axis=1, ddof=1)
+# 
+# Te_ETS_w = scipy.stats.nanmean(Te_ETS, axis=1)
+# dev_Te_ETS_w = scipy.stats.nanstd(Te_ETS, axis=1)
+# R_mid_ETS_w = scipy.mean(R_mid_ETS, axis=1)
+# dev_R_mid_ETS_w = scipy.std(R_mid_ETS, axis=1, ddof=1)
+# 
+# Te_FRC_w = scipy.mean(Te_FRC, axis=1)
+# dev_Te_FRC_w = scipy.std(Te_FRC, axis=1, ddof=1)
+# R_mid_FRC_w = scipy.mean(R_mid_FRC, axis=1)
+# dev_R_mid_FRC_w = scipy.std(R_mid_FRC, axis=1, ddof=1)
+# # Get rid of clearly too small points (Why do these happen?)
+# good_idxs = (Te_FRC_w >= 0.1)
+# Te_FRC_w = Te_FRC_w[good_idxs]
+# dev_Te_FRC_w = dev_Te_FRC_w[good_idxs]
+# R_mid_FRC_w = R_mid_FRC_w[good_idxs]
+# dev_R_mid_FRC_w = dev_R_mid_FRC_w[good_idxs]
+# 
+# Te_GPC2_w = scipy.stats.nanmean(Te_GPC2, axis=1)
+# dev_Te_GPC2_w = scipy.stats.nanstd(Te_GPC2, axis=1)
+# R_mid_GPC2_w = scipy.mean(R_mid_GPC2, axis=1)
+# dev_R_mid_GPC2_w = scipy.std(R_mid_GPC2, axis=1, ddof=1)
+# # Get rid of bad channels and channels outside the pedestal:
+# bad_idxs = scipy.where(scipy.isnan(Te_GPC2_w) | (R_mid_GPC2_w >= 0.9))[0]
+# Te_GPC2_w = scipy.delete(Te_GPC2_w, bad_idxs)
+# dev_Te_GPC2_w = scipy.delete(dev_Te_GPC2_w, bad_idxs)
+# R_mid_GPC2_w = scipy.delete(R_mid_GPC2_w, bad_idxs)
+# dev_R_mid_GPC2_w = scipy.delete(dev_R_mid_GPC2_w, bad_idxs)
+# 
+# Te_GPC_w = scipy.mean(Te_GPC, axis=1)
+# dev_Te_GPC_w = scipy.std(Te_GPC, axis=1, ddof=1)
+# R_mid_GPC_w = scipy.mean(R_mid_GPC, axis=1)
+# dev_R_mid_GPC_w = scipy.std(R_mid_GPC, axis=1, ddof=1)
+# # Get rid of clearly too small points (Why do these happen?)
+# good_idxs = (Te_GPC_w >= 0.1)
+# Te_GPC_w = Te_GPC_w[good_idxs]
+# dev_Te_GPC_w = dev_Te_GPC_w[good_idxs]
+# R_mid_GPC_w = R_mid_GPC_w[good_idxs]
+# dev_R_mid_GPC_w = dev_R_mid_GPC_w[good_idxs]
 
-Te_ETS_w = scipy.stats.nanmean(Te_ETS, axis=1)
-dev_Te_ETS_w = scipy.stats.nanstd(Te_ETS, axis=1)
-R_mid_ETS_w = scipy.mean(R_mid_ETS, axis=1)
-dev_R_mid_ETS_w = scipy.std(R_mid_ETS, axis=1, ddof=1)
+# Average over entire data set, use robust estimators:
+IQR_to_std = 1.349
 
-Te_FRC_w = scipy.mean(Te_FRC, axis=1)
-dev_Te_FRC_w = scipy.std(Te_FRC, axis=1, ddof=1)
-R_mid_FRC_w = scipy.mean(R_mid_FRC, axis=1)
-dev_R_mid_FRC_w = scipy.std(R_mid_FRC, axis=1, ddof=1)
+Te_TS_w = scipy.median(Te_TS, axis=1)
+dev_Te_TS_w = scipy.asarray([scipy.stats.scoreatpercentile(ch, 75) -
+                             scipy.stats.scoreatpercentile(ch, 25)
+                             for ch in Te_TS]) / IQR_to_std
+R_mid_w = scipy.median(R_mid_CTS, axis=1)
+dev_R_mid_w = scipy.asarray([scipy.stats.scoreatpercentile(ch, 75) -
+                             scipy.stats.scoreatpercentile(ch, 25)
+                             for ch in R_mid_CTS]) / IQR_to_std
+
+Te_ETS_w = scipy.stats.nanmedian(Te_ETS, axis=1)
+dev_Te_ETS_w = scipy.asarray([scipy.stats.scoreatpercentile(ch[~scipy.isnan(ch)], 75) -
+                              scipy.stats.scoreatpercentile(ch[~scipy.isnan(ch)], 25)
+                              for ch in Te_ETS]) / IQR_to_std
+R_mid_ETS_w = scipy.median(R_mid_ETS, axis=1)
+dev_R_mid_ETS_w = scipy.asarray([scipy.stats.scoreatpercentile(ch, 75) -
+                                 scipy.stats.scoreatpercentile(ch, 25)
+                                 for ch in R_mid_ETS]) / IQR_to_std
+
+Te_FRC_w = scipy.median(Te_FRC, axis=1)
+dev_Te_FRC_w = scipy.asarray([scipy.stats.scoreatpercentile(ch, 75) -
+                              scipy.stats.scoreatpercentile(ch, 25)
+                              for ch in Te_FRC]) / IQR_to_std
+R_mid_FRC_w = scipy.median(R_mid_FRC, axis=1)
+dev_R_mid_FRC_w = scipy.asarray([scipy.stats.scoreatpercentile(ch, 75) -
+                                 scipy.stats.scoreatpercentile(ch, 25)
+                                 for ch in R_mid_FRC]) / IQR_to_std
 # Get rid of clearly too small points (Why do these happen?)
 good_idxs = (Te_FRC_w >= 0.1)
 Te_FRC_w = Te_FRC_w[good_idxs]
@@ -176,10 +234,14 @@ dev_Te_FRC_w = dev_Te_FRC_w[good_idxs]
 R_mid_FRC_w = R_mid_FRC_w[good_idxs]
 dev_R_mid_FRC_w = dev_R_mid_FRC_w[good_idxs]
 
-Te_GPC2_w = scipy.stats.nanmean(Te_GPC2, axis=1)
-dev_Te_GPC2_w = scipy.stats.nanstd(Te_GPC2, axis=1)
-R_mid_GPC2_w = scipy.mean(R_mid_GPC2, axis=1)
-dev_R_mid_GPC2_w = scipy.std(R_mid_GPC2, axis=1, ddof=1)
+Te_GPC2_w = scipy.stats.nanmedian(Te_GPC2, axis=1)
+dev_Te_GPC2_w = scipy.asarray([scipy.stats.scoreatpercentile(ch[~scipy.isnan(ch)], 75) -
+                               scipy.stats.scoreatpercentile(ch[~scipy.isnan(ch)], 25)
+                               for ch in Te_GPC2]) / IQR_to_std
+R_mid_GPC2_w = scipy.median(R_mid_GPC2, axis=1)
+dev_R_mid_GPC2_w = scipy.asarray([scipy.stats.scoreatpercentile(ch, 75) -
+                                  scipy.stats.scoreatpercentile(ch, 25)
+                                  for ch in R_mid_GPC2]) / IQR_to_std
 # Get rid of bad channels and channels outside the pedestal:
 bad_idxs = scipy.where(scipy.isnan(Te_GPC2_w) | (R_mid_GPC2_w >= 0.9))[0]
 Te_GPC2_w = scipy.delete(Te_GPC2_w, bad_idxs)
@@ -187,10 +249,14 @@ dev_Te_GPC2_w = scipy.delete(dev_Te_GPC2_w, bad_idxs)
 R_mid_GPC2_w = scipy.delete(R_mid_GPC2_w, bad_idxs)
 dev_R_mid_GPC2_w = scipy.delete(dev_R_mid_GPC2_w, bad_idxs)
 
-Te_GPC_w = scipy.mean(Te_GPC, axis=1)
-dev_Te_GPC_w = scipy.std(Te_GPC, axis=1, ddof=1)
-R_mid_GPC_w = scipy.mean(R_mid_GPC, axis=1)
-dev_R_mid_GPC_w = scipy.std(R_mid_GPC, axis=1, ddof=1)
+Te_GPC_w = scipy.median(Te_GPC, axis=1)
+dev_Te_GPC_w = scipy.asarray([scipy.stats.scoreatpercentile(ch, 75) -
+                              scipy.stats.scoreatpercentile(ch, 25)
+                              for ch in Te_GPC]) / IQR_to_std
+R_mid_GPC_w = scipy.median(R_mid_GPC, axis=1)
+dev_R_mid_GPC_w = scipy.asarray([scipy.stats.scoreatpercentile(ch, 75) -
+                                 scipy.stats.scoreatpercentile(ch, 25)
+                                 for ch in R_mid_GPC]) / IQR_to_std
 # Get rid of clearly too small points (Why do these happen?)
 good_idxs = (Te_GPC_w >= 0.1)
 Te_GPC_w = Te_GPC_w[good_idxs]
