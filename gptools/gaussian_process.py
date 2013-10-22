@@ -521,7 +521,7 @@ class GaussianProcess(object):
         # Process Xstar:
         Xstar = scipy.asmatrix(Xstar, dtype=float)
         # Handle 1d x case where array is passed in:
-        if self.num_dim == 1 and self.X.shape[1] == 1:
+        if self.num_dim == 1 and Xstar.shape[0] == 1:
             Xstar = Xstar.T
         if Xstar.shape[1] != self.num_dim:
             raise ValueError("Second dimension of Xstar must be equal to "
@@ -534,6 +534,8 @@ class GaussianProcess(object):
             n = n * scipy.asmatrix(scipy.ones(Xstar.shape, dtype=int))
         else:
             n = scipy.asmatrix(n, dtype=int)
+            if self.num_dim == 1 and n.shape[0] == 1:
+                n = n.T
             if n.shape != Xstar.shape:
                 raise ValueError("When using array-like n, shape must match "
                                  "shape of Xstar! Shape of n given is %s, "
