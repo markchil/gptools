@@ -398,7 +398,7 @@ rand_vars = numpy.random.standard_normal((len(Rstar), 10))
 samps = gp.draw_sample(Rstar, rand_vars=rand_vars, method='eig', num_eig=10)
 a1.plot(Rstar, samps, linewidth=2)
 
-deriv_samps = gp.draw_sample(Rstar, n=1, rand_vars=rand_vars, diag_factor=1e4, method='eig', num_eig=1)
+deriv_samps = gp.draw_sample(Rstar, n=1, rand_vars=rand_vars, diag_factor=1e4, method='eig', num_eig=10)
 a2.plot(Rstar, deriv_samps, linewidth=2)
 
 a2.yaxis.get_major_ticks()[-1].label.set_visible(False)
