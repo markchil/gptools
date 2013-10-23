@@ -195,8 +195,8 @@ nk = gptools.DiagonalNoiseKernel(1, n=0, initial_noise=0.1, fixed_noise=False, n
 
 # Create and populate GP:
 gp = gptools.GaussianProcess(k, noise_k=nk)
-gp.add_data(R_mid_w, ne_TS_w, err_y=0*dev_ne_TS_w)
-gp.add_data(R_mid_ETS_w, ne_ETS_w, err_y=0*dev_ne_ETS_w)
+gp.add_data(R_mid_w, ne_TS_w, err_y=dev_ne_TS_w)
+gp.add_data(R_mid_ETS_w, ne_ETS_w, err_y=dev_ne_ETS_w)
 gp.add_data(R_mag_mean, 0, n=1)
 # gp.add_data(0.904, 0, err_y=0.1)
 # gp.add_data(0.904, 0, n=1, err_y=1)
@@ -328,7 +328,7 @@ mean_nth = scipy.mean(ne_nth, axis=1)
 std_nth = scipy.std(ne_nth, axis=1)
 
 mean_start = time.time()
-mean, cov = gp.predict(Rstar, noise=True)
+mean, cov = gp.predict(Rstar, noise=False)
 mean_elapsed = time.time() - mean_start
 mean = scipy.asarray(mean).flatten()
 std = scipy.sqrt(scipy.diagonal(cov))
