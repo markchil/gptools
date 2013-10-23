@@ -323,6 +323,9 @@ opt_elapsed = time.time() - opt_start
 # Get Rstar from a fits savefile:
 fits_file = scipy.io.readsav('/home/markchil/origfit_1101014006.save')
 Rstar = fits_file.ne_fit.rmajor[0][:, 0]
+ne_nth = fits_file.ne_fit.combined_fit_ne[0][:, 32:72]
+mean_nth = scipy.mean(ne_nth, axis=1)
+std_nth = scipy.std(ne_nth, axis=1)
 
 mean_start = time.time()
 mean, cov = gp.predict(Rstar, noise=False)
@@ -351,6 +354,8 @@ f.suptitle('Univariate GPR on TS data')
 a1 = f.add_subplot(3, 1, 1)
 a1.plot(Rstar, mean, 'k', linewidth=3, label='mean')
 a1.fill_between(Rstar, mean-std, mean+std, alpha=0.375, facecolor='k')
+a1.plot(Rstar, mean_nth, 'g', linewidth=3, label='mean')
+a1.fill_between(Rstar, mean_nth-std_nth, mean_nth+std_nth, alpha=0.375, facecolor='g')
 a1.errorbar(R_mid_w, ne_TS_w, xerr=dev_R_mid_w, yerr=dev_ne_TS_w, fmt='r.', label='CTS') # 
 a1.errorbar(R_mid_ETS_w, ne_ETS_w, xerr=dev_R_mid_ETS_w, yerr=dev_ne_ETS_w, fmt='m.', label='ETS') # 
 a1.axvline(x=R_mag_mean, color='r', label='$R_{mag}$')
@@ -394,12 +399,12 @@ a3.text(1,
 
 f.subplots_adjust(hspace=0)
 
-rand_vars = numpy.random.standard_normal((len(Rstar), 10))
-samps = gp.draw_sample(Rstar, rand_vars=rand_vars, method='eig', num_eig=10)
-a1.plot(Rstar, samps, linewidth=2)
-
-deriv_samps = gp.draw_sample(Rstar, n=1, rand_vars=rand_vars, diag_factor=1e4, method='eig', num_eig=10)
-a2.plot(Rstar, deriv_samps, linewidth=2)
+# rand_vars = numpy.random.standard_normal((len(Rstar), 10))
+# samps = gp.draw_sample(Rstar, rand_vars=rand_vars, method='eig', num_eig=10)
+# a1.plot(Rstar, samps, linewidth=2)
+# 
+# deriv_samps = gp.draw_sample(Rstar, n=1, rand_vars=rand_vars, diag_factor=1e4, method='eig', num_eig=10)
+# a2.plot(Rstar, deriv_samps, linewidth=2)
 
 a2.yaxis.get_major_ticks()[-1].label.set_visible(False)
 a2.yaxis.get_major_ticks()[0].label.set_visible(False)
