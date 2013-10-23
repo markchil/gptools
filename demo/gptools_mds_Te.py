@@ -343,7 +343,12 @@ gp.optimize_hyperparameters(
 opt_elapsed = time.time() - opt_start
 
 # Make predictions:
-Rstar = scipy.linspace(0.63, 0.93, 24*30)
+# Rstar = scipy.linspace(0.63, 0.93, 24*30)
+fits_file = scipy.io.readsav('/home/markchil/origfit_1101014006.save')
+Rstar = fits_file.ne_fit.rmajor[0][:, 0]
+Te_nth = fits_file.te_fit.te_comb_fit[0][:, 32:72]
+mean_nth = scipy.mean(Te_nth, axis=1)
+std_nth = scipy.std(Te_nth, axis=1)
 
 mean_start = time.time()
 mean, cov = gp.predict(Rstar, noise=False)
@@ -372,6 +377,8 @@ f.suptitle('Univariate GPR on time-averaged data')
 a1 = f.add_subplot(3, 1, 1)
 a1.plot(Rstar, mean, 'k', linewidth=3, label='mean')
 a1.fill_between(Rstar, mean-std, mean+std, alpha=0.375, facecolor='k')
+a1.plot(Rstar, mean_nth, 'g', linewidth=3, label='NTH')
+a1.fill_between(Rstar, mean_nth-std_nth, mean_nth+std_nth, alpha=0.375, facecolor='g')
 a1.errorbar(R_mid_w, Te_TS_w, xerr=dev_R_mid_w, yerr=dev_Te_TS_w, fmt='r.', label='CTS')
 a1.errorbar(R_mid_ETS_w, Te_ETS_w, xerr=dev_R_mid_ETS_w, yerr=dev_Te_ETS_w, fmt='m.', label='ETS')
 a1.errorbar(R_mid_FRC_w, Te_FRC_w, xerr=dev_R_mid_FRC_w, yerr=dev_Te_FRC_w, fmt='b.', label='FRC')
@@ -418,13 +425,13 @@ a3.text(1,
 
 f.subplots_adjust(hspace=0)
 
-samp_loc = scipy.concatenate((Rstar, Rstar))
-samp_n = scipy.concatenate((scipy.zeros_like(Rstar), scipy.ones_like(Rstar)))
-
-rand_vars = numpy.random.standard_normal((len(samp_loc), 12))
-samps = gp.draw_sample(samp_loc, n=samp_n, rand_vars=rand_vars, method='eig', num_eig=10)
-a1.plot(Rstar, samps[:len(Rstar)], linewidth=2)
-a2.plot(Rstar, samps[len(Rstar):], linewidth=2)
+# samp_loc = scipy.concatenate((Rstar, Rstar))
+# samp_n = scipy.concatenate((scipy.zeros_like(Rstar), scipy.ones_like(Rstar)))
+# 
+# rand_vars = numpy.random.standard_normal((len(samp_loc), 12))
+# samps = gp.draw_sample(samp_loc, n=samp_n, rand_vars=rand_vars, method='eig', num_eig=10)
+# a1.plot(Rstar, samps[:len(Rstar)], linewidth=2)
+# a2.plot(Rstar, samps[len(Rstar):], linewidth=2)
 
 a2.yaxis.get_major_ticks()[-1].label.set_visible(False)
 a2.yaxis.get_major_ticks()[0].label.set_visible(False)
