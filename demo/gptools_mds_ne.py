@@ -323,7 +323,7 @@ opt_elapsed = time.time() - opt_start
 # Get Rstar from a fits savefile:
 fits_file = scipy.io.readsav('/home/markchil/origfit_1101014006.save')
 Rstar = fits_file.ne_fit.rmajor[0][:, 0]
-ne_nth = fits_file.ne_fit.combined_fit_ne[0][:, 32:72]
+ne_nth = fits_file.ne_fit.combined_fit_ne[0][:, 32:72] / 1e20
 mean_nth = scipy.mean(ne_nth, axis=1)
 std_nth = scipy.std(ne_nth, axis=1)
 
