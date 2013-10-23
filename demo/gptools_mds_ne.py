@@ -328,7 +328,7 @@ mean_nth = scipy.mean(ne_nth, axis=1)
 std_nth = scipy.std(ne_nth, axis=1)
 
 mean_start = time.time()
-mean, cov = gp.predict(Rstar, noise=False)
+mean, cov = gp.predict(Rstar, noise=True)
 mean_elapsed = time.time() - mean_start
 mean = scipy.asarray(mean).flatten()
 std = scipy.sqrt(scipy.diagonal(cov))
