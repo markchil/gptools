@@ -267,7 +267,7 @@ dev_R_mid_GPC_w = dev_R_mid_GPC_w[good_idxs]
 #                                     param_bounds=[(0.0, 1000.0), (0.001, 100.0), (0.01, 1.0)],
 #                                     enforce_bounds=True)
 k = gptools.GibbsKernel1dTanh(
-    initial_params=[0.1, 0.09655, 0.05637, 0.002941, 0.8937],
+    initial_params=[0.1, 0.1, 0.05, 0.003, 0.89],
     fixed_params=[False, False, False, False, False],
     param_bounds=[(0.0, 10000.0), (0.01, 10.0), (0.0001, 1.0), (0.0001, 0.1), (0.88, 0.91)],
     enforce_bounds=True
@@ -286,7 +286,7 @@ gp.add_data(R_mid_GPC_w, Te_GPC_w, err_y=dev_Te_GPC_w)
 gp.add_data(R_mag_mean, 0, n=1)
 
 # Try block constraint:
-R_out = scipy.linspace(0.91, 0.95, 5)
+R_out = scipy.linspace(0.92, 0.95, 5)
 zeros_out = scipy.zeros_like(R_out)
 gp.add_data(R_out, zeros_out, err_y=0.001)
 gp.add_data(R_out, zeros_out, err_y=0.1, n=1)
@@ -379,6 +379,7 @@ a1.plot(Rstar, mean, 'k', linewidth=3, label='mean')
 a1.fill_between(Rstar, mean-std, mean+std, alpha=0.375, facecolor='k')
 a1.plot(Rstar, mean_nth, 'g', linewidth=3, label='NTH')
 a1.fill_between(Rstar, mean_nth-std_nth, mean_nth+std_nth, alpha=0.375, facecolor='g')
+a1.plot(Rstar, Te_nth)
 a1.errorbar(R_mid_w, Te_TS_w, xerr=dev_R_mid_w, yerr=dev_Te_TS_w, fmt='r.', label='CTS')
 a1.errorbar(R_mid_ETS_w, Te_ETS_w, xerr=dev_R_mid_ETS_w, yerr=dev_Te_ETS_w, fmt='m.', label='ETS')
 a1.errorbar(R_mid_FRC_w, Te_FRC_w, xerr=dev_R_mid_FRC_w, yerr=dev_Te_FRC_w, fmt='b.', label='FRC')
