@@ -5,6 +5,7 @@ import MDSplus
 import time
 import scipy
 import scipy.stats
+import scipy.io
 import numpy.random
 import matplotlib
 matplotlib.rcParams.update({'font.size': 22})
