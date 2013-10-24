@@ -348,8 +348,7 @@ opt_elapsed = time.time() - opt_start
 fits_file = scipy.io.readsav('/home/markchil/origfit_1101014006.save')
 Rstar = fits_file.ne_fit.rmajor[0][:, 0]
 Te_nth = fits_file.te_fit.te_comb_fit[0][:, 32:72]
-mean_nth = scipy.mean(Te_nth, axis=1)
-std_nth = scipy.std(Te_nth, axis=1)
+mean_nth, std_nth = gptools.compute_stats(Te_nth, robust=robust)
 
 mean_start = time.time()
 mean, cov = gp.predict(Rstar, noise=False)
