@@ -411,5 +411,5 @@ a2.yaxis.get_major_ticks()[0].label.set_visible(False)
 f.canvas.draw()
 
 with open('ne.dat', 'wb') as nefile:
-    nefile.write(scipy.array(samps, dtype=scipy.float32))
+    nefile.write(scipy.array(1e20 * samps, dtype=scipy.float32))
 # Assume Rmaj.dat was written by Te program.
