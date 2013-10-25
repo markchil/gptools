@@ -163,9 +163,9 @@ R_mid_ETS_w, dev_R_mid_ETS_w = gptools.compute_stats(R_mid_ETS, robust=robust)
 #                                     param_bounds=[(0.0, 1000.0), (0.001, 100.0), (0.01, 1.0)],
 #                                     enforce_bounds=True)
 k = gptools.GibbsKernel1dTanh(
-    initial_params=[10.0, 0.09655, 0.05637, 0.1, 0.8937],
+    initial_params=[0.1, 0.1, 0.05, 0.1, 0.89],
     fixed_params=[False, False, False, False, False],
-    param_bounds=[(0.0, 1000.0), (0.01, 10.0), (0.0001, 1.0), (0.0001, 10.0), (0.88, 0.91)],
+    param_bounds=[(0.0, 10000.0), (0.01, 10.0), (0.0001, 1.0), (0.0001, 10.0), (0.88, 0.91)],
     enforce_bounds=True
 )
 # k = gptools.GibbsKernel1dQuinticBucket(initial_params=[1, 0.15, 0.15, 0.1, 0.75, 0.1, 0.1, 0.1],
@@ -312,10 +312,10 @@ opt_elapsed = time.time() - opt_start
 # Rstar = scipy.linspace(0.63, 0.93, 24*30)
 # Get Rstar from a fits savefile:
 fits_file = scipy.io.readsav('/home/markchil/origfit_1101014006.save')
-Rstar = fits_file.ne_fit.rmajor[0][:, 0]
-ne_nth = fits_file.ne_fit.combined_fit_ne[0][:, 32:72] / 1e20
-mean_nth = scipy.mean(ne_nth, axis=1)
-std_nth = scipy.std(ne_nth, axis=1)
+Rstar = fits_file.te_fit.rmajor[0][:, 0]
+# ne_nth = fits_file.ne_fit.combined_fit_ne[0][:, 32:72] / 1e20
+# mean_nth = scipy.mean(ne_nth, axis=1)
+# std_nth = scipy.std(ne_nth, axis=1)
 
 mean_start = time.time()
 mean, cov = gp.predict(Rstar, noise=False)
@@ -344,8 +344,8 @@ f.suptitle('Univariate GPR on TS data')
 a1 = f.add_subplot(3, 1, 1)
 a1.plot(Rstar, mean, 'k', linewidth=3, label='mean')
 a1.fill_between(Rstar, mean-std, mean+std, alpha=0.375, facecolor='k')
-a1.plot(Rstar, mean_nth, 'g', linewidth=3, label='NTH')
-a1.fill_between(Rstar, mean_nth-std_nth, mean_nth+std_nth, alpha=0.375, facecolor='g')
+# a1.plot(Rstar, mean_nth, 'g', linewidth=3, label='NTH')
+# a1.fill_between(Rstar, mean_nth-std_nth, mean_nth+std_nth, alpha=0.375, facecolor='g')
 a1.errorbar(R_mid_w, ne_TS_w, xerr=dev_R_mid_w, yerr=dev_ne_TS_w, fmt='r.', label='CTS') # 
 a1.errorbar(R_mid_ETS_w, ne_ETS_w, xerr=dev_R_mid_ETS_w, yerr=dev_ne_ETS_w, fmt='m.', label='ETS') # 
 a1.axvline(x=R_mag_mean, color='r', label='$R_{mag}$')
@@ -396,7 +396,20 @@ f.subplots_adjust(hspace=0)
 # deriv_samps = gp.draw_sample(Rstar, n=1, rand_vars=rand_vars, diag_factor=1e4, method='eig', num_eig=10)
 # a2.plot(Rstar, deriv_samps, linewidth=2)
 
+samp_loc = Rstar
+samp_n = scipy.zeros_like(Rstar)
+num_samp = 99
+num_eig = 10
+
+loc_arr = scipy.reshape(scipy.repeat(samp_loc, num_samp), (len(samp_loc), -1))
+rand_vars = numpy.random.standard_normal((num_eig, num_samp))
+samps = gp.draw_sample(samp_loc, n=samp_n, rand_vars=rand_vars, method='eig', num_eig=num_eig)
+
 a2.yaxis.get_major_ticks()[-1].label.set_visible(False)
 a2.yaxis.get_major_ticks()[0].label.set_visible(False)
 # a3.yaxis.get_major_ticks()[-1].label.set_visible(False)
 f.canvas.draw()
+
+with open('ne.dat', 'wb') as nefile:
+    nefile.write(scipy.array(samps, dtype=scipy.float32))
+# Assume Rmaj.dat was written by Te program.
