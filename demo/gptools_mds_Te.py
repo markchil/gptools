@@ -431,7 +431,7 @@ f.subplots_adjust(hspace=0)
 
 samp_loc = Rstar
 samp_n = scipy.zeros_like(Rstar)
-num_samp = 100
+num_samp = 99
 num_eig = 10
 
 # rand_vars = numpy.random.standard_normal((len(samp_loc), num_samp))
@@ -449,4 +449,4 @@ f.canvas.draw()
 with open('Te.dat', 'wb') as Tefile:
     Tefile.write(scipy.asarray(samps, dtype=scipy.float32))
 with open('Rmaj.dat', 'wb') as Rfile:
-    Rfile.write(scipy.asarray(samp_loc, dtype=scipy.float32))
+    Rfile.write(scipy.asarray(scipy.tile(samp_loc, (num_samp, 1)), dtype=scipy.float32))
