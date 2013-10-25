@@ -107,24 +107,14 @@ R_out_std = scipy.std(R_out[ok_idxs])
 # dev_R_mid_ETS_w = scipy.std(R_mid_ETS, axis=1, ddof=1)
 
 # Average over entire data set, try using roubust estimators:
-IQR_to_std = 1.349
-ne_TS_w = scipy.median(ne_TS, axis=1)
-dev_ne_TS_w = scipy.asarray([scipy.stats.scoreatpercentile(ch, 75) -
-                             scipy.stats.scoreatpercentile(ch, 25)
-                             for ch in ne_TS]) / IQR_to_std
-R_mid_w = scipy.median(R_mid_CTS, axis=1)
-dev_R_mid_w = scipy.asarray([scipy.stats.scoreatpercentile(ch, 75) -
-                             scipy.stats.scoreatpercentile(ch, 25)
-                             for ch in R_mid_CTS]) / IQR_to_std
+# IQR_to_std = 1.349
 
-ne_ETS_w = scipy.stats.nanmedian(ne_ETS, axis=1)
-dev_ne_ETS_w = scipy.asarray([scipy.stats.scoreatpercentile(ne_ch[~scipy.isnan(ne_ch)], 75) -
-                              scipy.stats.scoreatpercentile(ne_ch[~scipy.isnan(ne_ch)], 25)
-                              for ne_ch in ne_ETS]) / IQR_to_std
-R_mid_ETS_w = scipy.median(R_mid_ETS, axis=1)
-dev_R_mid_ETS_w = scipy.asarray([scipy.stats.scoreatpercentile(ch, 75) -
-                                 scipy.stats.scoreatpercentile(ch, 25)
-                                 for ch in R_mid_ETS]) / IQR_to_std
+robust = True
+ne_TS_w, dev_ne_TS_w = gptools.compute_stats(ne_TS, robust=robust)
+R_mid_w, dev_R_mid_w = gptools.compute_stats(R_mid_CTS, robust=robust)
+
+ne_ETS_w, dev_ne_ETS_w = gptools.compute_stats(ne_ETS, robust=robust, check_nan=True)
+R_mid_ETS_w, dev_R_mid_ETS_w = gptools.compute_stats(R_mid_ETS, robust=robust)
 
 # # Make Q-Q plots with the robust statistics dictating the distribution:
 # for k in xrange(0, ne_TS.shape[0]):

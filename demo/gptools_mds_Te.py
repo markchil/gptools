@@ -199,7 +199,7 @@ R_out_std = scipy.std(R_out[ok_idxs])
 # dev_R_mid_GPC_w = dev_R_mid_GPC_w[good_idxs]
 
 # Average over entire data set, use robust estimators:
-IQR_to_std = 1.349
+# IQR_to_std = 1.349
 
 robust = True
 Te_TS_w, dev_Te_TS_w = gptools.compute_stats(Te_TS, robust=robust)
@@ -270,7 +270,7 @@ dev_R_mid_GPC_w = dev_R_mid_GPC_w[good_idxs]
 k = gptools.GibbsKernel1dTanh(
     initial_params=[0.1, 0.1, 0.05, 0.003, 0.89],
     fixed_params=[False, False, False, False, False],
-    param_bounds=[(0.0, 10000.0), (0.01, 10.0), (0.0001, 1.0), (0.0001, 0.1), (0.88, 0.91)],
+    param_bounds=[(0.0, 10000.0), (0.01, 10.0), (0.0001, 1.0), (0.0001, 10), (0.88, 0.91)],
     enforce_bounds=True
 )
 
@@ -346,7 +346,7 @@ opt_elapsed = time.time() - opt_start
 # Make predictions:
 # Rstar = scipy.linspace(0.63, 0.93, 24*30)
 fits_file = scipy.io.readsav('/home/markchil/origfit_1101014006.save')
-Rstar = fits_file.ne_fit.rmajor[0][:, 0]
+Rstar = fits_file.te_fit.rmajor[0][:, 0]
 # Te_nth = fits_file.te_fit.te_comb_fit[0][:, 32:72]
 # mean_nth, std_nth = gptools.compute_stats(Te_nth, robust=robust)
 
@@ -434,6 +434,8 @@ samp_n = scipy.zeros_like(Rstar)
 num_samp = 99
 num_eig = 10
 
+loc_arr = scipy.reshape(scipy.repeat(samp_loc, num_samp), (len(samp_loc), -1))
+
 # rand_vars = numpy.random.standard_normal((len(samp_loc), num_samp))
 rand_vars = numpy.random.standard_normal((num_eig, num_samp))
 samps = gp.draw_sample(samp_loc, n=samp_n, rand_vars=rand_vars, method='eig', num_eig=num_eig)
@@ -447,6 +449,6 @@ f.canvas.draw()
 
 # Write datafiles for STRAHL to use:
 with open('Te.dat', 'wb') as Tefile:
-    Tefile.write(scipy.asarray(samps, dtype=scipy.float32))
+    Tefile.write(scipy.array(samps, dtype=scipy.float32))
 with open('Rmaj.dat', 'wb') as Rfile:
-    Rfile.write(scipy.asarray(scipy.tile(samp_loc, (num_samp, 1)), dtype=scipy.float32))
+    Rfile.write(scipy.array(loc_arr, dtype=scipy.float32))
