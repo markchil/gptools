@@ -346,7 +346,7 @@ opt_elapsed = time.time() - opt_start
 # Make predictions:
 # Rstar = scipy.linspace(0.63, 0.93, 24*30)
 fits_file = scipy.io.readsav('/home/markchil/origfit_1101014006.save')
-Rstar = fits_file.te_fit.rmajor[0][:, 0]
+Rstar = fits_file.ne_fit.rmajor[0][:, 0]
 # Te_nth = fits_file.te_fit.te_comb_fit[0][:, 32:72]
 # mean_nth, std_nth = gptools.compute_stats(Te_nth, robust=robust)
 
