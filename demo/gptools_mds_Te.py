@@ -347,10 +347,10 @@ opt_elapsed = time.time() - opt_start
 # Rstar = scipy.linspace(0.63, 0.93, 24*30)
 fits_file = scipy.io.readsav('/home/markchil/origfit_1101014006.save')
 # Average over the inexplicably shifting Rmajor array:
-# Rstar = scipy.mean(fits_file.te_fit.rmajor[0][:, 32:72], axis=1)
-Rstar = fits_file.ne_fit.rmajor[0][:, 0]
-# Te_nth = fits_file.te_fit.te_comb_fit[0][:, 32:72]
-# mean_nth, std_nth = gptools.compute_stats(Te_nth, robust=robust)
+Rstar = scipy.mean(fits_file.te_fit.rmajor[0][:, 32:72], axis=1)
+# Rstar = fits_file.ne_fit.rmajor[0][:, 0]
+Te_nth = fits_file.te_fit.te_comb_fit[0][:, 32:72]
+mean_nth, std_nth = gptools.compute_stats(Te_nth, robust=robust)
 
 mean_start = time.time()
 mean, cov = gp.predict(Rstar, noise=False)
@@ -379,9 +379,9 @@ f.suptitle('Univariate GPR on time-averaged data')
 a1 = f.add_subplot(3, 1, 1)
 a1.plot(Rstar, mean, 'k', linewidth=3, label='mean')
 a1.fill_between(Rstar, mean-std, mean+std, alpha=0.375, facecolor='k')
-# a1.plot(Rstar, mean_nth, 'g', linewidth=3, label='NTH')
-# a1.fill_between(Rstar, mean_nth-std_nth, mean_nth+std_nth, alpha=0.375, facecolor='g')
-# a1.plot(Rstar, Te_nth)
+a1.plot(Rstar, mean_nth, 'g', linewidth=3, label='NTH')
+a1.fill_between(Rstar, mean_nth-std_nth, mean_nth+std_nth, alpha=0.375, facecolor='g')
+a1.plot(Rstar, Te_nth)
 a1.errorbar(R_mid_w, Te_TS_w, xerr=dev_R_mid_w, yerr=dev_Te_TS_w, fmt='r.', label='CTS')
 a1.errorbar(R_mid_ETS_w, Te_ETS_w, xerr=dev_R_mid_ETS_w, yerr=dev_Te_ETS_w, fmt='m.', label='ETS')
 a1.errorbar(R_mid_FRC_w, Te_FRC_w, xerr=dev_R_mid_FRC_w, yerr=dev_Te_FRC_w, fmt='b.', label='FRC')
