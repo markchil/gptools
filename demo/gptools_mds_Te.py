@@ -345,30 +345,25 @@ opt_elapsed = time.time() - opt_start
 
 # Make predictions:
 # Rstar = scipy.linspace(0.63, 0.93, 24*30)
-print('read fits')
 fits_file = scipy.io.readsav('/home/markchil/codes/gptools/demo/nth_samples_1101014006.save')
-print('done')
 # Average over the inexplicably shifting Rmajor array:
 Rstar = scipy.mean(fits_file.te_fit.rmajor[0][:, 32:72], axis=1)
 # Rstar = fits_file.ne_fit.rmajor[0][:, 0]
 Te_nth = fits_file.te_fit.te_comb_fit[0][:, 32:72]
 mean_nth, std_nth = gptools.compute_stats(Te_nth, robust=robust)
 
-print('predict mean')
 mean_start = time.time()
+import pdb; pdb.set_trace()
 mean, cov = gp.predict(Rstar, noise=False)
 mean_elapsed = time.time() - mean_start
 mean = scipy.asarray(mean).flatten()
 std = scipy.sqrt(scipy.diagonal(cov))
-print('done')
 
-print('predict deriv')
 meand_start = time.time()
 meand, covd = gp.predict(Rstar, noise=False, n=1)
 meand_elapsed = time.time() - meand_start
 meand = scipy.asarray(meand).flatten()
 stdd = scipy.sqrt(scipy.diagonal(covd))
-print('done')
 
 print("Optimization took: %.2fs\nMean prediction took: %.2fs\nGradient "
       "prediction took: %.2fs\n"  % (opt_elapsed, mean_elapsed, meand_elapsed))
