@@ -287,10 +287,10 @@ gp.add_data(R_mid_GPC_w, Te_GPC_w, err_y=dev_Te_GPC_w)
 gp.add_data(R_mag_mean, 0, n=1)
 
 # Try block constraint:
-# R_out = scipy.linspace(0.92, 0.95, 5)
-# zeros_out = scipy.zeros_like(R_out)
-# gp.add_data(R_out, zeros_out, err_y=0.001)
-# gp.add_data(R_out, zeros_out, err_y=0.1, n=1)
+R_out = scipy.linspace(0.92, 0.95, 4)
+zeros_out = scipy.zeros_like(R_out)
+gp.add_data(R_out, zeros_out, err_y=0.001)
+gp.add_data(R_out, zeros_out, err_y=0.1, n=1)
 
 # Make constraint functions:
 def l_cf(params):
