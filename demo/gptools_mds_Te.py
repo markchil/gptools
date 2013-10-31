@@ -345,7 +345,7 @@ opt_elapsed = time.time() - opt_start
 
 # Make predictions:
 # Rstar = scipy.linspace(0.63, 0.93, 24*30)
-fits_file = scipy.io.readsav('/home/markchil/origfit_1101014006.save')
+fits_file = scipy.io.readsav('/home/markchil/codes/gptools/demo/nth_samples_1101014006.save')
 # Average over the inexplicably shifting Rmajor array:
 Rstar = scipy.mean(fits_file.te_fit.rmajor[0][:, 32:72], axis=1)
 # Rstar = fits_file.ne_fit.rmajor[0][:, 0]

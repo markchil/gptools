@@ -311,7 +311,7 @@ opt_elapsed = time.time() - opt_start
 # Make predictions:
 # Rstar = scipy.linspace(0.63, 0.93, 24*30)
 # Get Rstar from a fits savefile:
-fits_file = scipy.io.readsav('/home/markchil/origfit_1101014006.save')
+fits_file = scipy.io.readsav('/home/markchil/codes/gptools/demo/nth_samples_1101014006.save')
 Rstar = fits_file.ne_fit.rmajor[0][:, 0]
 ne_nth = fits_file.ne_fit.combined_fit_ne[0][:, 32:72] / 1e20
 mean_nth, std_nth = gptools.compute_stats(ne_nth, robust=robust)
