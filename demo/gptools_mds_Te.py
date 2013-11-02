@@ -388,14 +388,14 @@ a1.errorbar(R_mid_ETS_w, Te_ETS_w, xerr=dev_R_mid_ETS_w, yerr=dev_Te_ETS_w, fmt=
 a1.errorbar(R_mid_FRC_w, Te_FRC_w, xerr=dev_R_mid_FRC_w, yerr=dev_Te_FRC_w, fmt='b.', label='FRC')
 a1.errorbar(R_mid_GPC2_w, Te_GPC2_w, xerr=dev_R_mid_GPC2_w, yerr=dev_Te_GPC2_w, fmt='g.', label='GPC2')
 a1.errorbar(R_mid_GPC_w, Te_GPC_w, xerr=dev_R_mid_GPC_w, yerr=dev_Te_GPC_w, fmt='k.', label='GPC')
-a1.axvline(x=R_mag_mean, color='r', label='$R_{mag}$')
+a1.axvline(x=R_mag_mean, color='r')#, label='$R_{mag}$')
 a1.axvspan(R_mag_mean-R_mag_std, R_mag_mean+R_mag_std, alpha=0.375, facecolor='r')
-a1.axvline(x=R_out_mean, color='g', label='$R_{out}$')
-a1.axvspan(R_out_mean-R_out_std, R_out_mean+R_out_std, alpha=0.375, facecolor='g')
+# a1.axvline(x=R_out_mean, color='g', label='$R_{out}$')
+# a1.axvspan(R_out_mean-R_out_std, R_out_mean+R_out_std, alpha=0.375, facecolor='g')
 a1.legend(loc='best', fontsize=10, ncol=2)
 #a1.set_xlabel('$R$ [m]')
 a1.get_xaxis().set_visible(False)
-a1.set_ylim(0, 4.5)
+a1.set_ylim(0, 3.5)
 a1.set_ylabel('$T_{e}$ [keV]')
 
 a2 = f.add_subplot(3, 1, 2, sharex=a1)
@@ -415,7 +415,7 @@ a3.plot(Rstar, gp.k.l_func(Rstar, 0, *gp.k.params[1:]), linewidth=3)
 a3.set_xlabel('$R$ [m]')
 a3.set_ylabel('$l$ [m]')
 
-a1.set_xlim(0.63, 0.93)
+a1.set_xlim(0.67, 0.91)
 a3.set_ylim(0.0, 0.15)
 
 a3.text(1,

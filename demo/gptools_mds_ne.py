@@ -341,9 +341,9 @@ f.suptitle('Univariate GPR on TS data')
 # f.suptitle('With slope constraint')
 
 a1 = f.add_subplot(3, 1, 1)
-a1.plot(Rstar, mean, 'k', linewidth=3, label='mean')
+a1.plot(Rstar, mean, 'k', linewidth=3, label='GPR')
 a1.fill_between(Rstar, mean-std, mean+std, alpha=0.375, facecolor='k')
-a1.plot(Rstar, mean_nth, 'g', linewidth=3, label='NTH')
+a1.plot(Rstar, mean_nth, 'g', linewidth=3, label='spline')
 a1.fill_between(Rstar, mean_nth-std_nth, mean_nth+std_nth, alpha=0.375, facecolor='g')
 # a1.plot(Rstar, ne_nth)
 a1.errorbar(R_mid_w, ne_TS_w, xerr=dev_R_mid_w, yerr=dev_ne_TS_w, fmt='r.', label='CTS') # 
@@ -375,7 +375,7 @@ a3.plot(Rstar, gp.k.l_func(Rstar, 0, *gp.k.params[1:]), linewidth=3)
 a3.set_xlabel('$R$ [m]')
 a3.set_ylabel('$l$ [m]')
 
-# a1.set_xlim(0.63, 0.93)
+a1.set_xlim(0.67, 0.91)
 a3.set_ylim(bottom=0.0)
 
 a3.text(1,
