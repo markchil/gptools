@@ -348,11 +348,11 @@ a1.fill_between(Rstar, mean_nth-std_nth, mean_nth+std_nth, alpha=0.375, facecolo
 # a1.plot(Rstar, ne_nth)
 a1.errorbar(R_mid_w, ne_TS_w, xerr=dev_R_mid_w, yerr=dev_ne_TS_w, fmt='r.', label='CTS') # 
 a1.errorbar(R_mid_ETS_w, ne_ETS_w, xerr=dev_R_mid_ETS_w, yerr=dev_ne_ETS_w, fmt='m.', label='ETS') # 
-a1.axvline(x=R_mag_mean, color='r', label='$R_{mag}$')
+a1.axvline(x=R_mag_mean, color='r')#, label='$R_{mag}$')
 a1.axvspan(R_mag_mean-R_mag_std, R_mag_mean+R_mag_std, alpha=0.375, facecolor='r')
-a1.axvline(x=R_out_mean, color='g', label='$R_{out}$')
-a1.axvspan(R_out_mean-R_out_std, R_out_mean+R_out_std, alpha=0.375, facecolor='g')
-a1.legend(loc='best', fontsize=10, ncol=2)
+# a1.axvline(x=R_out_mean, color='g', label='$R_{out}$')
+# a1.axvspan(R_out_mean-R_out_std, R_out_mean+R_out_std, alpha=0.375, facecolor='g')
+a1.legend(loc='upper right', fontsize=10, ncol=2)
 #a1.set_xlabel('$R$ [m]')
 a1.get_xaxis().set_visible(False)
 a1.set_ylim(bottom=0)
