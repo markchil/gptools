@@ -348,7 +348,7 @@ opt_elapsed = time.time() - opt_start
 fits_file = scipy.io.readsav('/home/markchil/codes/gptools/demo/nth_samples_1101014006.save')
 # Average over the inexplicably shifting Rmajor array:
 # Rstar = scipy.mean(fits_file.te_fit.rmajor[0][:, 32:72], axis=1)
-Rstar_nth = fits_file.ne_fit.rmajor[0][:, 0]
+Rstar = fits_file.ne_fit.rmajor[0][:, 0]
 Te_nth = fits_file.te_fit.te_comb_fit[0][:, 32:72]
 mean_nth, std_nth = gptools.compute_stats(Te_nth, robust=robust)
 
