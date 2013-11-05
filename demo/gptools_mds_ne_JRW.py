@@ -185,7 +185,7 @@ nk = gptools.DiagonalNoiseKernel(1, n=0, initial_noise=0.0, fixed_noise=True, no
 
 # Create and populate GP:
 gp = gptools.GaussianProcess(k, noise_k=nk)
-gp.add_data(R_mid_w, ne_TS_w, err_y=dev_ne_TS_w)
+gp.add_data(R_mid_w[:-1], ne_TS_w[:-1], err_y=dev_ne_TS_w[:-1])
 gp.add_data(R_mid_ETS_w, ne_ETS_w, err_y=dev_ne_ETS_w)
 gp.add_data(R_mag_mean, 0, n=1)
 # gp.add_data(0.904, 0, err_y=0.1)
@@ -302,7 +302,7 @@ gp.optimize_hyperparameters(
             #     loc=0.93,
             # )},
             # {'type': 'ineq', 'fun': gptools.Constraint(gp)},
-            # {'type': 'ineq', 'fun': lambda p: p[1] - p[2]},
+            {'type': 'ineq', 'fun': lambda p: p[1] - p[2]},
         )
     }
 )
@@ -343,8 +343,8 @@ f.suptitle('Univariate GPR on TS data')
 a1 = f.add_subplot(3, 1, 1)
 a1.plot(Rstar, mean, 'k', linewidth=3, label='GPR')
 a1.fill_between(Rstar, mean-std, mean+std, alpha=0.375, facecolor='k')
-a1.plot(Rstar, mean_nth, 'g', linewidth=3, label='spline')
-a1.fill_between(Rstar, mean_nth-std_nth, mean_nth+std_nth, alpha=0.375, facecolor='g')
+# a1.plot(Rstar, mean_nth, 'g', linewidth=3, label='spline')
+# a1.fill_between(Rstar, mean_nth-std_nth, mean_nth+std_nth, alpha=0.375, facecolor='g')
 # a1.plot(Rstar, ne_nth)
 a1.errorbar(R_mid_w, ne_TS_w, xerr=dev_R_mid_w, yerr=dev_ne_TS_w, fmt='r.', label='CTS') # 
 a1.errorbar(R_mid_ETS_w, ne_ETS_w, xerr=dev_R_mid_ETS_w, yerr=dev_ne_ETS_w, fmt='m.', label='ETS') # 
