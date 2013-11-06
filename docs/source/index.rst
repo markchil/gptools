@@ -22,6 +22,12 @@ Other kernels can be implemented by extending the :py:class:`~gptools.kernel.cor
 
 :py:mod:`gptools` has been developed and tested on Python 2.7 and scipy 0.12.0. Catches have been included to enable it to work on scipy 0.10.1. It may work just as well on other versions, but has not been tested.
 
+If you find this software useful, please be sure to cite it:
+
+M.A. Chilenski (2013). gptools: Gaussian processes with arbitrary derivative constraints and predictions, GNU General Public License. github.com/markchil/gptools
+
+Once I put together a formal publication on this software and its applications, this readme will be updated with the relevant citation.
+
 Contents
 --------
 
