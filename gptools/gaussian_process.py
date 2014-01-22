@@ -63,19 +63,17 @@ class GaussianProcess(object):
     
     standardize : bool
         Flag for whether or not all internal calculations should be done with
-        standardized variables (both X and y are standarized):
+        standardized variables (right now only y is standarized):
 
         .. math::
 
             Z = \frac{y - \mu}{\sigma}
 
-        Notice that this will change the interpretation of length scales
-        :math:`\ell` to be normalized length scales :math:`\ell/\sigma_X` and
-        scale parameters :math:`\sigma` to be normalized scales
-        :math:`\sigma/\sigma_y`. Regardless of the state of this flag,
-        :py:meth:`predict` and  :py:meth:`draw_sample` will always return in
-        real units. Default value is False (do internal calculations in real
-        units).
+        Notice that this will change the interpretation of scale parameters
+        :math:`\sigma` to be normalized scales :math:`\sigma/\sigma_y`.
+        Regardless of the state of this flag, :py:meth:`predict` and
+        :py:meth:`draw_sample` will always return in real units. Default value
+        is False (do internal calculations in real units).
     
     NOTE
         The following are all passed to :py:meth:`add_data`, refer to its docstring.
