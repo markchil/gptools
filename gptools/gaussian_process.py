@@ -61,6 +61,22 @@ class GaussianProcess(object):
         :py:class:`~gptools.kernel.noise.ZeroKernel` (noise specified elsewhere
         or not present).
     
+    standardize : bool
+        Flag for whether or not all internal calculations should be done with
+        standardized variables (both X and y are standarized):
+
+        .. math::
+
+            Z = \frac{y - \mu}{\sigma}
+
+        Notice that this will change the interpretation of length scales
+        :math:`\ell` to be normalized length scales :math:`\ell/\sigma_X` and
+        scale parameters :math:`\sigma` to be normalized scales
+        :math:`\sigma/\sigma_y'. Regardless of the state of this flag,
+        :py:meth:`predict` and  :py:meth:`draw_sample` will always return in
+        real units. Default value is False (do internal calculations in real
+        units).
+    
     NOTE
         The following are all passed to :py:meth:`add_data`, refer to its docstring.
     
@@ -81,6 +97,9 @@ class GaussianProcess(object):
         The non-noise portion of the covariance kernel.
     noise_k : :py:class:`~gptools.kernel.core.Kernel` instance
         The noise portion of the covariance kernel.
+    standardize : bool
+        True if internal calculations are done with standardized variables, False
+        if real units are used.
     X : :py:class:`Matrix`, (`M`, `N`)
         The `M` training input values, each of which is of dimension `N`.
     y : :py:class:`Array`, (`M`,)
@@ -113,7 +132,7 @@ class GaussianProcess(object):
     --------
     add_data : Used to process `X`, `y`, `err_y` and to add data to the process.
     """
-    def __init__(self, k, noise_k=None, X=None, y=None, err_y=0):
+    def __init__(self, k, noise_k=None, standardize=False, X=None, y=None, err_y=0):
         if not isinstance(k, Kernel):
             raise TypeError("Argument k must be an instance of Kernel when "
                             "constructing GaussianProcess!")
@@ -123,6 +142,8 @@ class GaussianProcess(object):
             if not isinstance(noise_k, Kernel):
                 raise TypeError("Keyword noise_k must be an instance of Kernel "
                                 "when constructing GaussianProcess!")
+
+        self.standardize = standardize
         self.k = k
         self.noise_k = noise_k
         self.y = scipy.array([], dtype=float)
@@ -325,12 +346,24 @@ class GaussianProcess(object):
             this by a factor of 10 at a time. Default is 1e2.
         """
         if not self.K_up_to_date:
+            if self.standardize:
+                # TODO: Implement standardization on X!
+                self.mu_y = scipy.mean(self.y)
+                self.std_y = scipy.std(self.y, ddof=1)
+                self.y_s = (self.y - self.mu_y) / self.std_y
+                y = self.y_s
+                # TODO: Check the validity here!
+                self.err_y_s = self.err_y / self.std_y
+                err_y = self.err_y_s
+            else:
+                y = self.y
+                err_y = self.err_y
             self.K = self.compute_Kij(self.X, None, self.n, None, noise=False)
             self.noise_K = self.compute_Kij(self.X, None, self.n, None, noise=True)
             K_tot = (self.K +
-                     scipy.diag(self.err_y**2.0) +
+                     scipy.diag(err_y**2.0) +
                      self.noise_K +
-                     diag_factor * sys.float_info.epsilon * scipy.eye(len(self.y)))
+                     diag_factor * sys.float_info.epsilon * scipy.eye(len(y)))
             try:
                 self.L = scipy.matrix(
                     scipy.linalg.cholesky(
@@ -354,7 +387,7 @@ class GaussianProcess(object):
                     self.L.T,
                     scipy.linalg.solve_triangular(
                         self.L,
-                        scipy.asmatrix(self.y).T,
+                        scipy.asmatrix(y).T,
                         lower=True,
                         check_finite=False
                     ),
@@ -366,14 +399,14 @@ class GaussianProcess(object):
                     self.L.T,
                     scipy.linalg.solve_triangular(
                         self.L,
-                        scipy.asmatrix(self.y).T,
+                        scipy.asmatrix(y).T,
                         lower=True
                     ),
                     lower=False
                 )
-            self.ll = (-0.5 * scipy.asmatrix(self.y) * self.alpha -
+            self.ll = (-0.5 * scipy.asmatrix(y) * self.alpha -
                        scipy.log(scipy.diag(self.L)).sum() - 
-                       0.5 * len(self.y) * scipy.log(2.0*scipy.pi))[0, 0]
+                       0.5 * len(y) * scipy.log(2.0 * scipy.pi))[0, 0]
             self.K_up_to_date = True
     
     def update_hyperparameters(self, new_params, return_jacobian=False):
@@ -548,6 +581,8 @@ class GaussianProcess(object):
         if noise:
             Kstar = Kstar + self.compute_Kij(self.X, Xstar, self.n, n, noise=True)
         mean = Kstar.T * self.alpha
+        if self.standardize:
+            mean = mean * self.std_y + self.mu_y
         if return_cov:
             try:
                 v = scipy.asmatrix(
@@ -562,7 +597,9 @@ class GaussianProcess(object):
             if noise:
                 Kstarstar = Kstarstar + self.compute_Kij(Xstar, None, n, None, noise=True)
             covariance = Kstarstar - v.T * v
-            
+            if self.standardize:
+                covariance = covariance * self.std_y**2.0
+
             return (mean, covariance)
         else:
             return mean
