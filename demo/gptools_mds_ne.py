@@ -163,7 +163,7 @@ R_mid_ETS_w, dev_R_mid_ETS_w = gptools.compute_stats(R_mid_ETS, robust=robust)
 #                                     param_bounds=[(0.0, 1000.0), (0.001, 100.0), (0.01, 1.0)],
 #                                     enforce_bounds=True)
 k = gptools.GibbsKernel1dTanh(
-    initial_params=[0.1 / 0.5, 0.1, 0.05, 0.1, 0.89],
+    initial_params=[1.0, 0.1, 0.05, 0.1, 0.89],
     fixed_params=[False, False, False, False, False],
     param_bounds=[(0.0, 10000.0), (0.01, 10.0), (0.0001, 1.0), (0.0001, 10.0), (0.88, 0.91)],
     enforce_bounds=True

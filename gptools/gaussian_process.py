@@ -352,7 +352,6 @@ class GaussianProcess(object):
                 self.std_y = scipy.std(self.y, ddof=1)
                 self.y_s = (self.y - self.mu_y) / self.std_y
                 y = self.y_s
-                # TODO: Check the validity here!
                 self.err_y_s = self.err_y / self.std_y
                 err_y = self.err_y_s
             else:
