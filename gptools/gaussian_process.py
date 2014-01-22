@@ -72,7 +72,7 @@ class GaussianProcess(object):
         Notice that this will change the interpretation of length scales
         :math:`\ell` to be normalized length scales :math:`\ell/\sigma_X` and
         scale parameters :math:`\sigma` to be normalized scales
-        :math:`\sigma/\sigma_y'. Regardless of the state of this flag,
+        :math:`\sigma/\sigma_y`. Regardless of the state of this flag,
         :py:meth:`predict` and  :py:meth:`draw_sample` will always return in
         real units. Default value is False (do internal calculations in real
         units).
