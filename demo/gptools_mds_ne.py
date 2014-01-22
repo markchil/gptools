@@ -184,7 +184,7 @@ k = gptools.GibbsKernel1dTanh(
 nk = gptools.DiagonalNoiseKernel(1, n=0, initial_noise=0.0, fixed_noise=True, noise_bound=(0.0, 10.0))
 
 # Create and populate GP:
-gp = gptools.GaussianProcess(k, noise_k=nk)
+gp = gptools.GaussianProcess(k, noise_k=nk, standardize=True)
 gp.add_data(R_mid_w, ne_TS_w, err_y=dev_ne_TS_w)
 gp.add_data(R_mid_ETS_w, ne_ETS_w, err_y=dev_ne_ETS_w)
 gp.add_data(R_mag_mean, 0, n=1)
