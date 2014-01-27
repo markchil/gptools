@@ -20,7 +20,7 @@
 
 from __future__ import division
 
-from gaussian_process import *
+from gptools.gaussian_process import *
 from .error_handling import GPArgumentError
 
 import multiprocessing
