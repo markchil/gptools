@@ -18,6 +18,12 @@
 """Provides wrappers for minimization functionality missing from old versions of scipy.
 """
 
+from __future__ import division
+
+import collections
+import warnings
+import scipy.optimize
+
 def wrap_fmin_slsqp(fun, guess, opt_kwargs={}):
     """Wrapper for :py:func:`fmin_slsqp` to allow it to be called with :py:func:`minimize`-like syntax.
 
