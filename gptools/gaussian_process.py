@@ -22,7 +22,7 @@ from __future__ import division
 
 from .error_handling import GPArgumentError
 from .kernel import Kernel, ZeroKernel
-from .fmin_wrappers import wrap_fmin_slsqp
+from .utils import wrap_fmin_slsqp
 
 import scipy
 import scipy.linalg
