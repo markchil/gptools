@@ -24,3 +24,4 @@ from .gaussian_process import *
 from .error_handling import *
 from .kernel import *
 from .utils import *
+from .fmin_wrappers import *
