@@ -22,7 +22,8 @@ from __future__ import division
 
 from .error_handling import GPArgumentError
 from .kernel import Kernel, ZeroKernel
-from .utils import wrap_fmin_slsqp
+# Embedded imports from utils are a kludge to avoid circular import issues.
+# from .utils import wrap_fmin_slsqp
 
 import scipy
 import scipy.linalg
@@ -499,6 +500,8 @@ class GaussianProcess(object):
         except AttributeError:
             warnings.warn("scipy.optimize.minimize not available, defaulting to fmin_slsqp.",
                           RuntimeWarning)
+            # Embedded imports from utils are a kludge to avoid circular import issues.
+            from .utils import wrap_fmin_slsqp
             res = wrap_fmin_slsqp(self.update_hyperparameters,
                                    scipy.concatenate((self.k.free_params, self.noise_k.free_params)),
                                    opt_kwargs=opt_kwargs)
@@ -928,6 +931,8 @@ class Constraint(object):
                     bounds=self.bounds
                 )
             except AttributeError:
+                # Embedded imports from utils are a kludge to avoid circular import issues.
+                from .utils import wrap_fmin_slsqp
                 res = wrap_fmin_slsqp(
                     lambda X: factor * self.gp.predict(X, n=self.n, return_cov=False)[0, 0],
                     scipy.mean(self.bounds, axis=1),
