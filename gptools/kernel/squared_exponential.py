@@ -41,7 +41,7 @@ class SquaredExponentialKernel(Kernel):
     
     .. math::
     
-        k_{SE} = \sigma^2 \exp\left(-\sum_i\frac{\tau_i^2}{l_i^2}\right)
+        k_{SE} = \sigma^2 \exp\left(-\frac{1}{2}\sum_i\frac{\tau_i^2}{l_i^2}\right)
     
     Parameters
     ----------
@@ -112,10 +112,8 @@ class SquaredExponentialKernel(Kernel):
         n_tot_j = scipy.asarray(scipy.sum(nj, axis=1), dtype=int).flatten()
         n_combined = scipy.asarray(ni + nj, dtype=int)
         # Compute factor from the dtau_d/dx_d_j terms in the chain rule:
-        # TODO: Is that really the right way to handle anisotropic multivariate case?
         j_chain_factors = (-1.0)**(n_tot_j)
         # Compute Hermite polynomial factor:
-        # TODO: Is that really the right thing to do with l_mat for the multivariate case?
         hermite_factors = scipy.prod((-1.0 / (scipy.sqrt(2.0) * l_mat))**(n_combined) *
                                      scipy.special.eval_hermite(n_combined, tau / (scipy.sqrt(2.0) * l_mat)),
                                      axis=1)
