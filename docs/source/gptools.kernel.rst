@@ -1,59 +1,62 @@
-kernel Package
-==============
+gptools.kernel package
+======================
 
-:mod:`kernel` Package
----------------------
+Submodules
+----------
 
-.. automodule:: gptools.kernel
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-:mod:`core` Module
-------------------
+gptools.kernel.core module
+--------------------------
 
 .. automodule:: gptools.kernel.core
     :members:
     :undoc-members:
     :show-inheritance:
 
-:mod:`gibbs` Module
--------------------
+gptools.kernel.gibbs module
+---------------------------
 
 .. automodule:: gptools.kernel.gibbs
     :members:
     :undoc-members:
     :show-inheritance:
 
-:mod:`matern` Module
---------------------
+gptools.kernel.matern module
+----------------------------
 
 .. automodule:: gptools.kernel.matern
     :members:
     :undoc-members:
     :show-inheritance:
 
-:mod:`noise` Module
--------------------
+gptools.kernel.noise module
+---------------------------
 
 .. automodule:: gptools.kernel.noise
     :members:
     :undoc-members:
     :show-inheritance:
 
-:mod:`rational_quadratic` Module
---------------------------------
+gptools.kernel.rational_quadratic module
+----------------------------------------
 
 .. automodule:: gptools.kernel.rational_quadratic
     :members:
     :undoc-members:
     :show-inheritance:
 
-:mod:`squared_exponential` Module
----------------------------------
+gptools.kernel.squared_exponential module
+-----------------------------------------
 
 .. automodule:: gptools.kernel.squared_exponential
     :members:
     :undoc-members:
     :show-inheritance:
 
+
+Module contents
+---------------
+
+.. automodule:: gptools.kernel
+    :members:
+    :undoc-members:
+    :show-inheritance:

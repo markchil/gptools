@@ -1,37 +1,5 @@
-gptools Package
+gptools package
 ===============
-
-:mod:`gptools` Package
-----------------------
-
-.. automodule:: gptools.__init__
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-:mod:`error_handling` Module
-----------------------------
-
-.. automodule:: gptools.error_handling
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-:mod:`gaussian_process` Module
-------------------------------
-
-.. automodule:: gptools.gaussian_process
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-:mod:`utils` Module
--------------------
-
-.. automodule:: gptools.utils
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 Subpackages
 -----------
@@ -40,3 +8,46 @@ Subpackages
 
     gptools.kernel
 
+Submodules
+----------
+
+gptools.error_handling module
+-----------------------------
+
+.. automodule:: gptools.error_handling
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+gptools.gaussian_process module
+-------------------------------
+
+.. automodule:: gptools.gaussian_process
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+gptools.gp_utils module
+-----------------------
+
+.. automodule:: gptools.gp_utils
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+gptools.utils module
+--------------------
+
+.. automodule:: gptools.utils
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: gptools
+    :members:
+    :undoc-members:
+    :show-inheritance:
