@@ -131,6 +131,8 @@ class GaussianProcess(object):
     add_data : Used to process `X`, `y`, `err_y` and to add data to the process.
     """
     def __init__(self, k, noise_k=None, standardize=False, X=None, y=None, err_y=0):
+        if standardize:
+            raise ValueError("Keyword standardize is not supported at this point!")
         if not isinstance(k, Kernel):
             raise TypeError("Argument k must be an instance of Kernel when "
                             "constructing GaussianProcess!")
@@ -346,6 +348,7 @@ class GaussianProcess(object):
         if not self.K_up_to_date:
             if self.standardize:
                 # TODO: Implement standardization on X!
+                # TODO: This does not handle the derivatives properly!
                 self.mu_y = scipy.mean(self.y)
                 self.std_y = scipy.std(self.y, ddof=1)
                 self.y_s = (self.y - self.mu_y) / self.std_y
