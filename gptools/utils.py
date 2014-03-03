@@ -430,21 +430,23 @@ def compute_stats(vals, check_nan=False, robust=False, axis=1, plot_QQ=False, bi
             """
             a_QQ.clear()
             a_hist.clear()
-            idx = slider.val
             title.set_text("%s, n=%d" % (name, idx))
+            idx = slider.val
             
-            osm, osr = scipy.stats.probplot(vals[idx, :], dist='norm', plot=None, fit=False)
-            a_QQ.plot(osm, osr, 'bo', markersize=10)
-            a_QQ.set_title('QQ plot')
-            a_QQ.set_xlabel('quantiles of $\mathcal{N}(0,1)$')
-            a_QQ.set_ylabel('quantiles of data')
-            
-            a_hist.hist(vals[idx, :], bins=bins, normed=True)
-            locs = scipy.linspace(vals[idx, :].min(), vals[idx, :].max())
-            a_hist.plot(locs, scipy.stats.norm.pdf(locs, loc=mean[idx], scale=std[idx]))
-            a_hist.set_title('Normalized histogram and reported PDF')
-            a_hist.set_xlabel('value')
-            a_hist.set_ylabel('density')
+            nan_idxs = scipy.isnan(vals[idx, :])
+            if not nan_idxs.all():
+                osm, osr = scipy.stats.probplot(vals[idx, :], dist='norm', plot=None, fit=False)
+                a_QQ.plot(osm, osr, 'bo', markersize=10)
+                a_QQ.set_title('QQ plot')
+                a_QQ.set_xlabel('quantiles of $\mathcal{N}(0,1)$')
+                a_QQ.set_ylabel('quantiles of data')
+                
+                a_hist.hist(vals[idx, :], bins=bins, normed=True)
+                locs = scipy.linspace(vals[idx, :].min(), vals[idx, :].max())
+                a_hist.plot(locs, scipy.stats.norm.pdf(locs, loc=mean[idx], scale=std[idx]))
+                a_hist.set_title('Normalized histogram and reported PDF')
+                a_hist.set_xlabel('value')
+                a_hist.set_ylabel('density')
             
             f.canvas.draw()
         
