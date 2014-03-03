@@ -26,6 +26,10 @@ import scipy
 import scipy.optimize
 import scipy.special
 import scipy.stats
+import matplotlib.pyplot as plt
+import matplotlib.widgets as mplw
+import matplotlib.gridspec as mplgs
+
 
 def wrap_fmin_slsqp(fun, guess, opt_kwargs={}):
     """Wrapper for :py:func:`fmin_slsqp` to allow it to be called with :py:func:`minimize`-like syntax.
@@ -341,7 +345,7 @@ class _Row(object):
 # Conversion factor to get from interquartile range to standard deviation:
 IQR_TO_STD = 2.0 * scipy.stats.norm.isf(0.25)
 
-def compute_stats(vals, check_nan=False, robust=False, axis=1, plot_QQ=False):
+def compute_stats(vals, check_nan=False, robust=False, axis=1, plot_QQ=False, bins=15):
     """Compute the average statistics (mean, std dev) for the given values.
     
     Parameters
@@ -360,6 +364,9 @@ def compute_stats(vals, check_nan=False, robust=False, axis=1, plot_QQ=False):
     plot_QQ : bool, optional
         Whether or not a QQ plot should be drawn for each channel. Default is
         False (do not draw QQ plots).
+    bins : int, optional
+        Number of bins to use when plotting histogram (for plot_QQ=True).
+        Default is 15
     
     Returns
     -------
@@ -408,5 +415,62 @@ def compute_stats(vals, check_nan=False, robust=False, axis=1, plot_QQ=False):
             mean = scipy.mean(vals, axis=axis)
             std = scipy.std(vals, axis=axis)
     if plot_QQ:
-        raise NotImplementedError("Not implemented yet!")
+        f = plt.figure()
+        gs = mplgs.GridSpec(2, 2, height_ratios=[8, 1])
+        a_QQ = f.add_subplot(gs[0, 0])
+        a_hist = f.add_subplot(gs[0, 1])
+        a_slider = f.add_subplot(gs[1, :])
+        
+        title = f.suptitle("")
+        
+        def update(val):
+            """Update the index from the results to be displayed.
+            """
+            a_QQ.clear()
+            a_hist.clear()
+            idx = slider.val
+            title.set_text("n=%d" % idx)
+            
+            osm, osr = scipy.stats.probplot(vals[idx, :], dist='norm', plot=None, fit=False)
+            a_QQ.plot(osm, osr, 'bo', markersize=10)
+            a_QQ.set_title('QQ plot')
+            a_QQ.set_xlabel('quantiles of $\mathcal{N}(0,1)$')
+            a_QQ.set_ylabel('quantiles of data')
+            
+            a_hist.hist(vals[idx, :], bins=bins, normed=True)
+            locs = scipy.linspace(vals[idx, :].min(), vals[idx, :].max())
+            a_hist.plot(locs, scipy.stats.norm.pdf(locs, loc=mean[idx], scale=std[idx]))
+            a_hist.set_title('Normalized histogram and reported PDF')
+            a_hist.set_xlabel('value')
+            a_hist.set_ylabel('density')
+            
+            f.canvas.draw()
+        
+        def arrow_respond(slider, event):
+            """Event handler for arrow key events in plot windows.
+
+            Pass the slider object to update as a masked argument using a lambda function::
+
+                lambda evt: arrow_respond(my_slider, evt)
+
+            Parameters
+            ----------
+            slider : Slider instance associated with this handler.
+            event : Event to be handled.
+            """
+            if event.key == 'right':
+                slider.set_val(min(slider.val + 1, slider.valmax))
+            elif event.key == 'left':
+                slider.set_val(max(slider.val - 1, slider.valmin))
+
+        slider = mplw.Slider(a_slider,
+                             'index',
+                             0,
+                             len(vals) - 1,
+                             valinit=0,
+                             valfmt='%d')
+        slider.on_changed(update)
+        update(0)
+        f.canvas.mpl_connect('key_press_event', lambda evt: arrow_respond(slider, evt))
+    
     return (mean, std)
