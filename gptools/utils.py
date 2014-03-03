@@ -430,8 +430,8 @@ def compute_stats(vals, check_nan=False, robust=False, axis=1, plot_QQ=False, bi
             """
             a_QQ.clear()
             a_hist.clear()
-            title.set_text("%s, n=%d" % (name, idx))
             idx = slider.val
+            title.set_text("%s, n=%d" % (name, idx))
             
             nan_idxs = scipy.isnan(vals[idx, :])
             if not nan_idxs.all():
