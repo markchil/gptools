@@ -345,7 +345,7 @@ class _Row(object):
 # Conversion factor to get from interquartile range to standard deviation:
 IQR_TO_STD = 2.0 * scipy.stats.norm.isf(0.25)
 
-def compute_stats(vals, check_nan=False, robust=False, axis=1, plot_QQ=False, bins=15):
+def compute_stats(vals, check_nan=False, robust=False, axis=1, plot_QQ=False, bins=15, name=''):
     """Compute the average statistics (mean, std dev) for the given values.
     
     Parameters
@@ -362,11 +362,13 @@ def compute_stats(vals, check_nan=False, robust=False, axis=1, plot_QQ=False, bi
         Axis to compute the statistics along. Presently only supported if
         `robust` is False. Default is 1.
     plot_QQ : bool, optional
-        Whether or not a QQ plot should be drawn for each channel. Default is
-        False (do not draw QQ plots).
+        Whether or not a QQ plot and histogram should be drawn for each channel.
+        Default is False (do not draw QQ plots).
     bins : int, optional
         Number of bins to use when plotting histogram (for plot_QQ=True).
         Default is 15
+    name : str, optional
+        Name to put in the title of the QQ/histogram plot.
     
     Returns
     -------
@@ -429,7 +431,7 @@ def compute_stats(vals, check_nan=False, robust=False, axis=1, plot_QQ=False, bi
             a_QQ.clear()
             a_hist.clear()
             idx = slider.val
-            title.set_text("n=%d" % idx)
+            title.set_text("%s, n=%d" % (name, idx))
             
             osm, osr = scipy.stats.probplot(vals[idx, :], dist='norm', plot=None, fit=False)
             a_QQ.plot(osm, osr, 'bo', markersize=10)
