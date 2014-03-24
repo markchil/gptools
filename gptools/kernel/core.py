@@ -20,7 +20,7 @@
 
 from __future__ import division
 
-from ..utils import unique_rows, generate_set_partitions
+from ..utils import unique_rows, generate_set_partitions, uniform_prior
 from ..error_handling import GPArgumentError
 
 import scipy
@@ -59,6 +59,21 @@ class Kernel(object):
         result in the parameter being set right at its bound. If False, bounds
         are not enforced inside the kernel. Default is False (do not enforce
         bounds).
+    hyperpriors : list of callables (`num_params`,), optional
+        List of functions that return the prior probability density for the
+        corresponding hyperparameter when evaluated. The function is called
+        with only the single hyperparameter (or a list of values) as an
+        argument, which permits use of standard PDFs from :py:mod:`scipy.stats`.
+        This does, however, require that the hyperparameters be treated as
+        independent. Note that what is actually computed is the logarithm of
+        the posterior density, so your PDF cannot be zero anywhere that it
+        might get evaluated. You can choose to specify either the distribution
+        or the log of the distribution by setting the `is_log` keyword.
+        Default value is uniform PDF on all hyperparameters.
+    is_log : list of bool (`num_params`,), optional
+        Indicates whether the corresponding hyperprior returns the density or
+        the log-density. Default is `False` for each parameter: all hyperpriors
+        return density (NOT log-density).
     
     Attributes
     ----------
@@ -72,6 +87,10 @@ class Kernel(object):
         Array of booleans indicated which parameters in params are fixed.
     param_bounds : list of 2-tuples, (`num_params`,)
         List of bounds for the parameters in params.
+    hyperpriors : list of callables, (`num_params`,)
+        List of prior functions for the hyperparameters.
+    is_log : list of bool, (`num_params`,)
+        List of flags for if the hyperpriors return density or log-density.
     
     Raises
     ------
@@ -82,7 +101,9 @@ class Kernel(object):
     GPArgumentError
         if `fixed_params` is passed but `initial_params` is not.
     """
-    def __init__(self, num_dim, num_params, initial_params=None, fixed_params=None, param_bounds=None, enforce_bounds=False):
+    def __init__(self, num_dim, num_params, initial_params=None,
+                 fixed_params=None, param_bounds=None, enforce_bounds=False,
+                 hyperpriors=None, is_log=None):
         if num_params < 0 or not isinstance(num_params, (int, long)):
             raise ValueError("num_params must be an integer >= 0!")
         self.num_params = num_params
@@ -117,9 +138,25 @@ class Kernel(object):
             if len(param_bounds) != num_params:
                 raise ValueError("Length of param_bounds must be equal to num_params!")
         
+        # Handle default case for hyperpriors -- set them all to be uniform:
+        if hyperpriors is None:
+            hyperpriors = num_params * [uniform_prior]
+        else:
+            if len(hyperpriors) != num_params:
+                raise ValueError("Length of hyperpriors must be equal to num_params!")
+        
+        # Handle default case for is_log -- set them all to be density:
+        if is_log is None:
+            is_log = num_params * [False]
+        else:
+            if len(is_log) != num_params:
+                raise ValueError("Length of is_log must be equal to num_params!")
+        
         self.params = scipy.asarray(initial_params, dtype=float)
         self.fixed_params = scipy.asarray(fixed_params, dtype=bool)
         self.param_bounds = param_bounds
+        self.hyperpriors = hyperpriors
+        self.is_log = is_log
     
     def __call__(self, Xi, Xj, ni, nj, hyper_deriv=None, symmetric=False):
         """Evaluate the covariance between points `Xi` and `Xj` with derivative order `ni`, `nj`.
@@ -288,7 +325,9 @@ class BinaryKernel(Kernel):
                                            k1.num_params + k2.num_params,
                                            initial_params=scipy.concatenate((k1.params, k2.params)),
                                            fixed_params=scipy.concatenate((k1.fixed_params, k2.fixed_params)),
-                                           param_bounds=scipy.concatenate((k1.param_bounds, k2.param_bounds)))
+                                           param_bounds=list(k1.param_bounds) + list(k2.param_bounds),
+                                           hyperpriors=list(k1.hyperpriors) + list(k2.hyperpriors),
+                                           is_log=list(k1.is_log) + list(k2.is_log))
     
     def set_hyperparams(self, new_params):
         """Set the (free) hyperparameters.

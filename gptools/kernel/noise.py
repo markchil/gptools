@@ -21,6 +21,7 @@
 from __future__ import division
 
 from .core import Kernel
+from ..utils import uniform_prior
 
 import scipy
 
@@ -31,22 +32,33 @@ class DiagonalNoiseKernel(Kernel):
     ----------
     num_dim : positive int
         Number of dimensions of the input data.
-    initial_noise : float
+    initial_noise : float, optional
         Initial value for the noise standard deviation. Default value is None
         (noise gets set to 1).
-    fixed_noise : bool
+    fixed_noise : bool, optional
         Whether or not the noise is taken to be fixed when optimizing the log
         likelihood.
-    noise_bound : 2-tuple
+    noise_bound : 2-tuple, optional
         The bounds for the noise when optimizing the log likelihood with
         :py:func:`scipy.optimize.minimize`. Must be of the form
         (`lower`, `upper`). Set a given entry to None to put no bound on
         that side. Default is None, which gets set to (0, None).
-    n : non-negative int or tuple of non-negative ints with length equal to `num_dim`
+    n : non-negative int or tuple of non-negative ints with length equal to `num_dim`, optional
         Indicates which derivative this noise is with respect to. Default is 0
         (noise applies to value).
+    hyperprior : callable, optional
+        Function that returns the prior density for a possible value (or array
+        of values) of noise when called. Note that what is computed is the
+        logarithm of the posterior density, so your prior must not evaluate to
+        zero anywhere it might get called. You can specify a prior that returns
+        log-density using the `is_log` keyword. Default behavior is to assign
+        a uniform prior.
+    is_log : bool
+        Whether the prior function returns density or log-density. Default is
+        False (returns density).
+    
     """
-    def __init__(self, num_dim, initial_noise=None, fixed_noise=None, noise_bound=None, n=0):
+    def __init__(self, num_dim, initial_noise=None, fixed_noise=None, noise_bound=None, n=0, hyperprior=uniform_prior, is_log=False):
         try:
             iter(n)
         except TypeError:
@@ -65,7 +77,9 @@ class DiagonalNoiseKernel(Kernel):
                                                   1,
                                                   initial_params=initial_noise,
                                                   fixed_params=fixed_noise,
-                                                  param_bounds=noise_bound)
+                                                  param_bounds=noise_bound,
+                                                  hyperpriors=[hyperprior],
+                                                  is_log=[is_log])
     
     def __call__(self, Xi, Xj, ni, nj, hyper_deriv=None, symmetric=False):
         """Evaluate the covariance between points `Xi` and `Xj` with derivative order `ni`, `nj`.

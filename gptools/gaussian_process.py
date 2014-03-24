@@ -407,6 +407,15 @@ class GaussianProcess(object):
             self.ll = (-0.5 * scipy.asmatrix(y) * self.alpha -
                        scipy.log(scipy.diag(self.L)).sum() - 
                        0.5 * len(y) * scipy.log(2.0 * scipy.pi))[0, 0]
+            # Apply hyperpriors:
+            # TODO: Is there a more pythonic way of doing this?
+            for p, is_log, theta in zip(list(self.k.hyperpriors) + list(self.noise_k.hyperpriors),
+                                        list(self.k.is_log) + list(self.noise_k.is_log),
+                                        list(self.k.params) + list(self.noise_k.params)):
+                if is_log:
+                    self.ll += p(theta)
+                else:
+                    self.ll += scipy.log(p(theta))
             self.K_up_to_date = True
     
     def update_hyperparameters(self, new_params, return_jacobian=False):

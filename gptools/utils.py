@@ -31,6 +31,27 @@ import matplotlib.widgets as mplw
 import matplotlib.gridspec as mplgs
 
 
+def uniform_prior(theta):
+    """Function to implement an (improper) uniform prior.
+    
+    Parameters
+    ----------
+    theta : array-like, or float
+        Value or values of hyperparameter.
+    
+    Returns
+    -------
+    f : :py:class:`Array` or float
+        Returns 1.0 if `theta` is scalar, or an array of ones in the same shape
+        as `theta` if `theta` is array-like.
+    """
+    try:
+        iter(theta)
+    except TypeError:
+        return 1.0
+    else:
+        return scipy.ones_like(theta, dtype=float)
+
 def wrap_fmin_slsqp(fun, guess, opt_kwargs={}):
     """Wrapper for :py:func:`fmin_slsqp` to allow it to be called with :py:func:`minimize`-like syntax.
 
