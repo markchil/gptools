@@ -530,7 +530,7 @@ class GaussianProcess(object):
                 res += [wrap_fmin_slsqp(self.update_hyperparameters,
                                         scipy.concatenate((self.k.free_params, self.noise_k.free_params)),
                                         opt_kwargs=opt_kwargs)]
-        
+        print(len(res))
         res_min = min(res, key=lambda r: r.fun)
         
         self.update_hyperparameters(res_min.x, return_jacobian=False)
