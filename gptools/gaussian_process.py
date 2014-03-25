@@ -519,6 +519,7 @@ class GaussianProcess(object):
         # TODO: This can easily be parallelized -- but will require a helper class.
         res = []
         for samp in param_samples:
+            print(samp)
             try:
                 res += [scipy.optimize.minimize(self.update_hyperparameters,
                                                 scipy.concatenate((self.k.free_params, self.noise_k.free_params)),
