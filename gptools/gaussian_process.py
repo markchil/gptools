@@ -508,7 +508,7 @@ class GaussianProcess(object):
         if random_starts == 0:
             param_samples = [scipy.concatenate((self.k.free_params, self.noise_k.free_params))]
         else:
-            param_ranges = scipy.concatenate((self.k.free_param_bounds, self.noise_k.free_param_bounds), dtype=float)
+            param_ranges = scipy.asarray(scipy.concatenate((self.k.free_param_bounds, self.noise_k.free_param_bounds)), dtype=float)
             # Replace unbounded variables with something big:
             param_ranges[scipy.where(scipy.isnan(param_ranges[:, 0])), 0] = -1e16
             param_ranges[scipy.where(scipy.isnan(param_ranges[:, 1])), 1] = 1e16
