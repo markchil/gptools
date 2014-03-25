@@ -459,7 +459,7 @@ class GaussianProcess(object):
                 jac[i] = 0.5 * scipy.trace(aaKI * dKijdHP)
             return (-1 * self.ll, -1 * jac)
 
-    def optimize_hyperparameters(self, method='SLSQP', opt_kwargs={}, verbose=False):
+    def optimize_hyperparameters(self, method='SLSQP', opt_kwargs={}, verbose=False, random_starts=0):
         r"""Optimize the hyperparameters by maximizing the log likelihood.
         
         Leaves the :py:class:`GaussianProcess` instance in the optimized state.
@@ -488,40 +488,58 @@ class GaussianProcess(object):
             :py:func:`scipy.optimize.minimize` is printed. If False, status
             information is only printed if the `success` flag from
             :py:func:`minimize` is False. Default is False.
+        random_starts : non-negative int, optional
+            Number of times to randomly perturb the starting guesses
+            (distributed uniformly within their bounds) in order to seek the
+            global minimum. Default is 0 (no random starts -- just use the
+            initial guess). Note that for `random_starts` != 0, the initial
+            guesses provided are not actually used.
         """
         if opt_kwargs is None:
-            #opt_kwargs = {'args': (False,),
-            #              'bounds': scipy.concatenate((self.k.free_param_bounds, self.noise_k.free_param_bounds)),
-            #              'jac': None}
             opt_kwargs = {}
         else:
             opt_kwargs = dict(opt_kwargs)
-        # TODO: Add ability to do random starts to avoid local minima.
         if 'method' in opt_kwargs:
             warnings.warn("Use of keyword 'method' in opt_kwargs is not allowed, "
                           "and is being ignored. Use the 'method' keyword for "
                           "optimize_hyperparameters instead.",
                           RuntimeWarning)
             opt_kwargs.pop('method')
-        try:
-            res = scipy.optimize.minimize(self.update_hyperparameters,
-                                          scipy.concatenate((self.k.free_params, self.noise_k.free_params)),
-                                          method=method,
-                                          **opt_kwargs)
-        except AttributeError:
-            warnings.warn("scipy.optimize.minimize not available, defaulting to fmin_slsqp.",
-                          RuntimeWarning)
-            res = wrap_fmin_slsqp(self.update_hyperparameters,
-                                   scipy.concatenate((self.k.free_params, self.noise_k.free_params)),
-                                   opt_kwargs=opt_kwargs)
-            
-        self.update_hyperparameters(res.x, return_jacobian=False)
+        if random_starts == 0:
+            param_samples = [scipy.concatenate((self.k.free_params, self.noise_k.free_params))]
+        else:
+            param_ranges = scipy.concatenate((self.k.free_param_bounds, self.noise_k.free_param_bounds), dtype=float)
+            # Replace unbounded variables with something big:
+            param_ranges[scipy.where(scipy.isnan(param_ranges[:, 0])), 0] = -1e16
+            param_ranges[scipy.where(scipy.isnan(param_ranges[:, 1])), 1] = 1e16
+            param_samples = scipy.asarray([numpy.random.uniform(low=param_ranges[k, 0],
+                                                                high=param_ranges[k, 1],
+                                                                size=random_starts)
+                                           for k in range(0, len(param_ranges))]).T
+        # TODO: This can easily be parallelized -- but will require a helper class.
+        res = []
+        for samp in param_samples:
+            try:
+                res += [scipy.optimize.minimize(self.update_hyperparameters,
+                                                scipy.concatenate((self.k.free_params, self.noise_k.free_params)),
+                                                method=method,
+                                                **opt_kwargs)]
+            except AttributeError:
+                warnings.warn("scipy.optimize.minimize not available, defaulting to fmin_slsqp.",
+                              RuntimeWarning)
+                res += [wrap_fmin_slsqp(self.update_hyperparameters,
+                                        scipy.concatenate((self.k.free_params, self.noise_k.free_params)),
+                                        opt_kwargs=opt_kwargs)]
+        
+        res_min = min(res, key=lambda r: r.fun)
+        
+        self.update_hyperparameters(res_min.x, return_jacobian=False)
         if verbose:
-            print(res)
-        if not res.success:
+            print(res_min)
+        if not res_min.success:
             warnings.warn("Solver %s reports failure, selected hyperparameters "
                           "are likely NOT optimal. Status: %d, Message: '%s'"
-                          % (method, res.status, res.message),
+                          % (method, res_min.status, res_min.message),
                           RuntimeWarning)
     
     def predict(self, Xstar, n=0, noise=False, return_cov=True):
