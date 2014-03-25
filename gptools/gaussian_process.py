@@ -519,19 +519,17 @@ class GaussianProcess(object):
         # TODO: This can easily be parallelized -- but will require a helper class.
         res = []
         for samp in param_samples:
-            print(samp)
             try:
                 res += [scipy.optimize.minimize(self.update_hyperparameters,
-                                                scipy.concatenate((self.k.free_params, self.noise_k.free_params)),
+                                                samp,
                                                 method=method,
                                                 **opt_kwargs)]
             except AttributeError:
                 warnings.warn("scipy.optimize.minimize not available, defaulting to fmin_slsqp.",
                               RuntimeWarning)
                 res += [wrap_fmin_slsqp(self.update_hyperparameters,
-                                        scipy.concatenate((self.k.free_params, self.noise_k.free_params)),
+                                        samp,
                                         opt_kwargs=opt_kwargs)]
-        print(len(res))
         res_min = min(res, key=lambda r: r.fun)
         
         self.update_hyperparameters(res_min.x, return_jacobian=False)
