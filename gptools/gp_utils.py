@@ -33,6 +33,7 @@ import matplotlib.widgets as mplw
 import matplotlib.gridspec as mplgs
 import itertools
 import scipy
+import copy
 
 def parallel_compute_ll_matrix(gp, bounds, num_pts, num_proc=None):
     """Compute matrix of the log likelihood over the parameter space in parallel.
@@ -91,8 +92,7 @@ def parallel_compute_ll_matrix(gp, bounds, num_pts, num_proc=None):
         specific_param_vals[0] = param_vals[0][k]
         pv_cases.append(specific_param_vals)
         
-        gp_cases.append(GaussianProcess(gp.k, noise_k=gp.noise_k))
-        gp_cases[-1].add_data(gp.X, gp.y, err_y=gp.err_y, n=gp.n)
+        gp_cases += [copy.deepcopy(gp)]
         
         num_pts_cases.append(num_pts)
     
