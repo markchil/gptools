@@ -25,7 +25,12 @@ from ..error_handling import GPArgumentError
 
 import scipy
 import scipy.special
-import mpmath
+try:
+    import mpmath
+except ImportError:
+    import warnings
+    warnings.warn("Could not import mpmath. ArbitraryKernel class will not work.",
+                  ImportWarning)
 import inspect
 import multiprocessing
 

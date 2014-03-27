@@ -26,9 +26,13 @@ import scipy
 import scipy.optimize
 import scipy.special
 import scipy.stats
-import matplotlib.pyplot as plt
-import matplotlib.widgets as mplw
-import matplotlib.gridspec as mplgs
+try:
+    import matplotlib.pyplot as plt
+    import matplotlib.widgets as mplw
+    import matplotlib.gridspec as mplgs
+except ImportError:
+    warnings.warn("Could not import matplotlib. plot_QQ keyword for compute_stats will not function.",
+                  ImportWarning)
 
 
 def uniform_prior(theta):

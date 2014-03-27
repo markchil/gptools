@@ -28,9 +28,14 @@ from .gaussian_process import GaussianProcess
 from .error_handling import GPArgumentError
 
 import multiprocessing
-import matplotlib.pyplot as plt
-import matplotlib.widgets as mplw
-import matplotlib.gridspec as mplgs
+try:
+    import matplotlib.pyplot as plt
+    import matplotlib.widgets as mplw
+    import matplotlib.gridspec as mplgs
+except ImportError:
+    import warnings
+    warnings.warn("Could not import matplotlib. slice_plot will not be available.",
+                  ImportWarning)
 import itertools
 import scipy
 import copy
