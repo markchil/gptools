@@ -58,7 +58,7 @@ class Kernel(object):
     param_bounds : list of 2-tuples (`num_params`,), optional
         List of bounds for each of the parameters. Each 2-tuple is of the form
         (`lower`, `upper`). If there is no bound in a given direction, set it
-        to None. Default is (0.0, None) for each parameter.
+        to double_max. Default is (0.0, double_max) for each parameter.
     enforce_bounds : bool, optional
         If True, an attempt to set a parameter outside of its bounds will
         result in the parameter being set right at its bound. If False, bounds
@@ -136,16 +136,16 @@ class Kernel(object):
                 if len(fixed_params) != num_params:
                     raise ValueError("Length of fixed_params must be equal to num_params!")
         
-        # Handle default case for parameter bounds -- set them all to (0, None):
+        # Handle default case for parameter bounds -- set them all to (0, double_max):
         if param_bounds is None:
-            param_bounds = num_params * [(0.0, None)]
+            param_bounds = num_params * [(0.0, scipy.finfo('d').max)]
         else:
             if len(param_bounds) != num_params:
                 raise ValueError("Length of param_bounds must be equal to num_params!")
         
         # Handle default case for hyperpriors -- set them all to be uniform:
         if hyperpriors is None:
-            hyperpriors = num_params * [UniformPrior]
+            hyperpriors = [UniformPrior(b) for b in param_bounds]
         else:
             if len(hyperpriors) != num_params:
                 raise ValueError("Length of hyperpriors must be equal to num_params!")
