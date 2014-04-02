@@ -416,6 +416,9 @@ class GaussianProcess(object):
                     self.ll += p(theta)
                 else:
                     self.ll += scipy.log(p(theta))
+            params = list(self.k.params) + list(self.noise_k.params)
+            for p in list(self.k.potentials) + list(self.noise_k.potentials):
+                self.ll += p(params)
             self.K_up_to_date = True
     
     def update_hyperparameters(self, new_params, return_jacobian=False):

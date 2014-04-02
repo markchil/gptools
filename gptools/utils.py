@@ -35,10 +35,66 @@ except ImportError:
                   ImportWarning)
 
 
+class InequalityPotential(object):
+    """Class to implement a potential to enforce an inequality constraint.
+    
+    Returns 0.0 if theta[idx2] <= theta[idx1], double_min otherwise.
+    
+    Parameters
+    ----------
+    idx1 : int
+        Index of the parameter that is required to be greater.
+    idx2 : int
+        Index of the parameter that is required to be lesser.
+    """
+    def __init__(self, idx1, idx2):
+        self.idx1 = idx1
+        self.idx2 = idx2
+    
+    def __call__(self, theta):
+        """Return the log-density of the potential.
+        
+        Parameters
+        ----------
+        theta : array-like
+            Array of the hyperparameters.
+        
+        Returns
+        -------
+        f : float
+            Returns 0.0 if the condition is met, double_min if not.
+        """
+        if theta[self.idx2] <= theta[self.idx1]:
+            return 0.0
+        else:
+            return scipy.finfo('d').min
+
 class UniformPrior(object):
+    """Class to implement a uniform prior.
+    
+    Parameters
+    ----------
+    bounds : 2-tuple
+        The bounds for the parameter this prior corresponds to: (ub, lb).
+    """
     def __init__(self, bounds):
         self.bounds = bounds
+        
     def __call__(self, theta):
+        """Return the log-density of the uniform prior.
+        
+        Parameters
+        ----------
+        theta : array-like, or float
+            Value or values of the hyperparameter.
+        
+        Returns
+        -------
+        f : :py:class:`Array` or float
+            Returns -log(ub - lb) if theta is scalar and in bounds, double_min
+            if theta is scalar and out of bounds and an appropriately-shaped
+            array if theta is array-like.
+        """
         try:
             iter(theta)
         except TypeError:

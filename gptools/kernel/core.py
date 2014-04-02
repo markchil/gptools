@@ -79,6 +79,11 @@ class Kernel(object):
         Indicates whether the corresponding hyperprior returns the density or
         the log-density. Default is `True` for each parameter: all hyperpriors
         return log-density.
+    potentials : list of callables, optional
+        List of functions that return log-densities that are added onto the
+        posterior log-density. Must take the vector of hyperparameters as the
+        only argument and return a single value of log-density. Default is []
+        (no potentials).
     
     Attributes
     ----------
@@ -108,7 +113,7 @@ class Kernel(object):
     """
     def __init__(self, num_dim, num_params, initial_params=None,
                  fixed_params=None, param_bounds=None, enforce_bounds=False,
-                 hyperpriors=None, is_log=None):
+                 hyperpriors=None, is_log=None, potentials=[]):
         if num_params < 0 or not isinstance(num_params, (int, long)):
             raise ValueError("num_params must be an integer >= 0!")
         self.num_params = num_params
@@ -162,6 +167,7 @@ class Kernel(object):
         self.param_bounds = param_bounds
         self.hyperpriors = hyperpriors
         self.is_log = is_log
+        self.potentials = potentials
     
     def __call__(self, Xi, Xj, ni, nj, hyper_deriv=None, symmetric=False):
         """Evaluate the covariance between points `Xi` and `Xj` with derivative order `ni`, `nj`.
