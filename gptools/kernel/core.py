@@ -20,7 +20,7 @@
 
 from __future__ import division
 
-from ..utils import unique_rows, generate_set_partitions, uniform_prior
+from ..utils import unique_rows, generate_set_partitions, UniformPrior
 from ..error_handling import GPArgumentError
 
 import scipy
@@ -72,8 +72,8 @@ class Kernel(object):
         Default value is uniform PDF on all hyperparameters.
     is_log : list of bool (`num_params`,), optional
         Indicates whether the corresponding hyperprior returns the density or
-        the log-density. Default is `False` for each parameter: all hyperpriors
-        return density (NOT log-density).
+        the log-density. Default is `True` for each parameter: all hyperpriors
+        return log-density.
     
     Attributes
     ----------
@@ -140,14 +140,14 @@ class Kernel(object):
         
         # Handle default case for hyperpriors -- set them all to be uniform:
         if hyperpriors is None:
-            hyperpriors = num_params * [uniform_prior]
+            hyperpriors = num_params * [UniformPrior]
         else:
             if len(hyperpriors) != num_params:
                 raise ValueError("Length of hyperpriors must be equal to num_params!")
         
         # Handle default case for is_log -- set them all to be density:
         if is_log is None:
-            is_log = num_params * [False]
+            is_log = num_params * [True]
         else:
             if len(is_log) != num_params:
                 raise ValueError("Length of is_log must be equal to num_params!")

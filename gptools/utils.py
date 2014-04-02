@@ -31,6 +31,21 @@ import matplotlib.widgets as mplw
 import matplotlib.gridspec as mplgs
 
 
+class UniformPrior(object):
+    def __init__(self, bounds):
+        self.bounds = bounds
+    def __call__(self, theta):
+        try:
+            iter(theta)
+        except TypeError:
+            if self.bounds[0] <= theta and theta <= self.bounds[1]:
+                return -scipy.log(self.bounds[1] - self.bounds[0])
+            else:
+                return scipy.finfo('d').min
+        else:
+            logp = -scipy.log(self.bounds[1] - self.bounds[0]) * scipy.ones_like(theta, dtype=float)
+            logp[(self.bounds[0] <= theta) & (theta <= self.bounds[1])] = scipy.finfo('d').min
+
 def uniform_prior(theta):
     """Function to implement an (improper) uniform prior.
     
