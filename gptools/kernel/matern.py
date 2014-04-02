@@ -25,8 +25,12 @@ from ..utils import generate_set_partitions
 
 import scipy
 import scipy.special
-import mpmath
 import warnings
+try:
+    import mpmath
+except ImportError:
+    warnings.warn("Could not import mpmath. Certain functions of the Matern kernel will not function.",
+                  ImportWarning)
 
 class MaternKernel(ChainRuleKernel):
     r"""Matern covariance kernel. Supports arbitrary derivatives. Treats order as a hyperparameter.

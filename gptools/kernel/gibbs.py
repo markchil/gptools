@@ -23,7 +23,12 @@ from __future__ import division
 from .core import Kernel, ArbitraryKernel
 from ..utils import unique_rows
 
-import mpmath
+try:
+    import mpmath
+except ImportError:
+    import warnings
+    warnings.warn("Could not import mpmath. Arbitrary warping functions for Gibbs kernels will not function.",
+                  ImportWarning)
 import scipy
 import scipy.interpolate
 import inspect
