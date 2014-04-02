@@ -67,7 +67,7 @@ class InequalityPotential(object):
         if theta[self.idx2] <= theta[self.idx1]:
             return 0.0
         else:
-            return scipy.finfo('d').min
+            return -scipy.inf  #scipy.finfo('d').min
 
 class UniformPrior(object):
     """Class to implement a uniform prior.
@@ -101,10 +101,10 @@ class UniformPrior(object):
             if self.bounds[0] <= theta and theta <= self.bounds[1]:
                 return -scipy.log(self.bounds[1] - self.bounds[0])
             else:
-                return scipy.finfo('d').min
+                return -scipy.inf  #scipy.finfo('d').min
         else:
             logp = -scipy.log(self.bounds[1] - self.bounds[0]) * scipy.ones_like(theta, dtype=float)
-            logp[(self.bounds[0] <= theta) & (theta <= self.bounds[1])] = scipy.finfo('d').min
+            logp[(self.bounds[0] <= theta) & (theta <= self.bounds[1])] = -scipy.inf  #scipy.finfo('d').min
 
 def uniform_prior(theta):
     """Function to implement an (improper) uniform prior.
