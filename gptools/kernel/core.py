@@ -111,7 +111,7 @@ class Kernel(object):
     GPArgumentError
         if `fixed_params` is passed but `initial_params` is not.
     """
-    def __init__(self, num_dim, num_params, initial_params=None,
+    def __init__(self, num_dim=1, num_params=0, initial_params=None,
                  fixed_params=None, param_bounds=None, enforce_bounds=False,
                  hyperpriors=None, is_log=None, potentials=[]):
         if num_params < 0 or not isinstance(num_params, (int, long)):
@@ -332,8 +332,8 @@ class BinaryKernel(Kernel):
         self.k1 = k1
         self.k2 = k2
         
-        super(BinaryKernel, self).__init__(k1.num_dim,
-                                           k1.num_params + k2.num_params,
+        super(BinaryKernel, self).__init__(num_dim=k1.num_dim,
+                                           num_params=k1.num_params + k2.num_params,
                                            initial_params=scipy.concatenate((k1.params, k2.params)),
                                            fixed_params=scipy.concatenate((k1.fixed_params, k2.fixed_params)),
                                            param_bounds=list(k1.param_bounds) + list(k2.param_bounds),
@@ -581,7 +581,7 @@ class ArbitraryKernel(Kernel):
     num_proc : non-negative int
         Number of processors to use in evaluating covariance derivatives. 0 means serial.
     """
-    def __init__(self, num_dim, cov_func, num_proc=0, **kwargs):
+    def __init__(self, cov_func, num_dim=1, num_proc=0, **kwargs):
         if num_proc is None:
             num_proc = multiprocessing.cpu_count()
         self.num_proc = num_proc
@@ -591,8 +591,8 @@ class ArbitraryKernel(Kernel):
             # Need to remove self from the arg list for bound method:
             num_params = len(inspect.getargspec(cov_func.__call__)[0]) - 3
         self.cov_func = cov_func
-        super(ArbitraryKernel, self).__init__(num_dim,
-                                              num_params,
+        super(ArbitraryKernel, self).__init__(num_dim=num_dim,
+                                              num_params=num_params,
                                               **kwargs)
     
     def __call__(self, Xi, Xj, ni, nj, hyper_deriv=None, symmetric=False):

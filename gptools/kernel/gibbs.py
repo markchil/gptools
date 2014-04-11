@@ -181,8 +181,8 @@ class GibbsKernel1dTanhArb(ArbitraryKernel):
         All parameters are passed to :py:class:`~gptools.kernel.core.Kernel`.
     """
     def __init__(self, **kwargs):
-        super(GibbsKernel1dTanhArb, self).__init__(1,
-                                                   GibbsFunction1dArb(tanh_warp_arb),
+        super(GibbsKernel1dTanhArb, self).__init__(GibbsFunction1dArb(tanh_warp_arb),
+                                                   num_dim=1,
                                                    **kwargs)
 
 class GibbsKernel1dGaussArb(ArbitraryKernel):
@@ -219,8 +219,8 @@ class GibbsKernel1dGaussArb(ArbitraryKernel):
         All parameters are passed to :py:class:`~gptools.kernel.core.Kernel`.
     """
     def __init__(self, **kwargs):
-        super(GibbsKernel1dGaussArb, self).__init__(1,
-                                                    GibbsFunction1dArb(gauss_warp_arb),
+        super(GibbsKernel1dGaussArb, self).__init__(GibbsFunction1dArb(gauss_warp_arb),
+                                                    num_dim=1,
                                                     **kwargs)
 
 class GibbsKernel1d(Kernel):
@@ -253,7 +253,7 @@ class GibbsKernel1d(Kernel):
             # Need to remove self from the arg list for bound method:
             num_params = len(inspect.getargspec(l_func.__call__)[0]) - 3 + 1
         
-        super(GibbsKernel1d, self).__init__(1, num_params, **kwargs)
+        super(GibbsKernel1d, self).__init__(num_dim=1, num_params=num_params, **kwargs)
     
     def __call__(self, Xi, Xj, ni, nj, hyper_deriv=None, symmetric=False):
         """Evaluate the covariance between points `Xi` and `Xj` with derivative order `ni`, `nj`.

@@ -70,9 +70,9 @@ class MaternKernel(ChainRuleKernel):
     GPArgumentError
         If `fixed_params` is passed but `initial_params` is not.
     """
-    def __init__(self, num_dim, **kwargs):
-        super(MaternKernel, self).__init__(num_dim,
-                                           num_dim + 2,
+    def __init__(self, num_dim=1, **kwargs):
+        super(MaternKernel, self).__init__(num_dim=num_dim,
+                                           num_params=num_dim + 2,
                                            **kwargs)
     
     def _compute_k(self, tau):

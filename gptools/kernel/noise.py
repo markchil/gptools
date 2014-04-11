@@ -58,7 +58,7 @@ class DiagonalNoiseKernel(Kernel):
         False (returns density).
     
     """
-    def __init__(self, num_dim, initial_noise=None, fixed_noise=None, noise_bound=None, n=0, hyperprior=uniform_prior, is_log=False):
+    def __init__(self, num_dim=1, initial_noise=None, fixed_noise=None, noise_bound=None, n=0, hyperprior=uniform_prior, is_log=False):
         try:
             iter(n)
         except TypeError:
@@ -73,8 +73,8 @@ class DiagonalNoiseKernel(Kernel):
             fixed_noise = [fixed_noise]
         if noise_bound is not None:
             noise_bound = [noise_bound]
-        super(DiagonalNoiseKernel, self).__init__(num_dim,
-                                                  1,
+        super(DiagonalNoiseKernel, self).__init__(num_dim=num_dim,
+                                                  num_params=1,
                                                   initial_params=initial_noise,
                                                   fixed_params=fixed_noise,
                                                   param_bounds=noise_bound,
@@ -125,8 +125,8 @@ class ZeroKernel(DiagonalNoiseKernel):
     num_dim : positive int
         The number of dimensions of the inputs.
     """
-    def __init__(self, num_dim):
-        super(ZeroKernel, self).__init__(num_dim, initial_noise=0.0, fixed_noise=True)
+    def __init__(self, num_dim=1):
+        super(ZeroKernel, self).__init__(num_dim=num_dim, initial_noise=0.0, fixed_noise=True)
 
     def __call__(self, Xi, Xj, ni, nj, hyper_deriv=None, symmetric=False):
         """Return zeros the same length as the input Xi.
