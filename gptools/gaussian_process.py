@@ -418,7 +418,7 @@ class GaussianProcess(object):
                     self.ll += scipy.log(p(theta))
             params = list(self.k.params) + list(self.noise_k.params)
             for p in list(self.k.potentials) + list(self.noise_k.potentials):
-                self.ll += p(params)
+                self.ll += p(params, self.k + self.noise_k)
             self.K_up_to_date = True
     
     def update_hyperparameters(self, new_params, return_jacobian=False):
@@ -533,6 +533,9 @@ class GaussianProcess(object):
                 res += [wrap_fmin_slsqp(self.update_hyperparameters,
                                         samp,
                                         opt_kwargs=opt_kwargs)]
+            except:
+                warnings.warn("Minimizer failed, skipping sample. Error is: %s" % (sys.exc_info()[0],),
+                              RuntimeWarning)
         res_min = min(res, key=lambda r: r.fun)
         
         self.update_hyperparameters(res_min.x, return_jacobian=False)

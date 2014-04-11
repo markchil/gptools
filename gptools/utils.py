@@ -35,47 +35,115 @@ except ImportError:
                   ImportWarning)
 
 
-class InequalityPotential(object):
+class LessThanUniformPotential(object):
     """Class to implement a potential to enforce an inequality constraint.
     
-    Returns 0.0 if theta[idx2] <= theta[idx1], double_min otherwise.
+    Specifically lets you change the param with l_idx to have a uniform prior
+    between its lower bound and the param with g_idx.
+    
+    Returns log((ub-lb)/(theta[g_idx]-lb)) if theta[l_idx] <= theta[g_idx],
+    double_min otherwise.
     
     Parameters
     ----------
-    idx1 : int
-        Index of the parameter that is required to be greater.
-    idx2 : int
+    l_idx : int
         Index of the parameter that is required to be lesser.
+    g_idx : int
+        Index of the parameter that is required to be greater.
     """
-    def __init__(self, idx1, idx2):
-        self.idx1 = idx1
-        self.idx2 = idx2
+    def __init__(self, l_idx, g_idx):
+        self.l_idx = l_idx
+        self.g_idx = g_idx
     
-    def __call__(self, theta):
+    def __call__(self, theta, k):
         """Return the log-density of the potential.
         
         Parameters
         ----------
         theta : array-like
             Array of the hyperparameters.
+        k : Kernel instance
+            The kernel the hyperparameters apply to.
         
         Returns
         -------
         f : float
-            Returns 0.0 if the condition is met, double_min if not.
+            Returns log((ub-lb)/(theta[g_idx]-lb)) if the condition is met, inf if not.
         """
-        if theta[self.idx2] <= theta[self.idx1]:
-            return 0.0
+        if theta[self.l_idx] <= theta[self.g_idx] and theta[self.l_idx] >= k.param_bounds[self.l_idx][0]:
+            return (scipy.log(k.param_bounds[self.l_idx][1] - k.param_bounds[self.l_idx][0]) -
+                    scipy.log(theta[self.g_idx] - k.param_bounds[self.l_idx][0]))
         else:
             return -scipy.inf  #scipy.finfo('d').min
 
-class UniformPrior(object):
-    """Class to implement a uniform prior.
+class JeffreysPrior(object):
+    """Class to implement a Jeffreys prior over a finite range. Returns log-density.
     
     Parameters
     ----------
     bounds : 2-tuple
-        The bounds for the parameter this prior corresponds to: (ub, lb).
+        The bounds for the parameter this prior corresponds to: (lb, ub).
+    """
+    def __init__(self, bounds):
+        self.bounds = bounds
+    
+    def __call__(self, theta):
+        try:
+            iter(theta)
+        except TypeError:
+            if self.bounds[0] <= theta and theta <= self.bounds[1]:
+                return -scipy.log(scipy.log(self.bounds[1] / self.bounds[0])) - scipy.log(theta)
+            else:
+                return -scipy.inf
+        else:
+            logp = -scipy.log(scipy.log(self.bounds[1] / self.bounds[0])) - scipy.log(theta)
+            logp[(self.bounds[0] <= theta) & (theta <= self.bounds[1])] = -scipy.inf
+            return logp
+
+class LinearPrior(object):
+    """Class to implement a linear prior. Returns log-density.
+    
+    Parameters
+    ----------
+    bounds : 2-tuple
+        The bounds for the parameter this prior corresponds to: (lb, ub).
+    """
+    def __init__(self, bounds):
+        self.bounds = bounds
+    
+    def __call__(self, theta):
+        """Return the log-density of the uniform prior.
+        
+        Parameters
+        ----------
+        theta : array-like, or float
+            Value of values of the hyperparameter.
+        
+        Returns
+        -------
+        f : :py:class:`Array` or float
+            Returns log(2/(b-a)^2) + log(b-theta) if theta is in bounds, -inf
+            if theta is out of bounds.
+        """
+        try:
+            iter(theta)
+        except TypeError:
+            if self.bounds[0] <= theta and theta <= self.bounds[1]:
+                return scipy.log(2 / (self.bounds[1] - self.bounds[0])**2) + scipy.log(self.bounds[1] - theta)
+            else:
+                return -scipy.inf
+        else:
+            logp = scipy.log(2 / (self.bounds[1] - self.bounds[0])**2) + scipy.log(self.bounds[1] - theta)
+            logp[(self.bounds[0] <= theta) & (theta <= self.bounds[1])] = -scipy.inf
+            return logp
+
+class UniformPrior(object):
+    """Class to implement a uniform prior. Returns log-density.
+    
+    Parameters
+    ----------
+    bounds : 2-tuple
+        The bounds for the parameter this prior corresponds to: (lb, ub).
     """
     def __init__(self, bounds):
         self.bounds = bounds
@@ -105,6 +173,7 @@ class UniformPrior(object):
         else:
             logp = -scipy.log(self.bounds[1] - self.bounds[0]) * scipy.ones_like(theta, dtype=float)
             logp[(self.bounds[0] <= theta) & (theta <= self.bounds[1])] = -scipy.inf  #scipy.finfo('d').min
+            return logp
 
 def uniform_prior(theta):
     """Function to implement an (improper) uniform prior.
