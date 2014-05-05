@@ -546,6 +546,7 @@ class GaussianProcess(object):
                           "are likely NOT optimal. Status: %d, Message: '%s'"
                           % (method, res_min.status, res_min.message),
                           RuntimeWarning)
+        return res_min
     
     def predict(self, Xstar, n=0, noise=False, return_cov=True):
         """Predict the mean and covariance at the inputs `Xstar`.

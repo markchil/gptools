@@ -20,7 +20,7 @@
 
 from __future__ import division
 
-from .core import ChainRuleKernel
+from .core import ChainRuleKernel, ArbitraryKernel
 from ..utils import generate_set_partitions
 
 import scipy
@@ -31,6 +31,106 @@ try:
 except ImportError:
     warnings.warn("Could not import mpmath. Certain functions of the Matern kernel will not function.",
                   ImportWarning)
+
+def matern_function(Xi, Xj, *args):
+    """Matern covariance function of arbitrary dimension, for use with :py:class:`ArbitraryKernel`.
+    
+    The Matern kernel has the following hyperparameters, always referenced in
+    the order listed:
+    
+    = ===== ====================================
+    0 sigma prefactor
+    1 nu    order of kernel
+    2 l1    length scale for the first dimension
+    3 l2    ...and so on for all dimensions
+    = ===== ====================================
+    
+    The kernel is defined as:
+    
+    .. math::
+    
+        k_M = \sigma^2 \frac{2^{1-\nu}}{\Gamma(\nu)}
+        \left (\sqrt{2\nu \sum_i\left (\frac{\tau_i^2}{l_i^2}\right )}\right )^\nu
+        K_\nu\left(\sqrt{2\nu \sum_i\left(\frac{\tau_i^2}{l_i^2}\right)}\right)
+    
+    Parameters
+    ----------
+    Xi, Xj : :py:class:`Array`, :py:class:`mpf`, tuple or scalar float
+        Points to evaluate the covariance between. If they are :py:class:`Array`,
+        :py:mod:`scipy` functions are used, otherwise :py:mod:`mpmath`
+        functions are used.
+    *args
+        Remaining arguments are the 2+num_dim hyperparameters as defined above.
+    """
+    num_dim = len(args) - 2
+    nu = args[1]
+    
+    if isinstance(Xi, scipy.ndarray):
+        if isinstance(Xi, scipy.matrix):
+            Xi = scipy.asarray(Xi, dtype=float)
+            Xj = scipy.asarray(Xj, dtype=float)
+        
+        tau = scipy.asarray(Xi - Xj, dtype=float)
+        l_mat = scipy.tile(args[-num_dim:], (tau.shape[0], 1))
+        r2l2 = scipy.sum((tau / l_mat)**2, axis=1)
+        y = scipy.sqrt(2.0 * nu * r2l2)
+        k = 2.0**(1 - nu) / scipy.special.gamma(nu) * y**nu * scipy.special.kv(nu, y)
+        k[r2l2 == 0] = 1
+    else:
+        try:
+            tau = [xi - xj for xi, xj in zip(Xi, Xj)]
+        except TypeError:
+            tau = Xi - Xj
+        try:
+            r2l2 = sum([(t / l)**2 for t, l in zip(tau, args[2:])])
+        except TypeError:
+            r2l2 = (tau / args[2])**2
+        y = mpmath.sqrt(2.0 * nu * r2l2)
+        k = 2.0**(1 - nu) / mpmath.gamma(nu) * y**nu * mpmath.besselk(nu, y)
+    k *= args[0]**2.0
+    return k
+
+class MaternKernelArb(ArbitraryKernel):
+    """Matern covariance kernel. Supports arbitrary derivatives. Treats order as a hyperparameter.
+    
+    This version of the Matern kernel is painfully slow, but uses :py:mod:`mpmath`
+    to ensure the derivatives are computed properly, since there may be issues
+    with the regular :py:class:`MaternKernel`.
+    
+    The Matern kernel has the following hyperparameters, always referenced in
+    the order listed:
+    
+    = ===== ====================================
+    0 sigma prefactor
+    1 nu    order of kernel
+    2 l1    length scale for the first dimension
+    3 l2    ...and so on for all dimensions
+    = ===== ====================================
+    
+    The kernel is defined as:
+    
+    .. math::
+    
+        k_M = \sigma^2 \frac{2^{1-\nu}}{\Gamma(\nu)}
+        \left (\sqrt{2\nu \sum_i\left (\frac{\tau_i^2}{l_i^2}\right )}\right )^\nu
+        K_\nu\left(\sqrt{2\nu \sum_i\left(\frac{\tau_i^2}{l_i^2}\right)}\right)
+
+    Parameters
+    ----------
+    **kwargs
+        All keyword parameters are passed to :py:class:`~gptools.kernel.core.ArbitraryKernel`.
+    """
+    def __init__(self, **kwargs):
+        super(MaternKernelArb, self).__init__(matern_function,
+                                              num_params=2 + kwargs.get('num_dim', 1),
+                                              **kwargs)
+    
+    @property
+    def nu(self):
+        r"""Returns the value of the order :math:`\nu`.
+        """
+        return self.params[1]
+
 
 class MaternKernel(ChainRuleKernel):
     r"""Matern covariance kernel. Supports arbitrary derivatives. Treats order as a hyperparameter.
@@ -162,6 +262,7 @@ class MaternKernel(ChainRuleKernel):
         dk_dy : :py:class:`Array`, (`M`,)
             Specified derivative at specified locations.
         """
+        warnings.warn("The Matern kernel has not been verified for derivatives. Consider using MaternKernelArb.")
         
         dk_dy = scipy.zeros_like(y, dtype=float)
         non_zero_idxs = (y != 0)
@@ -171,14 +272,11 @@ class MaternKernel(ChainRuleKernel):
                                      (y[non_zero_idxs])**(-k + self.nu) *
                                      scipy.special.kvp(self.nu, y[non_zero_idxs], n=n-k))
         
-        # Handle the cases near y=0.
+        # Handle the cases at y=0.
         # Compute the appropriate value using mpmath's arbitrary precision
         # arithmetic. This is potentially slow, but seems to behave pretty
         # well. In cases where the value should be infinite, very large
         # (but still finite) floats are returned with the appropriate sign.
-        
-        # TODO: These can probably be stored as they are computed if it
-        # ends up being too slow.
         if n >= 2 * self.nu:
             warnings.warn("n >= 2*nu can yield inaccurate results.", RuntimeWarning)
         

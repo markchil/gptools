@@ -505,7 +505,10 @@ class ChainRuleKernel(Kernel):
                 Specified derivative at specified locations.
         """
         # Construct the derivative pattern:
-        # Example: For d^3 k(x, y, z) / dx^2 dy n would be [2, 1, 0] and
+        # For each dimension, this will contain the index of the dimension
+        # repeated a number of times equal to the order of derivative with
+        # respect to that dimension.
+        # Example: For d^3 k(x, y, z) / dx^2 dy, n would be [2, 1, 0] and
         # deriv_pattern should be [0, 0, 1]. For k(x, y, z) deriv_pattern is [].
         deriv_pattern = []
         for idx in xrange(0, len(n)):
@@ -566,11 +569,16 @@ class ArbitraryKernel(Kernel):
         Covariance function. Must take arrays of `Xi` and `Xj` as the
         first two arguments. The subsequent (scalar) arguments are the
         hyperparameters. The number of parameters is found by inspection of
-        `cov_func` itself.
+        `cov_func` itself, or with the num_params keyword.
     num_proc : int or None, optional
         Number of procs to use in evaluating covariance derivatives. 0 means
         to do it in serial, None means to use all available cores. Default is
         0 (serial evaluation).
+    num_params : int or None, optional
+        Number of hyperparameters. If None, inspection will be used to infer
+        the number of hyperparameters (but will fail if you used clever business
+        with *args, etc.). Default is None (use inspection to find argument
+        count).
     **kwargs
         All other keyword parameters are passed to :py:class:`~gptools.kernel.core.Kernel`.
     
@@ -581,15 +589,16 @@ class ArbitraryKernel(Kernel):
     num_proc : non-negative int
         Number of processors to use in evaluating covariance derivatives. 0 means serial.
     """
-    def __init__(self, cov_func, num_dim=1, num_proc=0, **kwargs):
+    def __init__(self, cov_func, num_dim=1, num_proc=0, num_params=None, **kwargs):
         if num_proc is None:
             num_proc = multiprocessing.cpu_count()
         self.num_proc = num_proc
-        try:
-            num_params = len(inspect.getargspec(cov_func)[0]) - 2
-        except TypeError:
-            # Need to remove self from the arg list for bound method:
-            num_params = len(inspect.getargspec(cov_func.__call__)[0]) - 3
+        if num_params is None:
+            try:
+                num_params = len(inspect.getargspec(cov_func)[0]) - 2
+            except TypeError:
+                # Need to remove self from the arg list for bound method:
+                num_params = len(inspect.getargspec(cov_func.__call__)[0]) - 3
         self.cov_func = cov_func
         super(ArbitraryKernel, self).__init__(num_dim=num_dim,
                                               num_params=num_params,
@@ -632,26 +641,28 @@ class ArbitraryKernel(Kernel):
         X_cat = scipy.asarray(scipy.concatenate((Xi, Xj), axis=1), dtype=float)
         n_cat_unique = unique_rows(n_cat)
         k = scipy.zeros(Xi.shape[0], dtype=float)
-        # Loop over unique 
+        # Loop over unique derivative patterns:
+        if self.num_proc > 0:
+            pool = multiprocessing.Pool(processes=self.num_proc)
         for n_cat_state in n_cat_unique:
-            # TODO: Parallelize this!
             idxs = scipy.where(scipy.asarray((n_cat == n_cat_state).all(axis=1)).squeeze())[0]
             if (n_cat_state == 0).all():
                 k[idxs] = self.cov_func(Xi[idxs, :], Xj[idxs, :], *self.params)
             else:
                 if self.num_proc > 0 and len(idxs) > 1:
-                    pool = multiprocessing.Pool(processes=self.num_proc)
                     k[idxs] = scipy.asarray(
                         pool.map(_ArbitraryKernelEval(self, n_cat_state), X_cat[idxs, :]),
                         dtype=float
                     )
-                    pool.close()
                 else:
                     for idx in idxs:
                         k[idx] = mpmath.chop(mpmath.diff(self._mask_cov_func,
                                                          X_cat[idx, :],
-                                                         n=n_cat_state))
+                                                         n=n_cat_state,
+                                                         singular=True))
         
+        if self.num_proc > 0:
+            pool.close()
         return k
     
     def _mask_cov_func(self, *args):
@@ -694,4 +705,5 @@ class _ArbitraryKernelEval(object):
         """
         return mpmath.chop(mpmath.diff(self.obj._mask_cov_func,
                                        X_cat_row,
-                                       n=self.n_cat_state))
+                                       n=self.n_cat_state,
+                                       singular=True))
