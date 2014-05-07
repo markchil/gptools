@@ -31,6 +31,7 @@ import scipy.stats
 import numpy.random
 import sys
 import warnings
+import multiprocessing
 
 class GaussianProcess(object):
     r"""Gaussian process.
@@ -462,7 +463,8 @@ class GaussianProcess(object):
                 jac[i] = 0.5 * scipy.trace(aaKI * dKijdHP)
             return (-1 * self.ll, -1 * jac)
 
-    def optimize_hyperparameters(self, method='SLSQP', opt_kwargs={}, verbose=False, random_starts=0):
+    def optimize_hyperparameters(self, method='SLSQP', opt_kwargs={},
+                                 verbose=False, random_starts=0, num_proc=None):
         r"""Optimize the hyperparameters by maximizing the log likelihood.
         
         Leaves the :py:class:`GaussianProcess` instance in the optimized state.
@@ -497,18 +499,23 @@ class GaussianProcess(object):
             global minimum. Default is 0 (no random starts -- just use the
             initial guess). Note that for `random_starts` != 0, the initial
             guesses provided are not actually used.
+        num_proc : non-negative int or None
+            Number of processors to use with random starts. If 0, processing is
+            not done in parallel. If None, all available processors are used.
+            Default is None (use all available processors).
         """
         if opt_kwargs is None:
             opt_kwargs = {}
         else:
             opt_kwargs = dict(opt_kwargs)
         if 'method' in opt_kwargs:
-            warnings.warn("Use of keyword 'method' in opt_kwargs is not allowed, "
-                          "and is being ignored. Use the 'method' keyword for "
-                          "optimize_hyperparameters instead.",
+            warnings.warn("Key 'method' is present in opt_kwargs, will override "
+                          "option specified with method kwarg.",
                           RuntimeWarning)
-            opt_kwargs.pop('method')
+        else:
+            opt_kwargs['method'] = method
         if random_starts == 0:
+            num_proc = 0
             param_samples = [scipy.concatenate((self.k.free_params, self.noise_k.free_params))]
         else:
             param_ranges = scipy.asarray(scipy.concatenate((self.k.free_param_bounds, self.noise_k.free_param_bounds)), dtype=float)
@@ -519,23 +526,32 @@ class GaussianProcess(object):
                                                                 high=param_ranges[k, 1],
                                                                 size=random_starts)
                                            for k in range(0, len(param_ranges))]).T
-        # TODO: This can easily be parallelized -- but will require a helper class.
-        res = []
-        for samp in param_samples:
-            try:
-                res += [scipy.optimize.minimize(self.update_hyperparameters,
-                                                samp,
-                                                method=method,
-                                                **opt_kwargs)]
-            except AttributeError:
-                warnings.warn("scipy.optimize.minimize not available, defaulting to fmin_slsqp.",
-                              RuntimeWarning)
-                res += [wrap_fmin_slsqp(self.update_hyperparameters,
-                                        samp,
-                                        opt_kwargs=opt_kwargs)]
-            except:
-                warnings.warn("Minimizer failed, skipping sample. Error is: %s" % (sys.exc_info()[0],),
-                              RuntimeWarning)
+        if num_proc == 0:
+            res = []
+            for samp in param_samples:
+                try:
+                    res += [scipy.optimize.minimize(self.update_hyperparameters,
+                                                    samp,
+                                                    method=method,
+                                                    **opt_kwargs)]
+                except AttributeError:
+                    warnings.warn("scipy.optimize.minimize not available, "
+                                  "defaulting to fmin_slsqp.",
+                                  RuntimeWarning)
+                    res += [wrap_fmin_slsqp(self.update_hyperparameters,
+                                            samp,
+                                            opt_kwargs=opt_kwargs)]
+                except:
+                    warnings.warn("Minimizer failed, skipping sample. Error is: "
+                                  "%s" % (sys.exc_info()[0],),
+                                  RuntimeWarning)
+        else:
+            pool = multiprocessing.Pool(processes=num_proc)
+            res = pool.map(_OptimizeHyperparametersEval(self, opt_kwargs),
+                           param_samples)
+            pool.close()
+            # Filter out the failed convergences:
+            res = [r for r in res if r is not None]
         res_min = min(res, key=lambda r: r.fun)
         
         self.update_hyperparameters(res_min.x, return_jacobian=False)
@@ -817,6 +833,39 @@ class GaussianProcess(object):
             else:
                 raise ValueError("method %s not recognized!" % (method,))
             return mean + L * scipy.asmatrix(rand_vars[:num_eig, :], dtype=float)
+
+class _OptimizeHyperparametersEval(object):
+    """Helper class to support parallel random starts of MAP estimation of hyperparameters.
+    
+    Parameters
+    ----------
+    gp : :py:class:`GaussianProcess` instance
+        Instance to wrap to allow parallel optimization of.
+    opt_kwargs : dict
+        Dictionary of keyword arguments to be passed to
+        :py:func:`scipy.optimize.minimize`.
+    """
+    def __init__(self, gp, opt_kwargs):
+        self.gp = gp
+        self.opt_kwargs = opt_kwargs
+    
+    def __call__(self, samp):
+        try:
+            return scipy.optimize.minimize(self.gp.update_hyperparameters,
+                                           samp,
+                                           **self.opt_kwargs)
+        except AttributeError:
+            warnings.warn("scipy.optimize.minimize not available, defaulting "
+                          "to fmin_slsqp.",
+                          RuntimeWarning)
+            return wrap_fmin_slsqp(self.gp.update_hyperparameters,
+                                   samp,
+                                   opt_kwargs=self.opt_kwargs)
+        except:
+            warnings.warn("Minimizer failed, skipping sample. Error is: %s"
+                          % (sys.exc_info()[0],),
+                          RuntimeWarning)
+            return None
 
 class Constraint(object):
     """Implements an inequality constraint on the value of the mean or its derivatives.

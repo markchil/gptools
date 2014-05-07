@@ -684,8 +684,8 @@ class _ArbitraryKernelEval(object):
     
     Parameters
     ----------
-    obj : :py:class:Kernel: instance
-        Instance to warp to allow parallel computation of.
+    obj : :py:class:`Kernel` instance
+        Instance to wrap to allow parallel computation of.
     n_cat_state : Array-like, (2,)
         Derivative orders to take with respect to `Xi` and `Xj`.
     """
