@@ -32,6 +32,16 @@ import numpy.random
 import sys
 import warnings
 import multiprocessing
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+try:
+    import emcee
+except ImportError:
+    warnings.warn("Could not import package emcee: MCMC sampling will not be available.")
+try:
+    import triangle
+except ImportError:
+    warnings.warn("Could not import package triangle: plotting of MCMC results will not be available.")
 
 class GaussianProcess(object):
     r"""Gaussian process.
@@ -514,25 +524,27 @@ class GaussianProcess(object):
                           RuntimeWarning)
         else:
             opt_kwargs['method'] = method
+        
+        param_ranges = scipy.asarray(scipy.concatenate((self.k.free_param_bounds, self.noise_k.free_param_bounds)), dtype=float)
+        # Replace unbounded variables with something big:
+        param_ranges[scipy.where(scipy.isnan(param_ranges[:, 0])), 0] = -1e16
+        param_ranges[scipy.where(scipy.isnan(param_ranges[:, 1])), 1] = 1e16
         if random_starts == 0:
             num_proc = 0
             param_samples = [scipy.concatenate((self.k.free_params, self.noise_k.free_params))]
         else:
-            param_ranges = scipy.asarray(scipy.concatenate((self.k.free_param_bounds, self.noise_k.free_param_bounds)), dtype=float)
-            # Replace unbounded variables with something big:
-            param_ranges[scipy.where(scipy.isnan(param_ranges[:, 0])), 0] = -1e16
-            param_ranges[scipy.where(scipy.isnan(param_ranges[:, 1])), 1] = 1e16
             param_samples = scipy.asarray([numpy.random.uniform(low=param_ranges[k, 0],
                                                                 high=param_ranges[k, 1],
                                                                 size=random_starts)
                                            for k in range(0, len(param_ranges))]).T
+        if 'bounds' not in opt_kwargs:
+            opt_kwargs['bounds'] = param_ranges
         if num_proc == 0:
             res = []
             for samp in param_samples:
                 try:
                     res += [scipy.optimize.minimize(self.update_hyperparameters,
                                                     samp,
-                                                    method=method,
                                                     **opt_kwargs)]
                 except AttributeError:
                     warnings.warn("scipy.optimize.minimize not available, "
@@ -543,7 +555,7 @@ class GaussianProcess(object):
                                             opt_kwargs=opt_kwargs)]
                 except:
                     warnings.warn("Minimizer failed, skipping sample. Error is: "
-                                  "%s" % (sys.exc_info()[0],),
+                                  "%s: %s" % (sys.exc_info()[0], sys.exc_info()[1],),
                                   RuntimeWarning)
         else:
             pool = multiprocessing.Pool(processes=num_proc)
@@ -629,7 +641,7 @@ class GaussianProcess(object):
         Kstar = self.compute_Kij(self.X, Xstar, self.n, n)
         if noise:
             Kstar = Kstar + self.compute_Kij(self.X, Xstar, self.n, n, noise=True)
-        mean = Kstar.T * self.alpha
+        mean = scipy.asarray(Kstar.T * self.alpha).flatten()
         if self.standardize:
             mean = mean * self.std_y + self.mu_y
         if return_cov:
@@ -833,6 +845,164 @@ class GaussianProcess(object):
             else:
                 raise ValueError("method %s not recognized!" % (method,))
             return mean + L * scipy.asmatrix(rand_vars[:num_eig, :], dtype=float)
+    
+    def plot(self, X=None, n=0, ax=None, envelopes=[1, 3], base_alpha=0.375, return_prediction=False, **kwargs):
+        """Plots the Gaussian process using the current hyperparameters. Only for num_dim <= 2.
+        
+        Parameters
+        ----------
+        X : array-like (`M`,) or (`M`, `num_dim`), optional
+            The values to evaluate the Gaussian process at. If None, then 100
+            points between the minimum and maximum of the data's X are used.
+            Default is None (use 100 points between min and max).
+        n : int or list, optional
+            The order of derivative to compute. For num_dim=1, this must be an
+            int. For num_dim=2, this must be a list of ints of length 2.
+            Default is 0 (don't take derivative).
+        ax : axis instance, optional
+            Axis to plot the result on. If no axis is passed, one is created.
+            If the string 'gca' is passed, the current axis (from plt.gca())
+            is used. If X_dim = 2, the axis must be 3d.
+        envelopes: list of float, optional
+            +/-n*sigma envelopes to plot. Default is [1, 3].
+        base_alpha : float, optional
+            Alpha value to use for +/-1*sigma envelope. All other envelopes
+            are drawn with base_alpha/e. Default is 0.375.
+        return_prediction : bool, optional
+            If True, the predicted mean, cov are also returned.
+        **kwargs : extra plotting arguments, optional
+            Extra arguments that are passed to plot the mean.
+        
+        Returns
+        -------
+        The axis instance used.
+        """
+        if self.num_dim > 2:
+            raise ValueError("Plotting is not supported for num_dim > 2!")
+        if ax is None:
+            f = plt.figure()
+            if self.num_dim == 1:
+                ax = f.add_subplot(1, 1, 1)
+            elif self.num_dim == 2:
+                ax = f.add_subplot(111, projection='3d')
+        elif ax == 'gca':
+            ax = plt.gca()
+        
+        if self.num_dim == 1:
+            if X is None:
+                X = scipy.linspace(self.X.min(), self.X.max(), 100)
+            if envelopes:
+                mean, cov = self.predict(X, n=n, noise=False)
+                std = scipy.sqrt(scipy.diagonal(cov))
+            else:
+                mean = self.predict(X, n=n, noise=False, return_cov=False)
+            l = ax.plot(X, mean, **kwargs)
+            color = plt.getp(l[0], 'color')
+            for i in envelopes:
+                ax.fill_between(X, mean - i * std, mean + i * std,
+                                facecolor=color, alpha=base_alpha / i)
+        elif self.num_dim == 2:
+            if 'linewidths' not in kwargs:
+                kwargs['linewidths'] = 0
+            if X is None:
+                x1 = scipy.linspace(self.X[:, 0].min(), self.X[:, 0].max(), 50)
+                x2 = scipy.linspace(self.X[:, 1].min(), self.X[:, 1].max(), 50)
+                X1, X2 = scipy.meshgrid(x1, x2)
+                X1 = X1.flatten()
+                X2 = X2.flatten()
+                X = scipy.hstack((scipy.atleast_2d(X1).T, scipy.atleast_2d(X2).T))
+            if envelopes:
+                mean, cov = self.predict(X, n=n, noise=False)
+                std = scipy.sqrt(scipy.diagonal(cov))
+            else:
+                mean = self.predict(X, n=n, noise=False, return_cov=False)
+            s = ax.plot_trisurf(X1, X2, mean, **kwargs)
+            for i in envelopes:
+                kwargs.pop('alpha', base_alpha)
+                ax.plot_trisurf(X1, X2, mean-std, alpha=base_alpha / i, **kwargs)
+                ax.plot_trisurf(X1, X2, mean+std, alpha=base_alpha / i, **kwargs)
+        
+        if return_prediction:
+            if envelopes:
+                return (ax, mean, cov)
+            else:
+                return (ax, mean)
+        else:
+            return ax
+    
+    def sample_hyperparameter_posterior(self, nwalkers=200, nsamp=1500,
+                                        num_proc=None, sampler=None,
+                                        plot_posterior=False,
+                                        plot_chains=False):
+        """Produce samples from the posterior for the hyperparameters using MCMC.
+        
+        Returns the sampler created, because storing it stops the GP from being
+        pickleable.
+        """
+        # TODO: Pick better default parameters!
+        if num_proc is None:
+            num_proc = multiprocessing.cpu_count()
+        k_nk = self.k + self.noise_k
+        ndim = len(k_nk.free_params)
+        theta0 = scipy.zeros((nwalkers, ndim))
+        # TODO: Handle inequality (potential) constraints properly!
+        for i in xrange(0, nwalkers):
+            guess = []
+            for j in xrange(0, ndim):
+                guess += [numpy.random.uniform(low=k_nk.free_param_bounds[j][0], high=k_nk.free_param_bounds[j][1])]
+            theta0[i, :] = guess
+        if sampler is None:
+            sampler = emcee.EnsembleSampler(nwalkers,
+                                            ndim,
+                                            _ComputeLnProbEval(self),
+                                            threads=num_proc)
+        sampler.run_mcmc(theta0, nsamp)
+        if plot_posterior:
+            triangle.corner(sampler.flatchain, plot_datapoints=False)
+        if plot_chains:
+            f = plt.figure()
+            for k in xrange(0, ndim):
+                a = f.add_subplot(3, ndim, k + 1)
+                a.acorr(sampler.flatchain[:, k], maxlags=100, detrend=plt.mlab.detrend_mean)
+                a.set_xlabel('lag')
+                a.set_title('autocorrelation')
+                a = f.add_subplot(3, ndim, ndim + k + 1)
+                for chain in sampler.chain[:, :, k]:
+                    a.plot(chain)
+                a.set_xlabel('sample')
+                a.set_title('all chains')
+                a = f.add_subplot(3, ndim, 2 * ndim + k + 1)
+                a.plot(sampler.flatchain[:, k])
+                a.set_xlabel('sample')
+                a.set_title('flattened chain')
+            
+        return sampler
+        # TODO: Do something more intelligent about preserving sampler's state:
+        # Need to be able to work around the fact that pools aren't pickleable.
+        # Can tack extra samples on with:
+        # t0 = sampler.chain[:, -1, :]
+        # sampler.run_mcmc(theta0, nsamp)
+
+class _ComputeLnProbEval(object):
+    """Helper class to allow emcee to sample in parallel.
+    
+    Parameters
+    ----------
+    gp : :py:class:`GaussianProcess` instance
+        The :py:class:`GaussianProcess` instance to wrap.
+    """
+    def __init__(self, gp):
+        self.gp = gp
+    
+    def __call__(self, x):
+        """Return the log-probability of the given hyperparameters.
+        
+        Parameters
+        ----------
+        x : array-like
+            The new hyperparameters.
+        """
+        return -1 * self.gp.update_hyperparameters(x.flatten())
 
 class _OptimizeHyperparametersEval(object):
     """Helper class to support parallel random starts of MAP estimation of hyperparameters.
@@ -862,8 +1032,8 @@ class _OptimizeHyperparametersEval(object):
                                    samp,
                                    opt_kwargs=self.opt_kwargs)
         except:
-            warnings.warn("Minimizer failed, skipping sample. Error is: %s"
-                          % (sys.exc_info()[0],),
+            warnings.warn("Minimizer failed, skipping sample. Error is: %s: %s"
+                          % (sys.exc_info()[0], sys.exc_info()[1],),
                           RuntimeWarning)
             return None
 
