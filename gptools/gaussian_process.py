@@ -86,6 +86,12 @@ class GaussianProcess(object):
         :py:meth:`draw_sample` will always return in real units. Default value
         is False (do internal calculations in real units).
     
+    diag_factor : float, optional
+        Factor of :py:attr:`sys.float_info.epsilon` which is added to
+        the diagonal of the total `K` matrix to improve the stability of
+        the Cholesky decomposition. If you are having issues, try increasing
+        this by a factor of 10 at a time. Default is 1e2.
+    
     NOTE
         The following are all passed to :py:meth:`add_data`, refer to its docstring.
     
@@ -129,6 +135,8 @@ class GaussianProcess(object):
         Solution to :math:`K\alpha=y`.
     ll : float
         Log-likelihood of the data given the model.
+    diag_factor : float
+        The factor of :py:attr:`sys.float_info.epsilon` which is added to the diagonal of the `K` matrix to improve stability.
     
     Raises
     ------
@@ -141,7 +149,7 @@ class GaussianProcess(object):
     --------
     add_data : Used to process `X`, `y`, `err_y` and to add data to the process.
     """
-    def __init__(self, k, noise_k=None, standardize=False, X=None, y=None, err_y=0):
+    def __init__(self, k, noise_k=None, standardize=False, X=None, y=None, err_y=0, diag_factor=1e2):
         if standardize:
             raise ValueError("Keyword standardize is not supported at this point!")
         if not isinstance(k, Kernel):
@@ -154,6 +162,7 @@ class GaussianProcess(object):
                 raise TypeError("Keyword noise_k must be an instance of Kernel "
                                 "when constructing GaussianProcess!")
 
+        self.diag_factor = diag_factor
         self.standardize = standardize
         self.k = k
         self.noise_k = noise_k
@@ -338,7 +347,7 @@ class GaussianProcess(object):
         
         return Kij
     
-    def compute_K_L_alpha_ll(self, diag_factor=1e2):
+    def compute_K_L_alpha_ll(self):
         r"""Compute `K`, `L`, `alpha` and log-likelihood according to the first part of Algorithm 2.1 in R&W.
         
         Computes `K` and the noise portion of `K` using :py:meth:`compute_Kij`,
@@ -347,14 +356,6 @@ class GaussianProcess(object):
         
         Only does the computation if :py:attr:`K_up_to_date` is False --
         otherwise leaves the existing values.
-        
-        Parameters
-        ----------
-        diag_factor : float, optional
-            Factor of :py:attr:`sys.float_info.epsilon` which is added to
-            the diagonal of the total `K` matrix to improve the stability of
-            the Cholesky decomposition. If you are having issues, try increasing
-            this by a factor of 10 at a time. Default is 1e2.
         """
         if not self.K_up_to_date:
             if self.standardize:
@@ -374,7 +375,7 @@ class GaussianProcess(object):
             K_tot = (self.K +
                      scipy.diag(err_y**2.0) +
                      self.noise_K +
-                     diag_factor * sys.float_info.epsilon * scipy.eye(len(y)))
+                     self.diag_factor * sys.float_info.epsilon * scipy.eye(len(y)))
             try:
                 self.L = scipy.matrix(
                     scipy.linalg.cholesky(
