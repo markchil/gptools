@@ -474,7 +474,7 @@ class GaussianProcess(object):
             return (-1 * self.ll, -1 * jac)
 
     def optimize_hyperparameters(self, method='SLSQP', opt_kwargs={},
-                                 verbose=False, random_starts=0, num_proc=None):
+                                 verbose=False, random_starts=None, num_proc=None):
         r"""Optimize the hyperparameters by maximizing the log likelihood.
         
         Leaves the :py:class:`GaussianProcess` instance in the optimized state.
@@ -506,9 +506,10 @@ class GaussianProcess(object):
         random_starts : non-negative int, optional
             Number of times to randomly perturb the starting guesses
             (distributed uniformly within their bounds) in order to seek the
-            global minimum. Default is 0 (no random starts -- just use the
-            initial guess). Note that for `random_starts` != 0, the initial
-            guesses provided are not actually used.
+            global minimum. If None, then `num_proc` random starts will be
+            performed. Default is None (do number of random starts equal to the
+            number of processors allocated). Note that for `random_starts` != 0,
+            the initial guesses provided are not actually used.
         num_proc : non-negative int or None
             Number of processors to use with random starts. If 0, processing is
             not done in parallel. If None, all available processors are used.
@@ -525,6 +526,9 @@ class GaussianProcess(object):
         else:
             opt_kwargs['method'] = method
         
+        if num_proc is None:
+            num_proc = multiprocessing.cpu_count()
+        
         param_ranges = scipy.asarray(scipy.concatenate((self.k.free_param_bounds, self.noise_k.free_param_bounds)), dtype=float)
         # Replace unbounded variables with something big:
         param_ranges[scipy.where(scipy.isnan(param_ranges[:, 0])), 0] = -1e16
@@ -533,6 +537,8 @@ class GaussianProcess(object):
             num_proc = 0
             param_samples = [scipy.concatenate((self.k.free_params, self.noise_k.free_params))]
         else:
+            if random_starts is None:
+                random_starts = max(num_proc, 1)
             param_samples = scipy.asarray([numpy.random.uniform(low=param_ranges[k, 0],
                                                                 high=param_ranges[k, 1],
                                                                 size=random_starts)
