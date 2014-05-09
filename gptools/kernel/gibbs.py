@@ -457,7 +457,13 @@ class GibbsKernel1dTanh(GibbsKernel1d):
         All parameters are passed to :py:class:`~gptools.kernel.core.Kernel`.
     """
     def __init__(self, **kwargs):
-        super(GibbsKernel1dTanh, self).__init__(tanh_warp, **kwargs)
+        super(GibbsKernel1dTanh, self).__init__(tanh_warp,
+                                                param_names=[r'\sigma_f',
+                                                             'l_1',
+                                                             'l_2',
+                                                             'l_w',
+                                                             'x_0'],
+                                                **kwargs)
 
 def cubic_bucket_warp(x, n, l1, l2, l3, x0, w1, w2, w3):
     """Warps the length scale with a piecewise cubic "bucket" shape.
@@ -541,7 +547,16 @@ class GibbsKernel1dCubicBucket(GibbsKernel1d):
         All parameters are passed to :py:class:`~gptools.kernel.core.Kernel`.
     """
     def __init__(self, **kwargs):
-        super(GibbsKernel1dBucket, self).__init__(cubic_bucket_warp, **kwargs)
+        super(GibbsKernel1dBucket, self).__init__(cubic_bucket_warp,
+                                                  [r'\sigma_f',
+                                                   'l_1',
+                                                   'l_2',
+                                                   'l_3',
+                                                   'x_0',
+                                                   'w_1',
+                                                   'w_2',
+                                                   'w_3'],
+                                                  **kwargs)
 
 def quintic_bucket_warp(x, n, l1, l2, l3, x0, w1, w2, w3):
     """Warps the length scale with a piecewise quintic "bucket" shape.
@@ -640,4 +655,13 @@ class GibbsKernel1dQuinticBucket(GibbsKernel1d):
         All parameters are passed to :py:class:`~gptools.kernel.core.Kernel`.
     """
     def __init__(self, **kwargs):
-        super(GibbsKernel1dQuinticBucket, self).__init__(quintic_bucket_warp, **kwargs)
+        super(GibbsKernel1dQuinticBucket, self).__init__(quintic_bucket_warp,
+                                                         [r'\sigma_f',
+                                                          'l_1',
+                                                          'l_2',
+                                                          'l_3',
+                                                          'x_0',
+                                                          'w_1',
+                                                          'w_2',
+                                                          'w_3'],
+                                                         **kwargs)

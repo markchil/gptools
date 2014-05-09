@@ -79,7 +79,8 @@ class DiagonalNoiseKernel(Kernel):
                                                   fixed_params=fixed_noise,
                                                   param_bounds=noise_bound,
                                                   hyperpriors=[hyperprior],
-                                                  is_log=[is_log])
+                                                  is_log=[is_log],
+                                                  param_names=[r'\sigma_n'])
     
     def __call__(self, Xi, Xj, ni, nj, hyper_deriv=None, symmetric=False):
         """Evaluate the covariance between points `Xi` and `Xj` with derivative order `ni`, `nj`.

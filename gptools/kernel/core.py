@@ -59,6 +59,8 @@ class Kernel(object):
         List of bounds for each of the parameters. Each 2-tuple is of the form
         (`lower`, `upper`). If there is no bound in a given direction, set it
         to double_max. Default is (0.0, double_max) for each parameter.
+    param_names : list of str (`num_params`,), optional
+        List of labels for the hyperparameters. Default is all empty strings.
     enforce_bounds : bool, optional
         If True, an attempt to set a parameter outside of its bounds will
         result in the parameter being set right at its bound. If False, bounds
@@ -97,6 +99,8 @@ class Kernel(object):
         Array of booleans indicated which parameters in params are fixed.
     param_bounds : list of 2-tuples, (`num_params`,)
         List of bounds for the parameters in params.
+    param_names : list of str, (`num_params`,)
+        List of the labels for the hyperparameters.
     hyperpriors : list of callables, (`num_params`,)
         List of prior functions for the hyperparameters.
     is_log : list of bool, (`num_params`,)
@@ -112,11 +116,17 @@ class Kernel(object):
         if `fixed_params` is passed but `initial_params` is not.
     """
     def __init__(self, num_dim=1, num_params=0, initial_params=None,
-                 fixed_params=None, param_bounds=None, enforce_bounds=False,
+                 fixed_params=None, param_bounds=None, param_names=None, enforce_bounds=False,
                  hyperpriors=None, is_log=None, potentials=[]):
         if num_params < 0 or not isinstance(num_params, (int, long)):
             raise ValueError("num_params must be an integer >= 0!")
         self.num_params = num_params
+        if param_names is None:
+            param_names = [''] * self.num_params
+        elif len(param_names) != self.num_params:
+            raise ValueError("param_names must be a list of length num_params!")
+        self.param_names = param_names
+
         if num_dim < 1 or not isinstance(num_dim, (int, long)):
             raise ValueError("num_dim must be an integer > 0!")
         self.num_dim = num_dim
@@ -246,6 +256,17 @@ class Kernel(object):
         """
         return scipy.asarray(self.param_bounds, dtype=float)[~self.fixed_params]
     
+    @property
+    def free_param_names(self):
+        """Returns the names of the free hyperparameters.
+        
+        Returns
+        -------
+        free_param_names : :py:class:`Array`
+            Array of the names of the free parameters, in order.
+        """
+        return scipy.asarray(self.param_names)[~self.fixed_params]
+    
     def __add__(self, other):
         """Add two Kernels together.
         
@@ -285,6 +306,8 @@ class Kernel(object):
         Assumes that the length parameters are the last `num_dim` elements of
         :py:attr:`self.params`.
         
+        Where `l` and `tau` are both zero, that term is set to zero.
+        
         Parameters
         ----------
         tau : :py:class:`Array`, (`M`, `N`)
@@ -303,7 +326,9 @@ class Kernel(object):
             inputs. Only returned if `return_l` is True.
         """
         l_mat = scipy.tile(self.params[-self.num_dim:], (tau.shape[0], 1))
-        r2l2 = scipy.sum((tau / l_mat)**2, axis=1)
+        tau_over_l = tau / l_mat
+        tau_over_l[(tau == 0) & (l_mat == 0)] = 0.0
+        r2l2 = scipy.sum((tau_over_l)**2, axis=1)
         if return_l:
             return (r2l2, l_mat)
         else:
@@ -337,6 +362,7 @@ class BinaryKernel(Kernel):
                                            initial_params=scipy.concatenate((k1.params, k2.params)),
                                            fixed_params=scipy.concatenate((k1.fixed_params, k2.fixed_params)),
                                            param_bounds=list(k1.param_bounds) + list(k2.param_bounds),
+                                           param_names=list(k1.param_names) + list(k2.param_names),
                                            hyperpriors=list(k1.hyperpriors) + list(k2.hyperpriors),
                                            is_log=list(k1.is_log) + list(k2.is_log))
     
