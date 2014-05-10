@@ -346,8 +346,6 @@ class BinaryKernel(Kernel):
     `k1` and `k2` must have the same number of dimensions.
     """
     def __init__(self, k1, k2):
-        """
-        """
         if not isinstance(k1, Kernel) or not isinstance(k2, Kernel):
             raise TypeError("Both arguments to SumKernel must be instances of "
                             "type Kernel!")
@@ -733,3 +731,71 @@ class _ArbitraryKernelEval(object):
                                        X_cat_row,
                                        n=self.n_cat_state,
                                        singular=True))
+
+class MaskedKernel(Kernel):
+    """Creates a kernel that is only masked to operate on certain dimensions.
+    
+    This can be used, for instance, to put a squared exponential kernel in one
+    direction and a Matern kernel in the other.
+    
+    Parameters
+    ----------
+    base : :py:class:`Kernel` instance
+        The :py:class:`Kernel` to apply in the dimensions specified in `mask`.
+    total_dim : int, optional
+        The total number of dimensions the masked kernel should have. Default
+        is 2.
+    mask : list or other array-like, optional
+        1d list of indices of dimensions `X` to include when passing to the
+        `base` kernel. Length must be `base.num_dim`. Default is [0] (i.e.,
+        just pass the first column of `X` to a univariate `base` kernel).
+    """
+    def __init__(self, base, total_dim=2, mask=[0]):
+        if len(mask) != base.num_dim:
+            raise ValueError("Length of mask must be equal to the number of "
+                             "dimensions of the base kernel!")
+        super(MaskedKernel, self).__init__(num_dim=total_dim,
+                                           num_params=base.num_params,
+                                           initial_params=base.params,
+                                           fixed_params=base.fixed_params,
+                                           param_bounds=base.param_bounds,
+                                           param_names=base.param_names,
+                                           enforce_bounds=base.enforce_bounds,
+                                           hyperpriors=base.hyperpriors,
+                                           is_log=base.is_log,
+                                           potentials=base.potentials)
+        self.base = base
+        self.mask = mask
+    
+    def __call__(self, Xi, Xj, ni, nj, **kwargs):
+        """Evaluate the covariance between points `Xi` and `Xj` with derivative order `ni`, `nj`.
+        
+        Note that in the argument specifications, `N` is the `total_dim`
+        specified in the constructor (i.e., :py:attr:`num_dim` for the
+        :py:class:`MaskedKernel` instance itself).
+        
+        Parameters
+        ----------
+        Xi : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+            `M` inputs with dimension `N`.
+        Xj : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+            `M` inputs with dimension `N`.
+        ni : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+            `M` derivative orders for set `i`.
+        nj : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+            `M` derivative orders for set `j`.
+        hyper_deriv : Non-negative int or None, optional
+            The index of the hyperparameter to compute the first derivative
+            with respect to. If None, no derivatives are taken. Default is None
+            (no hyperparameter derivatives).
+        symmetric : bool, optional
+            Whether or not the input `Xi`, `Xj` are from a symmetric matrix.
+            Default is False.
+        
+        Returns
+        -------
+        Kij : :py:class:`Array`, (`M`,)
+            Covariances for each of the `M` `Xi`, `Xj` pairs.
+        """
+        return self.base(Xi[:, self.mask], Xj[:, self.mask], ni[:, self.mask], nj[:, self.mask], **kwargs)
+        

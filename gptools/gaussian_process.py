@@ -984,6 +984,7 @@ class GaussianProcess(object):
                                             ndim,
                                             _ComputeLnProbEval(self),
                                             threads=num_proc)
+        if sampler.chain.size == 0:
             # TODO: Handle inequality (potential) constraints properly!
             for i in xrange(0, nwalkers):
                 guess = []
