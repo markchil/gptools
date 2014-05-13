@@ -20,11 +20,12 @@
 
 from __future__ import division
 
-from ..utils import unique_rows, generate_set_partitions, UniformPrior
+from ..utils import unique_rows, generate_set_partitions, UniformJointPrior, ProductJointPrior, IndependentJointPrior
 from ..error_handling import GPArgumentError
 
 import scipy
 import scipy.special
+import scipy.stats
 try:
     import mpmath
 except ImportError:
@@ -51,41 +52,30 @@ class Kernel(object):
         Initial values to set for the hyperparameters. Default is None, in
         which case 1 is used for the initial values.
     fixed_params : :py:class:`Array` or other Array-like of bool, (`num_params`,), optional
-        Sets which parameters are considered fixed when optimizing the log
+        Sets which hyperparameters are considered fixed when optimizing the log
         likelihood. A True entry corresponds to that element being
         fixed (where the element ordering is as defined in the class).
-        Default value is None (no parameters are fixed).
+        Default value is None (no hyperparameters are fixed).
     param_bounds : list of 2-tuples (`num_params`,), optional
-        List of bounds for each of the parameters. Each 2-tuple is of the form
-        (`lower`, `upper`). If there is no bound in a given direction, set it
-        to double_max. Default is (0.0, double_max) for each parameter.
+        List of bounds for each of the hyperparameters. Each 2-tuple is of the
+        form (lower`, `upper`). If there is no bound in a given direction, it
+        works best to set it to something big like 1e16. Default is (0.0, 1e16)
+        for each hyperparameter. Note that this is overridden by the `hyperprior`
+        keyword, if present.
     param_names : list of str (`num_params`,), optional
         List of labels for the hyperparameters. Default is all empty strings.
     enforce_bounds : bool, optional
-        If True, an attempt to set a parameter outside of its bounds will
-        result in the parameter being set right at its bound. If False, bounds
-        are not enforced inside the kernel. Default is False (do not enforce
-        bounds).
-    hyperpriors : list of callables (`num_params`,), optional
-        List of functions that return the prior probability density for the
-        corresponding hyperparameter when evaluated. The function is called
-        with only the single hyperparameter (or a list of values) as an
-        argument, which permits use of standard PDFs from :py:mod:`scipy.stats`.
-        This does, however, require that the hyperparameters be treated as
-        independent. Note that what is actually computed is the logarithm of
-        the posterior density, so your PDF cannot be zero anywhere that it
-        might get evaluated. You can choose to specify either the distribution
-        or the log of the distribution by setting the `is_log` keyword.
-        Default value is uniform PDF on all hyperparameters.
-    is_log : list of bool (`num_params`,), optional
-        Indicates whether the corresponding hyperprior returns the density or
-        the log-density. Default is `True` for each parameter: all hyperpriors
-        return log-density.
-    potentials : list of callables, optional
-        List of functions that return log-densities that are added onto the
-        posterior log-density. Must take the vector of hyperparameters as the
-        only argument and return a single value of log-density. Default is []
-        (no potentials).
+        If True, an attempt to set a hyperparameter outside of its bounds will
+        result in the hyperparameter being set right at its bound. If False,
+        bounds are not enforced inside the kernel. Default is False (do not
+        enforce bounds).
+    hyperprior : :py:class:`JointPrior` instance or list, optional
+        Joint prior distribution for all hyperparameters. Can either be given
+        as a :py:class:`JointPrior` instance or a list of `num_params`
+        callables or py:class:`rv_frozen` instances from :py:mod:`scipy.stats`,
+        in which case a :py:class:`IndependentJointPrior` is constructed with
+        these as the independent priors on each hyperparameter. Default is a
+        uniform PDF on all hyperparameters.
     
     Attributes
     ----------
@@ -97,14 +87,10 @@ class Kernel(object):
         Array of parameters.
     fixed_params : :py:class:`Array` of bool, (`num_params`,)
         Array of booleans indicated which parameters in params are fixed.
-    param_bounds : list of 2-tuples, (`num_params`,)
-        List of bounds for the parameters in params.
     param_names : list of str, (`num_params`,)
         List of the labels for the hyperparameters.
-    hyperpriors : list of callables, (`num_params`,)
-        List of prior functions for the hyperparameters.
-    is_log : list of bool, (`num_params`,)
-        List of flags for if the hyperpriors return density or log-density.
+    hyperprior : :py:class:`JointPrior` instance
+        Joint prior distribution for the hyperparameters.
     
     Raises
     ------
@@ -116,8 +102,8 @@ class Kernel(object):
         if `fixed_params` is passed but `initial_params` is not.
     """
     def __init__(self, num_dim=1, num_params=0, initial_params=None,
-                 fixed_params=None, param_bounds=None, param_names=None, enforce_bounds=False,
-                 hyperpriors=None, is_log=None, potentials=[]):
+                 fixed_params=None, param_bounds=None, param_names=None,
+                 enforce_bounds=False, hyperprior=None):
         if num_params < 0 or not isinstance(num_params, (int, long)):
             raise ValueError("num_params must be an integer >= 0!")
         self.num_params = num_params
@@ -138,12 +124,12 @@ class Kernel(object):
             # Only accept fixed_params if initial_params is given:
             if fixed_params is not None:
                 raise GPArgumentError("Must pass explicit parameter values "
-                                         "if fixing parameters!")
+                                      "if fixing parameters!")
             initial_params = scipy.ones(num_params, dtype=float)
             fixed_params = scipy.zeros(num_params, dtype=float)
         else:
             if len(initial_params) != num_params:
-                raise ValueError("Length of initial_params must be equal to the num_params!")
+                raise ValueError("Length of initial_params must be equal to num_params!")
             # Handle default case of fixed_params: no fixed parameters.
             if fixed_params is None:
                 fixed_params = scipy.zeros(num_params, dtype=float)
@@ -153,34 +139,41 @@ class Kernel(object):
         
         # Handle default case for parameter bounds -- set them all to (0, double_max):
         if param_bounds is None:
-            param_bounds = num_params * [(0.0, scipy.finfo('d').max)]
+            param_bounds = num_params * [(0.0, 1e16)]
         else:
             if len(param_bounds) != num_params:
                 raise ValueError("Length of param_bounds must be equal to num_params!")
         
         # Handle default case for hyperpriors -- set them all to be uniform:
-        if hyperpriors is None:
-            hyperpriors = [UniformPrior(b) for b in param_bounds]
+        if hyperprior is None:
+            hyperprior = UniformJointPrior(param_bounds)
         else:
-            if len(hyperpriors) != num_params:
-                raise ValueError("Length of hyperpriors must be equal to num_params!")
-        
-        # Handle default case for is_log -- set them all to be density:
-        if is_log is None:
-            is_log = num_params * [True]
-        else:
-            if len(is_log) != num_params:
-                raise ValueError("Length of is_log must be equal to num_params!")
+            try:
+                iter(hyperprior)
+                if len(hyperprior) != num_params:
+                    raise ValueError("If hyperprior is a list its length must "
+                                     "be equal to num_params!")
+                hyperprior = IndependentJointPrior(hyperprior)
+            except TypeError:
+                pass
         
         self.params = scipy.asarray(initial_params, dtype=float)
         self.fixed_params = scipy.asarray(fixed_params, dtype=bool)
-        self.param_bounds = param_bounds
-        self.hyperpriors = hyperpriors
-        self.is_log = is_log
-        self.potentials = potentials
+        self.hyperprior = hyperprior
+    
+    @property
+    def param_bounds(self):
+        return self.hyperprior.bounds
+    
+    @param_bounds.setter
+    def param_bounds(self, value):
+        self.hyperprior.bounds = value
     
     def __call__(self, Xi, Xj, ni, nj, hyper_deriv=None, symmetric=False):
         """Evaluate the covariance between points `Xi` and `Xj` with derivative order `ni`, `nj`.
+        
+        Note that this method only returns the covariance -- the hyperpriors
+        and potentials stored in this kernel must be applied separately.
         
         Parameters
         ----------
@@ -347,7 +340,7 @@ class BinaryKernel(Kernel):
     """
     def __init__(self, k1, k2):
         if not isinstance(k1, Kernel) or not isinstance(k2, Kernel):
-            raise TypeError("Both arguments to SumKernel must be instances of "
+            raise TypeError("Both arguments to BinaryKernel must be instances of "
                             "type Kernel!")
         if k1.num_dim != k2.num_dim:
             raise ValueError("Only kernels having the same number of dimensions "
@@ -355,14 +348,29 @@ class BinaryKernel(Kernel):
         self.k1 = k1
         self.k2 = k2
         
+        self._enforce_bounds = k1.enforce_bounds or k2.enforce_bounds
+        
         super(BinaryKernel, self).__init__(num_dim=k1.num_dim,
                                            num_params=k1.num_params + k2.num_params,
                                            initial_params=scipy.concatenate((k1.params, k2.params)),
                                            fixed_params=scipy.concatenate((k1.fixed_params, k2.fixed_params)),
-                                           param_bounds=list(k1.param_bounds) + list(k2.param_bounds),
                                            param_names=list(k1.param_names) + list(k2.param_names),
-                                           hyperpriors=list(k1.hyperpriors) + list(k2.hyperpriors),
-                                           is_log=list(k1.is_log) + list(k2.is_log))
+                                           hyperprior=k1.hyperprior * k2.hyperprior,
+                                           enforce_bounds=self._enforce_bounds)
+    
+    @property
+    def enforce_bounds(self):
+        """Boolean indicating whether or not the kernel will explicitly enforce the bounds defined by the hyperprior.
+        """
+        return self._enforce_bounds
+    
+    @enforce_bounds.setter
+    def enforce_bounds(self, v):
+        """Set `enforce_bounds` for both of the kernels to a new value.
+        """
+        self._enforce_bounds = v
+        self.k1.enforce_bounds = v
+        self.k2.enforce_bounds = v
     
     def set_hyperparams(self, new_params):
         """Set the (free) hyperparameters.
@@ -619,13 +627,18 @@ class ArbitraryKernel(Kernel):
         self.num_proc = num_proc
         if num_params is None:
             try:
-                num_params = len(inspect.getargspec(cov_func)[0]) - 2
+                argspec = inspect.getargspec(cov_func)[0]
+                num_params = len(argspec) - 2
+                param_names = argspec[2:]
             except TypeError:
                 # Need to remove self from the arg list for bound method:
-                num_params = len(inspect.getargspec(cov_func.__call__)[0]) - 3
+                argspec = inspect.getargspec(cov_func.__call__)[0]
+                num_params = len(argspec) - 3
+                param_names = argspec[3:]
         self.cov_func = cov_func
         super(ArbitraryKernel, self).__init__(num_dim=num_dim,
                                               num_params=num_params,
+                                              param_names=kwargs.pop('param_names', param_names),
                                               **kwargs)
     
     def __call__(self, Xi, Xj, ni, nj, hyper_deriv=None, symmetric=False):
@@ -758,14 +771,14 @@ class MaskedKernel(Kernel):
                                            num_params=base.num_params,
                                            initial_params=base.params,
                                            fixed_params=base.fixed_params,
-                                           param_bounds=base.param_bounds,
                                            param_names=base.param_names,
                                            enforce_bounds=base.enforce_bounds,
-                                           hyperpriors=base.hyperpriors,
-                                           is_log=base.is_log,
-                                           potentials=base.potentials)
+                                           hyperprior=base.hyperprior)
         self.base = base
         self.mask = mask
+    
+    # TODO: This doesn't make it intuitive to change the parameters of the base
+    # kernel!
     
     def __call__(self, Xi, Xj, ni, nj, **kwargs):
         """Evaluate the covariance between points `Xi` and `Xj` with derivative order `ni`, `nj`.

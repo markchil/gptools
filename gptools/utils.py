@@ -26,6 +26,8 @@ import scipy
 import scipy.optimize
 import scipy.special
 import scipy.stats
+import numpy.random
+import copy
 try:
     import matplotlib.pyplot as plt
     import matplotlib.widgets as mplw
@@ -68,48 +70,53 @@ class LessThanUniformPotential(object):
         Returns
         -------
         f : float
-            Returns log((ub-lb)/(theta[g_idx]-lb)) if the condition is met, inf if not.
+            Returns log((ub-lb)/(theta[g_idx]-lb)) if the condition is met, -inf if not.
         """
         if theta[self.l_idx] <= theta[self.g_idx] and theta[self.l_idx] >= k.param_bounds[self.l_idx][0]:
             return (scipy.log(k.param_bounds[self.l_idx][1] - k.param_bounds[self.l_idx][0]) -
                     scipy.log(theta[self.g_idx] - k.param_bounds[self.l_idx][0]))
         else:
-            return -scipy.inf  #scipy.finfo('d').min
+            return -scipy.inf
 
 class JeffreysPrior(object):
     """Class to implement a Jeffreys prior over a finite range. Returns log-density.
     
     Parameters
     ----------
+    idx : int
+        The index this prior applies to.
     bounds : 2-tuple
         The bounds for the parameter this prior corresponds to: (lb, ub).
     """
-    def __init__(self, bounds):
+    def __init__(self, idx, bounds):
+        self.idx = idx
         self.bounds = bounds
     
     def __call__(self, theta):
-        try:
-            iter(theta)
-        except TypeError:
-            if self.bounds[0] <= theta and theta <= self.bounds[1]:
-                return -scipy.log(scipy.log(self.bounds[1] / self.bounds[0])) - scipy.log(theta)
-            else:
-                return -scipy.inf
+        if self.bounds[0] <= theta[self.idx] and theta[self.idx] <= self.bounds[1]:
+            return -scipy.log(scipy.log(self.bounds[1] / self.bounds[0])) - scipy.log(theta[self.idx])
         else:
-            logp = -scipy.log(scipy.log(self.bounds[1] / self.bounds[0])) - scipy.log(theta)
-            logp[(self.bounds[0] <= theta) & (theta <= self.bounds[1])] = -scipy.inf
-            return logp
+            return -scipy.inf
+            
+    def interval(self, alpha):
+        if alpha == 1:
+            return self.bounds
+        else:
+            raise ValueError("Unsupported interval!")
 
 class LinearPrior(object):
     """Class to implement a linear prior. Returns log-density.
     
     Parameters
     ----------
+    idx : int
+        The index this prior applies to.
     bounds : 2-tuple
         The bounds for the parameter this prior corresponds to: (lb, ub).
     """
-    def __init__(self, bounds):
+    def __init__(self, idx, bounds):
         self.bounds = bounds
+        self.idx = idx
     
     def __call__(self, theta):
         """Return the log-density of the uniform prior.
@@ -125,36 +132,38 @@ class LinearPrior(object):
             Returns log(2/(b-a)^2) + log(b-theta) if theta is in bounds, -inf
             if theta is out of bounds.
         """
-        try:
-            iter(theta)
-        except TypeError:
-            if self.bounds[0] <= theta and theta <= self.bounds[1]:
-                return scipy.log(2 / (self.bounds[1] - self.bounds[0])**2) + scipy.log(self.bounds[1] - theta)
-            else:
-                return -scipy.inf
+        if self.bounds[0] <= theta[self.idx] and theta[self.idx] <= self.bounds[1]:
+            return scipy.log(2 / (self.bounds[1] - self.bounds[0])**2) + scipy.log(self.bounds[1] - theta[self.idx])
         else:
-            logp = scipy.log(2 / (self.bounds[1] - self.bounds[0])**2) + scipy.log(self.bounds[1] - theta)
-            logp[(self.bounds[0] <= theta) & (theta <= self.bounds[1])] = -scipy.inf
-            return logp
+            return -scipy.inf
+    
+    def interval(self, alpha):
+        if alpha == 1:
+            return self.bounds
+        else:
+            raise ValueError("Unsupported interval!")
 
 class UniformPrior(object):
     """Class to implement a uniform prior. Returns log-density.
     
     Parameters
     ----------
+    idx : int
+        The index this prior applies to.
     bounds : 2-tuple
         The bounds for the parameter this prior corresponds to: (lb, ub).
     """
-    def __init__(self, bounds):
+    def __init__(self, idx, bounds):
         self.bounds = bounds
+        self.idx = idx
         
     def __call__(self, theta):
-        """Return the log-density of the uniform prior.
+        """Return the log-PDF of the uniform prior.
         
         Parameters
         ----------
-        theta : array-like, or float
-            Value or values of the hyperparameter.
+        theta : array-like
+            Values of the hyperparameters.
         
         Returns
         -------
@@ -163,38 +172,237 @@ class UniformPrior(object):
             if theta is scalar and out of bounds and an appropriately-shaped
             array if theta is array-like.
         """
-        try:
-            iter(theta)
-        except TypeError:
-            if self.bounds[0] <= theta and theta <= self.bounds[1]:
-                return -scipy.log(self.bounds[1] - self.bounds[0])
-            else:
-                return -scipy.inf  #scipy.finfo('d').min
+        if self.bounds[0] <= theta[self.idx] and theta[self.idx] <= self.bounds[1]:
+            return -scipy.log(self.bounds[1] - self.bounds[0])
         else:
-            logp = -scipy.log(self.bounds[1] - self.bounds[0]) * scipy.ones_like(theta, dtype=float)
-            logp[(self.bounds[0] <= theta) & (theta <= self.bounds[1])] = -scipy.inf  #scipy.finfo('d').min
-            return logp
+            return -scipy.inf  #scipy.finfo('d').min
+    
+    def interval(self, alpha):
+        # Can't store the frozen distribution since it isn't pickleable.
+        return scipy.stats.uniform.interval(alpha, loc=self.bounds[0], scale=self.bounds[1] - self.bounds[0])
+    
+    def rvs(self, size=None):
+        return scipy.stats.uniform.rvs(size=size, loc=self.bounds[0], scale=self.bounds[1] - self.bounds[0])
 
-def uniform_prior(theta):
-    """Function to implement an (improper) uniform prior.
+class JointPrior(object):
+    """Abstract class for objects implementing joint priors over hyperparameters.
+    """
+    
+    def __call__(self, theta):
+        """Evaluate the prior log-PDF at the given values of the hyperparameters, theta.
+        
+        Parameters
+        ----------
+        theta : array-like, (`num_params`,)
+            The hyperparameters to evaluate the log-PDF at.
+        """
+        raise NotImplementedError("__call__ must be implemented in your own class.")
+    
+    def random_draw(self, size=None):
+        """Draw random samples of the hyperparameters.
+        
+        Parameters
+        ----------
+        size : None, int or array-like, optional
+            The number/shape of samples to draw. If None, only one sample is
+            returned. Default is None.
+        """
+        raise NotImplementedError("random_draw must be implemented in your own class.")
+    
+    def __mul__(self, other):
+        """Multiply two :py:class:`JointPrior` instances together.
+        """
+        return ProductJointPrior(self, other)
+
+class ProductJointPrior(JointPrior):
+    """Product of two independent priors.
     
     Parameters
     ----------
-    theta : array-like, or float
-        Value or values of hyperparameter.
-    
-    Returns
-    -------
-    f : :py:class:`Array` or float
-        Returns 1.0 if `theta` is scalar, or an array of ones in the same shape
-        as `theta` if `theta` is array-like.
+    p1, p2: :py:class:`JointPrior` instances
+        The two priors to merge.
     """
-    try:
-        iter(theta)
-    except TypeError:
-        return 1.0
-    else:
-        return scipy.ones_like(theta, dtype=float)
+    def __init__(self, p1, p2):
+        if not isinstance(p1, JointPrior) or not isinstance(p2, JointPrior):
+            raise TypeError("Both arguments to ProductPrior must be instances "
+                            "of type JointPrior!")
+        self.p1 = p1
+        self.p2 = p2
+    
+    @property
+    def bounds(self):
+        return list(self.p1.bounds) + list(self.p2.bounds)
+
+    def __call__(self, theta):
+        """Evaluate the prior log-PDF at the given values of the hyperparameters, theta.
+        
+        The log-PDFs of the two priors are summed.
+        
+        Parameters
+        ----------
+        theta : array-like, (`num_params`,)
+            The hyperparameters to evaluate the log-PDF at.
+        """
+        p1_num_params = len(self.p1.bounds)
+        return self.p1(theta[:p1_num_params]) + self.p2(theta[p1_num_params:])
+    
+    def random_draw(self, size=None):
+        """Draw random samples of the hyperparameters.
+
+        The outputs of the two priors are stacked vertically.
+        
+        Parameters
+        ----------
+        size : None, int or array-like, optional
+            The number/shape of samples to draw. If None, only one sample is
+            returned. Default is None.
+        """
+        return scipy.vstack((self.p1.random_draw(size=size), self.p2.random_draw(size=size)))
+
+class UniformJointPrior(JointPrior):
+    """Uniform prior over the specified bounds.
+    
+    Parameters
+    ----------
+    bounds : list of tuples, (`num_params`,)
+        The bounds for each of the random variables.
+    """
+    def __init__(self, bounds):
+        self.bounds = bounds
+    
+    def __call__(self, theta):
+        """Evaluate the prior log-PDF at the given values of the hyperparameters, theta.
+        
+        Parameters
+        ----------
+        theta : array-like, (`num_params`,)
+            The hyperparameters to evaluate the log-PDF at.
+        """
+        ll = 0
+        for v, b in zip(theta, self.bounds):
+            if b[0] <= v and v <= b[1]:
+                ll += -scipy.log(b[1] - b[0])
+            else:
+                ll = -scipy.inf
+                break
+        return ll
+    
+    def random_draw(self, size=None):
+        """Draw random samples of the hyperparameters.
+        
+        Parameters
+        ----------
+        size : None, int or array-like, optional
+            The number/shape of samples to draw. If None, only one sample is
+            returned. Default is None.
+        """
+        return [numpy.random.uniform(low=b[0], high=b[1], size=size) for b in self.bounds]
+
+class CoreEdgeJointPrior(UniformJointPrior):
+    """Prior for use with Gibbs kernel warping functions with an inequality constraint between the core and edge length scales.
+    """
+    
+    def __call__(self, theta):
+        """Evaluate the prior log-PDF at the given values of the hyperparameters, theta.
+        
+        Parameters
+        ----------
+        theta : array-like, (`num_params`,)
+            The hyperparameters to evaluate the log-PDF at.
+        """
+        ll = 0
+        bounds_new = copy.copy(self.bounds)
+        bounds_new[2] = (self.bounds[2][0], theta[1])
+        for v, b in zip(theta, bounds_new):
+            if b[0] <= v and v <= b[1]:
+                ll += -scipy.log(b[1] - b[0])
+            else:
+                ll = -scipy.inf
+                break
+        return ll
+    
+    def random_draw(self, size=None):
+        """Draw random samples of the hyperparameters.
+        
+        Parameters
+        ----------
+        size : None, int or array-like, optional
+            The number/shape of samples to draw. If None, only one sample is
+            returned. Default is None.
+        """
+        if size is None:
+            size = 1
+            single_val = True
+        else:
+            single_val = False
+        
+        out_shape = [len(self.bounds)]
+        try:
+            out_shape.extend(size)
+        except TypeError:
+            out_shape.append(size)
+        
+        out = scipy.zeros(out_shape)
+        for j in xrange(0, len(self.bounds)):
+            if j != 2:
+                out[j, :] = numpy.random.uniform(low=self.bounds[j][0],
+                                                 high=self.bounds[j][1],
+                                                 size=size)
+            else:
+                out[j, :] = numpy.random.uniform(low=self.bounds[j][0],
+                                                 high=out[j - 1, :],
+                                                 size=size)
+        if not single_val:
+            return out
+        else:
+            return out.ravel()
+
+class IndependentJointPrior(JointPrior):
+    """Joint prior for which each hyperparameter is independent.
+    
+    Parameters
+    ----------
+    univariate_priors : list of callables or rv_frozen, (`num_params`,)
+        The univariate priors for each hyperparameter. Entries in this list
+        can either be a callable that takes as an argument the entire list of
+        hyperparameters or a frozen instance of a distribution from
+        :py:mod:`scipy.stats`.
+    """
+    def __init__(self, univariate_priors):
+        self.univariate_priors = univariate_priors
+    
+    def __call__(self, theta):
+        """Evaluate the prior log-PDF at the given values of the hyperparameters, theta.
+        
+        Parameters
+        ----------
+        theta : array-like, (`num_params`,)
+            The hyperparameters to evaluate the log-PDF at.
+        """
+        ll = 0
+        for v, p in zip(theta, self.univariate_priors):
+            try:
+                ll += p(theta)
+            except TypeError:
+                ll += p.logpdf(v)
+        return ll
+    
+    @property
+    def bounds(self):
+        """The bounds of the random variable.
+        """
+        return [p.interval(1) for p in self.univariate_priors]
+    
+    def random_draw(self, size=None):
+        """Draw random samples of the hyperparameters.
+        
+        Parameters
+        ----------
+        size : None, int or array-like, optional
+            The number/shape of samples to draw. If None, only one sample is
+            returned. Default is None.
+        """
+        return [p.rvs(size=size) for p in self.univariate_priors]
 
 def wrap_fmin_slsqp(fun, guess, opt_kwargs={}):
     """Wrapper for :py:func:`fmin_slsqp` to allow it to be called with :py:func:`minimize`-like syntax.

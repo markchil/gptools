@@ -420,17 +420,10 @@ class GaussianProcess(object):
                        scipy.log(scipy.diag(self.L)).sum() - 
                        0.5 * len(y) * scipy.log(2.0 * scipy.pi))[0, 0]
             # Apply hyperpriors:
-            # TODO: Is there a more pythonic way of doing this?
-            for p, is_log, theta in zip(list(self.k.hyperpriors) + list(self.noise_k.hyperpriors),
-                                        list(self.k.is_log) + list(self.noise_k.is_log),
-                                        list(self.k.params) + list(self.noise_k.params)):
-                if is_log:
-                    self.ll += p(theta)
-                else:
-                    self.ll += scipy.log(p(theta))
-            params = list(self.k.params) + list(self.noise_k.params)
-            for p in list(self.k.potentials) + list(self.noise_k.potentials):
-                self.ll += p(params, self.k + self.noise_k)
+            k_nk = self.k + self.noise_k
+            theta = list(self.k.params) + list(self.noise_k.params)
+            self.ll += self.k.hyperprior(self.k.params)
+            self.ll += self.noise_k.hyperprior(self.noise_k.params)
             self.K_up_to_date = True
     
     def update_hyperparameters(self, new_params, return_jacobian=False):
@@ -530,20 +523,21 @@ class GaussianProcess(object):
         if num_proc is None:
             num_proc = multiprocessing.cpu_count()
         
-        param_ranges = scipy.asarray(scipy.concatenate((self.k.free_param_bounds, self.noise_k.free_param_bounds)), dtype=float)
+        k_nk = self.k + self.noise_k
+        
+        param_ranges = scipy.asarray(k_nk.free_param_bounds, dtype=float)
         # Replace unbounded variables with something big:
         param_ranges[scipy.where(scipy.isnan(param_ranges[:, 0])), 0] = -1e16
         param_ranges[scipy.where(scipy.isnan(param_ranges[:, 1])), 1] = 1e16
         if random_starts == 0:
             num_proc = 0
-            param_samples = [scipy.concatenate((self.k.free_params, self.noise_k.free_params))]
+            param_samples = [k_nk.free_params]
         else:
             if random_starts is None:
                 random_starts = max(num_proc, 1)
-            param_samples = scipy.asarray([numpy.random.uniform(low=param_ranges[k, 0],
-                                                                high=param_ranges[k, 1],
-                                                                size=random_starts)
-                                           for k in range(0, len(param_ranges))]).T
+            # Distribute random guesses according to the hyperprior:
+            param_samples = k_nk.hyperprior.random_draw(size=random_starts).T
+            param_samples = param_samples[:, ~k_nk.fixed_params]
         if 'bounds' not in opt_kwargs:
             opt_kwargs['bounds'] = param_ranges
         if num_proc == 0:
@@ -585,15 +579,26 @@ class GaussianProcess(object):
         
         self.update_hyperparameters(res_min.x, return_jacobian=False)
         if verbose:
+            print("Got %d completed starts, optimal result is:" % (len(res_min),))
             print(res_min)
             print("\nLL\t%.3f" % (-1 * res_min.fun))
-            for v, l in zip(res_min.x, list(self.k.free_param_names) + list(self.noise_k.free_param_names)):
+            for v, l in zip(res_min.x, k_nk.free_param_names):
                 print("%s\t%.3f" % (l.translate(None, '\\'), v))
         if not res_min.success:
-            warnings.warn("Solver %s reports failure, selected hyperparameters "
-                          "are likely NOT optimal. Status: %d, Message: '%s'"
+            warnings.warn("Optimizer %s reports failure, selected hyperparameters "
+                          "are likely NOT optimal. Status: %d, Message: '%s'. "
+                          "Try adjusting bounds, initial guesses or the number "
+                          "of random starts used."
                           % (method, res_min.status, res_min.message),
                           RuntimeWarning)
+        bounds = scipy.asarray(k_nk.free_param_bounds)
+        # Augment the bounds a little bit to catch things that are one step away:
+        if ((res_min.x <= 1.001 * bounds[:, 0]).any() or
+            (res_min.x >= 0.999 * bounds[:, 1]).any()):
+            warnings.warn("Optimizer appears to have hit/exceeded the bounds. "
+                          "Bounds are:\n%s\n, solution is:\n%s. Try adjusting "
+                          "bounds, initial guesses or the number of random "
+                          "starts used." % (str(bounds), str(res_min.x),))
         return res_min
     
     def predict(self, Xstar, n=0, noise=False, return_cov=True):
@@ -978,19 +983,14 @@ class GaussianProcess(object):
             num_proc = multiprocessing.cpu_count()
         k_nk = self.k + self.noise_k
         ndim = len(k_nk.free_params)
-        theta0 = scipy.zeros((nwalkers, ndim))
         if sampler is None:
             sampler = emcee.EnsembleSampler(nwalkers,
                                             ndim,
                                             _ComputeLnProbEval(self),
                                             threads=num_proc)
         if sampler.chain.size == 0:
-            # TODO: Handle inequality (potential) constraints properly!
-            for i in xrange(0, nwalkers):
-                guess = []
-                for j in xrange(0, ndim):
-                    guess += [numpy.random.uniform(low=k_nk.free_param_bounds[j][0], high=k_nk.free_param_bounds[j][1])]
-                theta0[i, :] = guess
+            theta0 = k_nk.hyperprior.random_draw(size=nwalkers).T
+            theta0 = theta0[:, ~k_nk.fixed_params]
         else:
             # Start from the stopping point of the previous chain:
             theta0 = sampler.chain[:, -1, :]

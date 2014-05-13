@@ -21,7 +21,6 @@
 from __future__ import division
 
 from .core import Kernel
-from ..utils import uniform_prior
 
 import scipy
 
@@ -37,7 +36,7 @@ class DiagonalNoiseKernel(Kernel):
         (noise gets set to 1).
     fixed_noise : bool, optional
         Whether or not the noise is taken to be fixed when optimizing the log
-        likelihood.
+        likelihood. Default is False (noise is not fixed).
     noise_bound : 2-tuple, optional
         The bounds for the noise when optimizing the log likelihood with
         :py:func:`scipy.optimize.minimize`. Must be of the form
@@ -47,18 +46,13 @@ class DiagonalNoiseKernel(Kernel):
         Indicates which derivative this noise is with respect to. Default is 0
         (noise applies to value).
     hyperprior : callable, optional
-        Function that returns the prior density for a possible value (or array
-        of values) of noise when called. Note that what is computed is the
-        logarithm of the posterior density, so your prior must not evaluate to
-        zero anywhere it might get called. You can specify a prior that returns
-        log-density using the `is_log` keyword. Default behavior is to assign
-        a uniform prior.
-    is_log : bool
-        Whether the prior function returns density or log-density. Default is
-        False (returns density).
-    
+        Function that returns the prior log-density for a possible value of
+        noise when called. Must also have an attribute called :py:attr:`bounds`
+        that is the bounds on the noise and a method called
+        :py:meth:`random_draw` that yields a random draw. Default behavior is
+        to assign a uniform prior.
     """
-    def __init__(self, num_dim=1, initial_noise=None, fixed_noise=None, noise_bound=None, n=0, hyperprior=uniform_prior, is_log=False):
+    def __init__(self, num_dim=1, initial_noise=None, fixed_noise=False, noise_bound=None, n=0, hyperprior=None):
         try:
             iter(n)
         except TypeError:
@@ -69,17 +63,14 @@ class DiagonalNoiseKernel(Kernel):
             self.n = scipy.asarray(n, dtype=int)
         if initial_noise is not None:
             initial_noise = [initial_noise]
-        if fixed_noise is not None:
-            fixed_noise = [fixed_noise]
         if noise_bound is not None:
             noise_bound = [noise_bound]
         super(DiagonalNoiseKernel, self).__init__(num_dim=num_dim,
                                                   num_params=1,
                                                   initial_params=initial_noise,
-                                                  fixed_params=fixed_noise,
+                                                  fixed_params=[fixed_noise],
                                                   param_bounds=noise_bound,
-                                                  hyperpriors=[hyperprior],
-                                                  is_log=[is_log],
+                                                  hyperprior=hyperprior,
                                                   param_names=[r'\sigma_n'])
     
     def __call__(self, Xi, Xj, ni, nj, hyper_deriv=None, symmetric=False):
