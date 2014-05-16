@@ -37,20 +37,20 @@ from mpl_toolkits.mplot3d import Axes3D
 try:
     import emcee
 except ImportError:
-    warnings.warn("Could not import package emcee: MCMC sampling will not be available.")
+    warnings.warn("Could not import emcee: MCMC sampling will not be available.")
 try:
     import triangle
 except ImportError:
-    warnings.warn("Could not import package triangle: plotting of MCMC results will not be available.")
+    warnings.warn("Could not import triangle: plotting of MCMC results will not "
+                  "be available.")
 
 class GaussianProcess(object):
     r"""Gaussian process.
     
-    If called with one argument, an untrained Gaussian process is
-    constructed and training data must be added with the :py:meth:`add_data` method.
-    If called with the optional keywords, the values given are used as the
-    training data. It is always possible to add additional training data
-    with :py:meth:`add_data`.
+    If called with one argument, an untrained Gaussian process is constructed
+    and data must be added with the :py:meth:`add_data` method. If called with
+    the optional keywords, the values given are used as the data. It is always
+    possible to add additional data with :py:meth:`add_data`.
     
     Note that the attributes have no write protection, but you should always
     add data with :py:meth:`add_data` to ensure internal consistency.
@@ -58,53 +58,40 @@ class GaussianProcess(object):
     Parameters
     ----------
     k : :py:class:`~gptools.kernel.core.Kernel` instance
-        Kernel instance corresponding to the desired noise-free
-        covariance kernel of the Gaussian process. The noise is handled
-        separately either through specification of `err_y`, or in a
-        separate kernel. This allows noise-free predictions when needed.
-    
+        Kernel instance corresponding to the desired noise-free covariance
+        kernel of the Gaussian process. The noise is handled separately either
+        through specification of `err_y`, or in a separate kernel. This allows
+        noise-free predictions when needed.
     noise_k : :py:class:`~gptools.kernel.core.Kernel` instance
-        Kernel instance corresponding to the noise portion of the
-        desired covariance kernel of the Gaussian process. Note that you
-        DO NOT need to specify this if the extent of the noise you want
-        to represent is contained in `err_y` (or if your data are
-        noiseless). Default value is None, which results in the
-        :py:class:`~gptools.kernel.noise.ZeroKernel` (noise specified elsewhere
-        or not present).
-    
-    standardize : bool
-        Flag for whether or not all internal calculations should be done with
-        standardized variables (right now only y is standarized):
-
-        .. math::
-
-            Z = \frac{y - \mu}{\sigma}
-
-        Notice that this will change the interpretation of scale parameters
-        :math:`\sigma` to be normalized scales :math:`\sigma/\sigma_y`.
-        Regardless of the state of this flag, :py:meth:`predict` and
-        :py:meth:`draw_sample` will always return in real units. Default value
-        is False (do internal calculations in real units).
-    
+        Kernel instance corresponding to the noise portion of the desired
+        covariance kernel of the Gaussian process. Note that you DO NOT need to
+        specify this if the extent of the noise you want to represent is
+        contained in `err_y` (or if your data are noiseless). Default value is
+        None, which results in the :py:class:`~gptools.kernel.noise.ZeroKernel`
+        (noise specified elsewhere or not present).
     diag_factor : float, optional
-        Factor of :py:attr:`sys.float_info.epsilon` which is added to
-        the diagonal of the total `K` matrix to improve the stability of
-        the Cholesky decomposition. If you are having issues, try increasing
-        this by a factor of 10 at a time. Default is 1e2.
+        Factor of :py:attr:`sys.float_info.epsilon` which is added to the
+        diagonal of the total `K` matrix to improve the stability of the
+        Cholesky decomposition. If you are having issues, try increasing this by
+        a factor of 10 at a time. Default is 1e2.
     
     NOTE
-        The following are all passed to :py:meth:`add_data`, refer to its docstring.
+        The following are all passed to :py:meth:`add_data`, refer to its
+        docstring.
     
     X : :py:class:`Matrix` or other Array-like, (`M`, `N`), optional
-        `M` training input values of dimension `N`. Default value is None (no
-        training data).
-        
+        `M` input values of dimension `N`. Default value is None (no data).
     y : :py:class:`Array` or other Array-like, (`M`,), optional
-        `M` training target values. Default value is None (no training data).
-        
+        `M` data target values. Default value is None (no data).
     err_y : :py:class:`Array` or other Array-like, (`M`,), optional
         Error (given as standard deviation) in the `M` training target values.
         Default value is 0 (noiseless observations).
+    n : :py:class:`Matrix` or other Array-like (`M`, `N`) or scalar float, optional
+        Non-negative integer values only. Degree of derivative for each target.
+        If `n` is a scalar it is taken to be the value for all points in `y`.
+        Otherwise, the length of n must equal the length of `y`. Default value
+        is 0 (observation of target value). If non-integer values are passed,
+        they will be silently rounded.
     
     Attributes
     ----------
@@ -112,9 +99,6 @@ class GaussianProcess(object):
         The non-noise portion of the covariance kernel.
     noise_k : :py:class:`~gptools.kernel.core.Kernel` instance
         The noise portion of the covariance kernel.
-    standardize : bool
-        True if internal calculations are done with standardized variables, False
-        if real units are used.
     X : :py:class:`Matrix`, (`M`, `N`)
         The `M` training input values, each of which is of dimension `N`.
     y : :py:class:`Array`, (`M`,)
@@ -149,9 +133,8 @@ class GaussianProcess(object):
     --------
     add_data : Used to process `X`, `y`, `err_y` and to add data to the process.
     """
-    def __init__(self, k, noise_k=None, standardize=False, X=None, y=None, err_y=0, diag_factor=1e2):
-        if standardize:
-            raise ValueError("Keyword standardize is not supported at this point!")
+    def __init__(self, k, noise_k=None, X=None, y=None, err_y=0, n=0,
+                 diag_factor=1e2):
         if not isinstance(k, Kernel):
             raise TypeError("Argument k must be an instance of Kernel when "
                             "constructing GaussianProcess!")
@@ -163,7 +146,6 @@ class GaussianProcess(object):
                                 "when constructing GaussianProcess!")
 
         self.diag_factor = diag_factor
-        self.standardize = standardize
         self.k = k
         self.noise_k = noise_k
         self.y = scipy.array([], dtype=float)
@@ -175,7 +157,7 @@ class GaussianProcess(object):
                 raise GPArgumentError("Must pass both X and y when "
                                       "constructing GaussianProcess!")
             else:
-                self.add_data(X, y, err_y=err_y, n=0)
+                self.add_data(X, y, err_y=err_y, n=n)
         elif X is None and y is not None:
             raise GPArgumentError("Must pass both X and y when constructing "
                                   "GaussianProcess!")
@@ -199,20 +181,20 @@ class GaussianProcess(object):
         Parameters
         ----------
         X : :py:class:`Matrix` or other Array-like, (`M`, `N`)
-            `M` training input values of dimension `N`.
+            `M` input values of dimension `N`.
         y : :py:class:`Array` or other Array-like, (`M`,)
-            `M` training target values.
+            `M` target values.
         err_y : :py:class:`Array` or other Array-like (`M`,) or scalar float, optional
             Non-negative values only. Error given as standard deviation) in the
-            `M` training target values. If `err_y` is a scalar, the data set is
-            taken to be homoscedastic (constant error). Otherwise, the length
-            of `err_y` must equal the length of `y`. Default value is 0
-            (noiseless observations).
+            `M` target values. If `err_y` is a scalar, the data set is taken to
+            be homoscedastic (constant error). Otherwise, the length of `err_y`
+            must equal the length of `y`. Default value is 0 (noiseless
+            observations).
         n : :py:class:`Matrix` or other Array-like (`M`, `N`) or scalar float, optional
             Non-negative integer values only. Degree of derivative for each
-            training target. If `n` is a scalar it is taken to be the value for
-            all points in `y`. Otherwise, the length of n must equal the length
-            of `y`. Default value is 0 (observation of target value). If
+            target. If `n` is a scalar it is taken to be the value for all
+            points in `y`. Otherwise, the length of n must equal the length of
+            `y`. Default value is 0 (observation of target value). If
             non-integer values are passed, they will be silently rounded.
         
         Raises
@@ -260,7 +242,8 @@ class GaussianProcess(object):
             if n.shape != (len(y), self.num_dim):
                 raise ValueError("When using array-like n, shape must be "
                                  "(len(y), k.num_dim)! Shape of n given is %s, "
-                                 "shape of y given is %s and num_dim=%d." % (n.shape, y.shape, self.num_dim))
+                                 "shape of y given is %s and num_dim=%d."
+                                 % (n.shape, y.shape, self.num_dim))
         if (n < 0).any():
             raise ValueError("All elements of n must be non-negative integers!")
         
@@ -270,9 +253,10 @@ class GaussianProcess(object):
         if self.num_dim == 1 and X.shape[0] == 1:
             X = X.T
         if X.shape != (len(y), self.num_dim):
-            raise ValueError("Shape of training inputs must be (len(y), k.num_dim)! "
-                             "X given has shape %s, shape of "
-                             "y is %s and num_dim=%d." % (X.shape, y.shape, self.num_dim))
+            raise ValueError("Shape of training inputs must be (len(y), "
+                             "k.num_dim)! X given has shape %s, shape of y is "
+                             "%s and num_dim=%d."
+                             % (X.shape, y.shape, self.num_dim))
         
         if self.X is None:
             self.X = X
@@ -342,7 +326,8 @@ class GaussianProcess(object):
         ni_tile = scipy.repeat(ni, Xj.shape[0], axis=0)
         Xj_tile = scipy.tile(Xj, (Xi.shape[0], 1))
         nj_tile = scipy.tile(nj, (Xi.shape[0], 1))
-        Kij = k(Xi_tile, Xj_tile, ni_tile, nj_tile, hyper_deriv=hyper_deriv, symmetric=symmetric)
+        Kij = k(Xi_tile, Xj_tile, ni_tile, nj_tile, hyper_deriv=hyper_deriv,
+                symmetric=symmetric)
         Kij = scipy.asmatrix(scipy.reshape(Kij, (Xi.shape[0], -1)))
         
         return Kij
@@ -358,18 +343,8 @@ class GaussianProcess(object):
         otherwise leaves the existing values.
         """
         if not self.K_up_to_date:
-            if self.standardize:
-                # TODO: Implement standardization on X!
-                # TODO: This does not handle the derivatives properly!
-                self.mu_y = scipy.mean(self.y)
-                self.std_y = scipy.std(self.y, ddof=1)
-                self.y_s = (self.y - self.mu_y) / self.std_y
-                y = self.y_s
-                self.err_y_s = self.err_y / self.std_y
-                err_y = self.err_y_s
-            else:
-                y = self.y
-                err_y = self.err_y
+            y = self.y
+            err_y = self.err_y
             self.K = self.compute_Kij(self.X, None, self.n, None, noise=False)
             self.noise_K = self.compute_Kij(self.X, None, self.n, None, noise=True)
             K_tot = (self.K +
@@ -486,17 +461,16 @@ class GaussianProcess(object):
             :py:mod:`scipy`.
         opt_kwargs : dict, optional
             Dictionary of extra keywords to pass to
-            :py:func:`scipy.optimize.minimize`. Refer to that function's docstring for
-            valid options. Note that if you use `jac` = True (i.e., optimization
-            function returns Jacobian) you should also set `args` = (True,) to
-            tell :py:meth:`update_hyperparameters` to compute and return the
-            Jacobian. Default is: {}.
+            :py:func:`scipy.optimize.minimize`. Refer to that function's
+            docstring for valid options. Note that if you use `jac` = True (i.e.,
+            optimization function returns Jacobian) you should also set `args`
+            = (True,) to tell :py:meth:`update_hyperparameters` to compute and
+            return the Jacobian. Default is: {}.
         verbose : bool, optional
-            Whether or not the output should be verbose. If
-            True, the entire :py:class:`Result` object from
-            :py:func:`scipy.optimize.minimize` is printed. If False, status
-            information is only printed if the `success` flag from
-            :py:func:`minimize` is False. Default is False.
+            Whether or not the output should be verbose. If True, the entire
+            :py:class:`Result` object from :py:func:`scipy.optimize.minimize` is
+            printed. If False, status information is only printed if the
+            `success` flag from :py:func:`minimize` is False. Default is False.
         random_starts : non-negative int, optional
             Number of times to randomly perturb the starting guesses
             (distributed uniformly within their bounds) in order to seek the
@@ -601,7 +575,8 @@ class GaussianProcess(object):
                           "starts used." % (str(bounds), str(res_min.x),))
         return res_min
     
-    def predict(self, Xstar, n=0, noise=False, return_cov=True):
+    def predict(self, Xstar, n=0, noise=False, return_std=True, return_cov=False,
+                use_MCMC=False, **kwargs):
         """Predict the mean and covariance at the inputs `Xstar`.
         
         The order of the derivative is given by `n`. The keyword `noise` sets
@@ -619,15 +594,26 @@ class GaussianProcess(object):
         noise : bool, optional
             Whether or not noise should be included in the covariance. Default
             is False (no noise in covariance).
+        return_std : bool, optional
+            Set to True to compute and return the standard deviation for the
+            predictions, False to skip this step. Default is True (return tuple
+            of (`mean`, `std`)).
         return_cov : bool, optional
             Set to True to compute and return the covariance matrix for the
-            predictions, False to skip this step. Default is True (return tuple
-            of (`mean`, `cov`)).
+            predictions, False to skip this step. Default is False.
+        use_MCMC : bool, optional
+            Set to True to use :py:meth:`predict_MCMC` to evaluate the prediction
+            marginalized over the hyperparameters.
+        **kwargs : optional kwargs
+            All additional kwargs are passed to :py:meth:`predict_MCMC` if
+            `use_MCMC` is True.
         
         Returns
         -------
         mean : :py:class:`Array`, (`M`,)
             Predicted GP mean.
+        std : :py:class:`Array`, (`M`,)
+            Predicted standard deviation, only returned if `return_std` is True.
         covariance : :py:class:`Matrix`, (`M`, `M`)
             Predicted covariance matrix, only returned if `return_cov` is True.
         
@@ -637,58 +623,65 @@ class GaussianProcess(object):
             If `n` is not consistent with the shape of `Xstar` or is not entirely
             composed of non-negative integers.
         """
-        # Process Xstar:
-        Xstar = scipy.asmatrix(Xstar, dtype=float)
-        # Handle 1d x case where array is passed in:
-        if self.num_dim == 1 and Xstar.shape[0] == 1:
-            Xstar = Xstar.T
-        if Xstar.shape[1] != self.num_dim:
-            raise ValueError("Second dimension of Xstar must be equal to "
-                             "self.num_dim! Shape of Xstar given is %s, "
-                             "num_dim is %d." % (Xstar.shape, self.num_dim))
-        # Process n:
-        try:
-            iter(n)
-        except TypeError:
-            n = n * scipy.asmatrix(scipy.ones(Xstar.shape, dtype=int))
+        if use_MCMC:
+            return self.predict_MCMC(Xstar, n=n, noise=noise,
+                                     return_std=return_std, return_cov=return_cov,
+                                     **kwargs)
         else:
-            n = scipy.asmatrix(n, dtype=int)
-            if self.num_dim == 1 and n.shape[0] == 1:
-                n = n.T
-            if n.shape != Xstar.shape:
-                raise ValueError("When using array-like n, shape must match "
-                                 "shape of Xstar! Shape of n given is %s, "
-                                 "shape of Xstar given is %s." % (n.shape, Xstar.shape))
-        if (n < 0).any():
-            raise ValueError("All elements of n must be non-negative integers!")
-        
-        self.compute_K_L_alpha_ll()
-        Kstar = self.compute_Kij(self.X, Xstar, self.n, n)
-        if noise:
-            Kstar = Kstar + self.compute_Kij(self.X, Xstar, self.n, n, noise=True)
-        mean = scipy.asarray(Kstar.T * self.alpha).flatten()
-        if self.standardize:
-            mean = mean * self.std_y + self.mu_y
-        if return_cov:
+            # Process Xstar:
+            Xstar = scipy.asmatrix(Xstar, dtype=float)
+            # Handle 1d x case where array is passed in:
+            if self.num_dim == 1 and Xstar.shape[0] == 1:
+                Xstar = Xstar.T
+            if Xstar.shape[1] != self.num_dim:
+                raise ValueError("Second dimension of Xstar must be equal to "
+                                 "self.num_dim! Shape of Xstar given is %s, "
+                                 "num_dim is %d." % (Xstar.shape, self.num_dim))
+            # Process n:
             try:
-                v = scipy.asmatrix(
-                    scipy.linalg.solve_triangular(self.L, Kstar, lower=True, check_finite=False)
-                )
+                iter(n)
             except TypeError:
-                # Handle older versions of scipy:
-                v = scipy.asmatrix(
-                    scipy.linalg.solve_triangular(self.L, Kstar, lower=True)
-                )
-            Kstarstar = self.compute_Kij(Xstar, None, n, None)
+                n = n * scipy.asmatrix(scipy.ones(Xstar.shape, dtype=int))
+            else:
+                n = scipy.asmatrix(n, dtype=int)
+                if self.num_dim == 1 and n.shape[0] == 1:
+                    n = n.T
+                if n.shape != Xstar.shape:
+                    raise ValueError("When using array-like n, shape must match "
+                                     "shape of Xstar! Shape of n given is %s, "
+                                     "shape of Xstar given is %s." % (n.shape, Xstar.shape))
+            if (n < 0).any():
+                raise ValueError("All elements of n must be non-negative integers!")
+        
+            self.compute_K_L_alpha_ll()
+            Kstar = self.compute_Kij(self.X, Xstar, self.n, n)
             if noise:
-                Kstarstar = Kstarstar + self.compute_Kij(Xstar, None, n, None, noise=True)
-            covariance = Kstarstar - v.T * v
-            if self.standardize:
-                covariance = covariance * self.std_y**2.0
-
-            return (mean, covariance)
-        else:
-            return mean
+                Kstar = Kstar + self.compute_Kij(self.X, Xstar, self.n, n, noise=True)
+            mean = scipy.asarray(Kstar.T * self.alpha).flatten()
+            if return_cov or return_std:
+                try:
+                    v = scipy.asmatrix(
+                        scipy.linalg.solve_triangular(self.L, Kstar, lower=True, check_finite=False)
+                    )
+                except TypeError:
+                    # Handle older versions of scipy:
+                    v = scipy.asmatrix(
+                        scipy.linalg.solve_triangular(self.L, Kstar, lower=True)
+                    )
+                Kstarstar = self.compute_Kij(Xstar, None, n, None)
+                if noise:
+                    Kstarstar = Kstarstar + self.compute_Kij(Xstar, None, n, None, noise=True)
+                covariance = Kstarstar - v.T * v
+                if return_std:
+                    std = scipy.sqrt(scipy.asarray(scipy.diagonal(covariance)).flatten())
+                    if return_cov:
+                        return (mean, std, covariance)
+                    else:
+                        return (mean, std)
+                else:
+                    return (mean, covariance)
+            else:
+                return mean
     
     def compute_ll_matrix(self, bounds, num_pts):
         """Compute the log likelihood over the (free) parameter space.
@@ -708,7 +701,8 @@ class GaussianProcess(object):
             param_vals : List of :py:class:`Array`
                 The parameter values used.
         """
-        present_free_params = scipy.concatenate((self.k.free_params, self.noise_k.free_params))
+        present_free_params = scipy.concatenate((self.k.free_params,
+                                                 self.noise_k.free_params))
         bounds = scipy.atleast_2d(scipy.asarray(bounds, dtype=float))
         if bounds.shape[1] != 2:
             raise ValueError("Argument bounds must have shape (n, 2)!")
@@ -723,7 +717,8 @@ class GaussianProcess(object):
         else:
             num_pts = scipy.asarray(num_pts, dtype=int)
             if len(num_pts) != len(present_free_params):
-                raise ValueError("Length of num_pts must match the number of free parameters of kernel!")
+                raise ValueError("Length of num_pts must match the number of "
+                                 "free parameters of kernel!")
         
         # Form arrays to evaluate parameters over:
         param_vals = []
@@ -759,19 +754,21 @@ class GaussianProcess(object):
         """
         if idx >= len(num_pts):
             # Base case: All entries in param_vals should be scalars:
-            return -1.0 * self.update_hyperparameters(scipy.asarray(param_vals, dtype=float))
+            return -1.0 * self.update_hyperparameters(scipy.asarray(param_vals,
+                                                                    dtype=float))
         else:
             # Recursive case: call _compute_ll_matrix for each entry in param_vals[idx]:
             vals = scipy.zeros(num_pts[idx:], dtype=float)
             for k in xrange(0, len(param_vals[idx])):
                 specific_param_vals = list(param_vals)
                 specific_param_vals[idx] = param_vals[idx][k]
-                vals[k] = self._compute_ll_matrix(idx + 1, specific_param_vals, num_pts)
+                vals[k] = self._compute_ll_matrix(idx + 1, specific_param_vals,
+                                                  num_pts)
             return vals
     
-    def draw_sample(self, Xstar, n=0, noise=False, num_samp=1, rand_vars=None,
-                    rand_type='standard normal', diag_factor=1e3, method='cholesky',
-                    num_eig=None):
+    def draw_sample(self, Xstar, n=0, num_samp=1, rand_vars=None,
+                    rand_type='standard normal', diag_factor=1e3,
+                    method='cholesky', num_eig=None, **kwargs):
         """Draw a sample evaluated at the given points `Xstar`.
         
         Parameters
@@ -790,10 +787,10 @@ class GaussianProcess(object):
         rand_vars : :py:class:`Matrix` or other Array-like (`M`, `P`), optional
             Vector of random variables :math:`u` to use in constructing the
             sample :math:`y_* = f_* + Lu`, where :math:`K=LL^T`. If None,
-            values will be produced using :py:func:`numpy.random.multivariate_normal`.
-            This allows you to use pseudo/quasi random numbers generated by
-            an external routine. Default is None (use :py:func:`multivariate_normal`
-            directly).
+            values will be produced using
+            :py:func:`numpy.random.multivariate_normal`. This allows you to use
+            pseudo/quasi random numbers generated by an external routine.
+            Default is None (use :py:func:`multivariate_normal` directly).
         rand_type : {'standard normal', 'uniform'}, optional
             Type of distribution the inputs are given with.
             
@@ -807,9 +804,9 @@ class GaussianProcess(object):
             covariance matrix prior to computing its Cholesky decomposition.
             This is necessary as sometimes the decomposition will fail because,
             to machine precision, the matrix appears to not be positive definite.
-            If you are getting errors from :py:func:`scipy.linalg.cholesky`, try increasing
-            this an order of magnitude at a time. This parameter only has an
-            effect when using rand_vars. Default value is 1e3. 
+            If you are getting errors from :py:func:`scipy.linalg.cholesky`, try
+            increasing this an order of magnitude at a time. This parameter only
+            has an effect when using rand_vars. Default value is 1e3. 
         method : {'cholesky', 'eig'}, optional
             Method to use for constructing the matrix square root. Default is
             'cholesky' (use lower-triangular Cholesky decomposition).
@@ -820,16 +817,20 @@ class GaussianProcess(object):
                 * 'eig': Perform an eigenvalue decomposition on the covariance
                   matrix: :math:`K=Q \\Lambda Q^{-1}`, use :math:`Q\\Lambda^{1/2}`
                   as the matrix square root.
+        
         num_eig : int or None, optional
             Number of eigenvalues to compute. Can range from 1 to `M` (the
             number of test points). If it is None, then all eigenvalues are
             computed. Default is None (compute all eigenvalues). This keyword
             only has an effect if `method` is 'eig'.
+        **kwargs : optional kwargs
+            All extra keyword arguments are passed to :py:meth:`predict` when
+            evaluating the mean and covariance matrix of the GP.
         
         Returns
         -------
-            samples : :py:class:`Array` (`M`, `P`) or (`M`, `num_samp`)
-                Samples evaluated at the `M` points.
+        samples : :py:class:`Array` (`M`, `P`) or (`M`, `num_samp`)
+            Samples evaluated at the `M` points.
         
         Raises
         ------
@@ -837,9 +838,10 @@ class GaussianProcess(object):
             If rand_type or method is invalid.
         """
         # All of the input processing for Xstar and n will be done in here:
-        mean, cov = self.predict(Xstar, n=n, noise=noise)
+        mean, cov = self.predict(Xstar, n=n, return_cov=True, return_std=False,
+                                 **kwargs)
         if rand_vars is None and method != 'eig':
-            return scipy.asarray(numpy.random.multivariate_normal(scipy.asarray(mean).flatten(), cov, num_samp)).T
+            return numpy.random.multivariate_normal(mean, cov, num_samp).T
         else:
             if num_eig is None or num_eig > len(mean):
                 num_eig = len(mean)
@@ -849,29 +851,35 @@ class GaussianProcess(object):
                 rand_vars = numpy.random.standard_normal((num_eig, num_samp))
             valid_types = ('standard normal', 'uniform')
             if rand_type not in valid_types:
-                raise ValueError("rand_type %s not recognized! Valid options are: %s." % (rand_type, valid_types,))
+                raise ValueError("rand_type %s not recognized! Valid options "
+                                 "are: %s." % (rand_type, valid_types,))
             if rand_type == 'uniform':
                 rand_vars = scipy.stats.norm.ppf(rand_vars)
             
             # TODO: Should probably do some shape-checking first...
             
             if method == 'cholesky':
-                L = scipy.asmatrix(scipy.linalg.cholesky(cov + diag_factor * sys.float_info.epsilon * scipy.eye(cov.shape[0]),
-                                                         lower=True,
-                                                         check_finite=False),
-                                   dtype=float)
+                L = scipy.asmatrix(scipy.linalg.cholesky(
+                    cov + diag_factor * sys.float_info.epsilon * scipy.eye(cov.shape[0]),
+                    lower=True,
+                    check_finite=False
+                ), dtype=float)
             elif method == 'eig':
                 # TODO: Add support for specifying cutoff eigenvalue!
                 # Not technically lower triangular, but we'll keep the name L:
-                eig, Q = scipy.linalg.eigh(cov + diag_factor * sys.float_info.epsilon * scipy.eye(cov.shape[0]),
-                                           eigvals=(len(mean) - 1 - (num_eig - 1), len(mean) - 1))
+                eig, Q = scipy.linalg.eigh(
+                    cov + diag_factor * sys.float_info.epsilon * scipy.eye(cov.shape[0]),
+                    eigvals=(len(mean) - 1 - (num_eig - 1), len(mean) - 1)
+                )
                 Lam_1_2 = scipy.asmatrix(scipy.diag(scipy.sqrt(eig)))
                 L = scipy.asmatrix(Q) * Lam_1_2
             else:
                 raise ValueError("method %s not recognized!" % (method,))
             return mean + L * scipy.asmatrix(rand_vars[:num_eig, :], dtype=float)
     
-    def plot(self, X=None, n=0, ax=None, envelopes=[1, 3], base_alpha=0.375, return_prediction=False, return_cov=True, **kwargs):
+    def plot(self, X=None, n=0, ax=None, envelopes=[1, 3], base_alpha=0.375,
+             return_prediction=False, return_std=True, return_cov=False,
+             plot_kwargs={}, **kwargs):
         """Plots the Gaussian process using the current hyperparameters. Only for num_dim <= 2.
         
         Parameters
@@ -891,15 +899,22 @@ class GaussianProcess(object):
         envelopes: list of float, optional
             +/-n*sigma envelopes to plot. Default is [1, 3].
         base_alpha : float, optional
-            Alpha value to use for +/-1*sigma envelope. All other envelopes
-            are drawn with base_alpha/e. Default is 0.375.
+            Alpha value to use for +/-1*sigma envelope. All other envelopes env
+            are drawn with base_alpha/env. Default is 0.375.
         return_prediction : bool, optional
-            If True, the predicted mean, cov are also returned.
+            If True, the predicted mean, cov are also returned. Default is False.
+        return_std : bool, optional
+            If True, the standard deviation is computed and returned along with
+            the mean when `return_prediction` is True. Default is True.
         return_cov : bool, optional
             If True, the covariance is computed and returned along with the
-            mean when `return_prediction` is True.
-        **kwargs : extra plotting arguments, optional
-            Extra arguments that are passed to plot the mean.
+            mean when `return_prediction` is True. Default is False.
+        plot_kwargs : dict, optional
+            The entries in this dictionary are passed as kwargs to the plotting
+            command used to plot the mean. Use this to, for instance, change the
+            color, line width and line style.
+        **kwargs : extra arguments for predict, optional
+            Extra arguments that are passed to :py:meth:`predict`.
         
         Returns
         -------
@@ -908,6 +923,9 @@ class GaussianProcess(object):
         mean : array
             The mean at the desired points `X` of derivative order `n`. Only
             returned if `return_prediction` is True.
+        std : array
+            The standard deviation of the predicted values. Only returned if
+            `return_prediction` and `return_std` are True.
         cov : matrix
             The covariance matrix between all predicted values. Only returned
             if `return_prediction` and `return_cov` are True.
@@ -926,12 +944,15 @@ class GaussianProcess(object):
         if self.num_dim == 1:
             if X is None:
                 X = scipy.linspace(self.X.min(), self.X.max(), 100)
-            if envelopes or (return_prediction and return_cov):
-                mean, cov = self.predict(X, n=n, noise=False)
-                std = scipy.sqrt(scipy.diagonal(cov))
+            if envelopes or (return_prediction and (return_cov and return_std)):
+                if return_cov:
+                    mean, std, cov = self.predict(X, n=n, return_std=True,
+                                                  return_cov=True, **kwargs)
+                else:
+                    mean, std = self.predict(X, n=n, return_std=True, **kwargs)
             else:
-                mean = self.predict(X, n=n, noise=False, return_cov=False)
-            l = ax.plot(X, mean, **kwargs)
+                mean = self.predict(X, n=n, return_std=False, **kwargs)
+            l = ax.plot(X, mean, **plot_kwargs)
             color = plt.getp(l[0], 'color')
             for i in envelopes:
                 ax.fill_between(X, mean - i * std, mean + i * std,
@@ -949,26 +970,33 @@ class GaussianProcess(object):
             else:
                 X1 = scipy.asarray(X[:, 0]).flatten()
                 X2 = scipy.asarray(X[:, 1]).flatten()
-            if envelopes or (return_prediction and return_cov):
-                mean, cov = self.predict(X, n=n, noise=False)
-                std = scipy.sqrt(scipy.diagonal(cov))
+            if envelopes or (return_prediction and (return_cov or return_std)):
+                if return_cov:
+                    mean, std, cov = self.predict(X, n=n, return_cov=True,
+                                                  return_std=True, **kwargs)
+                else:
+                    mean, std = self.predict(X, n=n, return_std=True, **kwargs)
             else:
-                mean = self.predict(X, n=n, noise=False, return_cov=False)
-            s = ax.plot_trisurf(X1, X2, mean, **kwargs)
+                mean = self.predict(X, n=n, return_std=False, **kwargs)
+            s = ax.plot_trisurf(X1, X2, mean, **plot_kwargs)
             for i in envelopes:
                 kwargs.pop('alpha', base_alpha)
                 ax.plot_trisurf(X1, X2, mean-std, alpha=base_alpha / i, **kwargs)
                 ax.plot_trisurf(X1, X2, mean+std, alpha=base_alpha / i, **kwargs)
         
         if return_prediction:
-            if return_cov:
+            if return_std and return_cov:
+                return (ax, mean, std, cov)
+            elif return_std and not return_cov:
+                return (ax, mean, std)
+            elif not return_std and return_cov:
                 return (ax, mean, cov)
             else:
                 return (ax, mean)
         else:
             return ax
     
-    def sample_hyperparameter_posterior(self, nwalkers=200, nsamp=1500,
+    def sample_hyperparameter_posterior(self, nwalkers=200, nsamp=500,
                                         num_proc=None, sampler=None,
                                         plot_posterior=False,
                                         plot_chains=False):
@@ -978,7 +1006,6 @@ class GaussianProcess(object):
         pickleable. To add more samples to a previous sampler, pass the sampler
         instance in the `sampler` keyword.
         """
-        # TODO: Pick better default parameters!
         if num_proc is None:
             num_proc = multiprocessing.cpu_count()
         k_nk = self.k + self.noise_k
@@ -1004,7 +1031,8 @@ class GaussianProcess(object):
             f = plt.figure()
             for k in xrange(0, ndim):
                 a = f.add_subplot(3, ndim, k + 1)
-                a.acorr(sampler.flatchain[:, k], maxlags=100, detrend=plt.mlab.detrend_mean)
+                a.acorr(sampler.flatchain[:, k], maxlags=100,
+                        detrend=plt.mlab.detrend_mean)
                 a.set_xlabel('lag')
                 a.set_title('$%s$ autocorrelation' % (k_nk.free_param_names[k],))
                 a = f.add_subplot(3, ndim, ndim + k + 1)
@@ -1020,6 +1048,254 @@ class GaussianProcess(object):
                 a.set_title('$%s$ flattened chain' % (k_nk.free_param_names[k],))
             
         return sampler
+    
+    def compute_from_MCMC(self, X, n=0, return_mean=True, return_std=True,
+                          return_cov=False, return_sample=False, num_samples=1,
+                          noise=False, samp_kwargs={}, sampler=None,
+                          flat_trace=None, burn=0, thin=1, **kwargs):
+        """Compute desired quantities from MCMC samples of the hyperparameter posterior.
+        
+        The return will be a list with a number of rows equal to the number of
+        hyperparameter samples. The columns depend on the state of the boolean
+        flags, but will be some subset of (mean, stddev, cov, samples), in that
+        order. Samples will be the raw output of :py:meth:`draw_sample`, so you
+        will need to remember to convert to an array and flatten if you want to
+        work with a single sample.
+        
+        Parameters
+        ----------
+        X : array-like (`M`,) or (`M`, `num_dim`)
+            The values to evaluate the Gaussian process at.
+        n : non-negative int or list, optional
+            The order of derivative to compute. For num_dim=1, this must be an
+            int. For num_dim=2, this must be a list of ints of length 2.
+            Default is 0 (don't take derivative).
+        return_mean : bool, optional
+            If True, the mean will be computed at each hyperparameter sample.
+            Default is True (compute mean).
+        return_std : bool, optional
+            If True, the standard deviation will be computed at each
+            hyperparameter sample. Default is True (compute stddev).
+        return_cov : bool, optional
+            If True, the covariance matrix will be computed at each
+            hyperparameter sample. Default is True (compute stddev).
+        return_sample : bool, optional
+            If True, random sample(s) will be computed at each hyperparameter
+            sample. Default is False (do not compute samples).
+        num_samples : int, optional
+            Compute this many samples if `return_sample` is True. Default is 1.
+        noise : bool, optional
+            If True, noise is included in the predictions and samples. Default
+            is False (do not include noise).
+        samp_kwargs : dict, optional
+            If `return_sample` is True, the contents of this dictionary will be
+            passed as kwargs to :py:meth:`draw_sample`.
+        sampler : :py:class:`Sampler` instance or None, optional
+            :py:class:`Sampler` instance that has already been run to the extent
+            desired on the hyperparameter posterior. If None, a new sampler will
+            be created with :py:meth:`sample_hyperparameter_posterior`. In this
+            case, all extra kwargs will be passed on, allowing you to set the
+            number of samples, etc. Default is None (create sampler).
+        flat_trace : array-like (`nsamp`, `ndim`) or None, optional
+            Flattened trace with samples of the free hyperparameters. If present,
+            overrides `sampler`. This allows you to use a sampler other than the
+            ones from :py:mod:`emcee`, or to specify arbitrary values you wish
+            to evaluate the curve at. Note that this WILL be thinned and burned
+            according to the following two kwargs. "Flat" refers to the fact
+            that you must have combined all chains into a single one. Default is
+            None (use `sampler`).
+        burn : int, optional
+            The number of samples to discard at the beginning of the chain.
+            Default is 0.
+        thin : int, optional
+            Every `thin`-th sample is kept. Default is 1.
+        num_proc : int, optional
+            The number of processors to use for evaluation. This is used both
+            when calling the sampler and when evaluating the Gaussian process.
+            If None, the number of available processors will be used. If zero,
+            evaluation will proceed in parallel. Default is to use all available
+            processors.
+        **kwargs : extra optional kwargs
+            All additional kwargs are passed to
+            :py:meth:`sampler_hyparparameter_posterior`.
+        
+        Returns
+        -------
+        out : dict
+            A dictionary having some or all of the fields 'mean', 'std', 'cov'
+            and 'samp'. Each entry is a list of array-like. The length of this
+            list is equal to the number of hyperparameter samples used, and the
+            entries have the following shapes:
+            
+                ==== ====================
+                mean (`M`,)
+                std  (`M`,)
+                cov  (`M`, `M`)
+                samp (`M`, `num_samples`)
+                ==== ====================
+        """
+        if flat_trace is None:
+            if sampler is None:
+                sampler = self.sample_hyperparameter_posterior(**kwargs)
+                
+            flat_trace = sampler.chain[:, burn:-1:thin, :]
+            flat_trace = flat_trace.reshape((-1, flat_trace.shape[2]))
+        else:
+            flat_trace = flat_trace[burn:-1:thin, :]
+        # TODO: Maybe add some diagnostics to look at how the burned/thinned
+        # trace is doing?
+        
+        num_proc = kwargs.get('num_proc', multiprocessing.cpu_count())
+        
+        if num_proc > 0:
+            pool = multiprocessing.Pool(processes=num_proc)
+            res = pool.map(_ComputeGPWrapper(self, X, n, return_mean, return_std,
+                                             return_cov, return_sample,
+                                             num_samples, noise, samp_kwargs),
+                           flat_trace)
+            pool.close()
+        else:
+            res = map(_ComputeGPWrapper(self, X, n, return_mean, return_std,
+                                        return_cov, return_sample, num_samples,
+                                        noise, samp_kwargs),
+                      flat_trace)
+        out = dict()
+        if return_mean:
+            out['mean'] = [r['mean'] for r in res]
+        if return_std:
+            out['std'] = [r['std'] for r in res]
+        if return_cov:
+            out['cov'] = [r['cov'] for r in res]
+        if return_sample:
+            out['samp'] = [r['samp'] for r in res]
+        return out
+    
+    def predict_MCMC(self, X, ddof=1, **kwargs):
+        """Make a prediction using MCMC samples.
+        
+        This is essentially a convenient wrapper of :py:meth:`compute_from_MCMC`,
+        designed to act more or less interchangeably with :py:meth:`predict`.
+        
+        Computes the mean of the GP posterior marginalized over the
+        hyperparameters using iterated expectations. If `return_std` is True,
+        uses the law of total variance to compute the variance of the GP
+        posterior marginalized over the hyperparameters. If `return_cov` is True,
+        uses the law of total covariance to compute the entire covariance of the
+        GP posterior marginalized over the hyperparameters. If both `return_cov`
+        and `return_std` are True, then both the covariance matrix and standard
+        deviation array will be returned.
+        
+        Parameters
+        ----------
+        X : array-like (`M`,) or (`M`, `num_dim`)
+            The values to evaluate the Gaussian process at.
+        ddof : int, optional
+            The degree of freedom correction to use when computing the variance.
+            Default is 1 (standard Bessel correction for unbiased estimate).
+        return_std : bool, optional
+            If True, the standard deviation is also computed. Default is True.
+        **kwargs : optional kwargs
+            All additional kwargs are passed directly to
+            :py:meth:`compute_from_MCMC`.
+        
+        Returns
+        -------
+        mean : :py:class:`Array`, (`M`,)
+            Predicted GP mean.
+        std : :py:class:`Array`, (`M`,)
+            Predicted standard deviation, only returned if `return_std` is True.
+        covariance : :py:class:`Matrix`, (`M`, `M`)
+            Predicted covariance matrix, only returned if `return_cov` is True.
+        """
+        kwargs['return_mean'] = True
+        res = self.compute_from_MCMC(X, **kwargs)
+        means = scipy.asarray(res['mean'])
+        mean = scipy.mean(means, axis=0)
+        
+        if 'cov' in res:
+            covs = scipy.asarray(res['cov'])
+            # TODO: Test to make sure this is doing the right thing...
+            cov = scipy.mean(covs, axis=0) + scipy.cov(means, rowvar=0, ddof=ddof)
+            if 'std' in res:
+                std = scipy.sqrt(scipy.asarray(scipy.diagonal(cov)).flatten())
+                return (mean, std, cov)
+            else:
+                return (mean, cov)
+        elif 'std' in res:
+            vars_ = scipy.asarray(scipy.asarray(res['std']))**2
+            std = scipy.sqrt(scipy.mean(vars_, axis=0) +
+                             scipy.var(means, axis=0, ddof=ddof))
+            return (mean, std)
+        else:
+            return mean
+
+class _ComputeGPWrapper(object):
+    """Wrapper to allow parallel evaluation of means, covariances and random draws.
+    
+    Parameters
+    ----------
+    gp : :py:class:`GaussianProcess` instance
+        The :py:class:`GaussianProcess` to wrap.
+    X : array-like
+        The evaluation locations to use. No pre-processing is performed: `X`
+        will be passed directly to :py:meth:`predict` and/or :py:meth:`draw_sample`.
+    n : int or array-like
+        The derivative orders to use. No pre-processing is performed: `n` will
+        be passed directly to :py:meth:`predict` and/or :py:meth:`draw_sample`.
+    return_mean : bool
+        If True, the mean will be computed.
+    return_std : bool
+        If True, the standard deviation will be computed.
+    return_cov : bool
+        If True, the covariance matrix will be computed.
+    return_sample : bool
+        If True, random sample(s) will be computed.
+    num_samples : int
+        If `return_sample` is True, this many random samples will be computed.
+    noise : bool
+        If True, noise will be included in the prediction and samples.
+    samp_kwargs : dict
+        The contents of this dictionary will be passed to :py:meth:`draw_sample`.
+    """
+    def __init__(self, gp, X, n, return_mean, return_std, return_cov,
+                 return_sample, num_samples, noise, samp_kwargs):
+        self.gp = gp
+        self.X = X
+        self.n = n
+        self.return_mean = return_mean
+        self.return_std = return_std
+        self.return_cov = return_cov
+        self.return_sample = return_sample
+        self.num_samples = num_samples
+        self.noise = noise
+        self.samp_kwargs = samp_kwargs
+    
+    def __call__(self, p_case):
+        """Evaluate the desired quantities with free hyperparameters `p_case`.
+        
+        Returns a dict with some or all of the fields 'mean', 'cov', 'std', 'samp'
+        """
+        out = dict()
+        self.gp.update_hyperparameters(list(p_case))
+        if self.return_mean or self.return_std or self.return_cov:
+            predict_out = self.gp.predict(self.X, n=self.n, noise=self.noise,
+                                          return_std=self.return_std,
+                                          return_cov=self.return_cov)
+            if self.return_cov or self.return_std:
+                out['mean'] = scipy.asarray(predict_out[0]).flatten()
+                if self.return_std:
+                    out['std'] = predict_out[1]
+                if self.return_cov and self.return_std:
+                    out['cov'] = predict_out[2]
+                elif self.return_cov and not self.return_std:
+                    out['cov'] = predict_out[1]
+            else:
+                out['mean'] = scipy.asarray(predict_out).flatten()
+        if self.return_sample:
+            out['samp'] = self.gp.draw_sample(self.X, n=self.n, noise=self.noise,
+                                       num_samp=self.num_samples,
+                                       **self.samp_kwargs)
+        return out
 
 class _ComputeLnProbEval(object):
     """Helper class to allow emcee to sample in parallel.
@@ -1159,13 +1435,15 @@ class Constraint(object):
                 if self.gp.num_dim == 1:
                     self.loc = scipy.asarray([loc], dtype=float)
                 else:
-                    raise ValueError("Argument loc must be 'min', 'max' or an array of length %d" % self.gp.num_dim)
+                    raise ValueError("Argument loc must be 'min', 'max' or an "
+                                     "array of length %d" % self.gp.num_dim)
             else:
                 loc = scipy.asarray(loc, dtype=float)
                 if loc.shape == (self.gp.num_dim,):
                     self.loc = loc
                 else:
-                    raise ValueError("Argument loc must be 'min', 'max' or have length %d" % self.gp.num_dim)
+                    raise ValueError("Argument loc must be 'min', 'max' or have "
+                                     "length %d" % self.gp.num_dim)
         
         if type_ in ('gt', 'lt'):
             self.type_ = type_
@@ -1186,11 +1464,13 @@ class Constraint(object):
                     if self.gp.num_dim == 1:
                         bounds[k] = scipy.asarray([bounds[k]], dtype=float)
                     else:
-                        raise ValueError("Each element in argument bounds must have length %d" % self.gp.num_dim)
+                        raise ValueError("Each element in argument bounds must "
+                                         "have length %d" % self.gp.num_dim)
                 else:
                     bounds[k] = scipy.asarray(bounds[k], dtype=float)
                     if bounds[k].shape != (self.gp.num_dim,):
-                        raise ValueError("Each element in argument bounds must have length %d" % self.gp.num_dim)
+                        raise ValueError("Each element in argument bounds must "
+                                         "have length %d" % self.gp.num_dim)
         # Unfold bounds into the shape needed by minimize:
         self.bounds = zip(bounds[0], bounds[1])
     
