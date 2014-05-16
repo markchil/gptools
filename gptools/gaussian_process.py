@@ -22,7 +22,7 @@ from __future__ import division
 
 from .error_handling import GPArgumentError
 from .kernel import Kernel, ZeroKernel
-from .utils import wrap_fmin_slsqp
+from .utils import wrap_fmin_slsqp, univariate_envelope_plot
 
 import scipy
 import scipy.linalg
@@ -932,14 +932,6 @@ class GaussianProcess(object):
         """
         if self.num_dim > 2:
             raise ValueError("Plotting is not supported for num_dim > 2!")
-        if ax is None:
-            f = plt.figure()
-            if self.num_dim == 1:
-                ax = f.add_subplot(1, 1, 1)
-            elif self.num_dim == 2:
-                ax = f.add_subplot(111, projection='3d')
-        elif ax == 'gca':
-            ax = plt.gca()
         
         if self.num_dim == 1:
             if X is None:
@@ -952,12 +944,16 @@ class GaussianProcess(object):
                     mean, std = self.predict(X, n=n, return_std=True, **kwargs)
             else:
                 mean = self.predict(X, n=n, return_std=False, **kwargs)
-            l = ax.plot(X, mean, **plot_kwargs)
-            color = plt.getp(l[0], 'color')
-            for i in envelopes:
-                ax.fill_between(X, mean - i * std, mean + i * std,
-                                facecolor=color, alpha=base_alpha / i)
+                std = None
+            univariate_envelope_plot(X, mean, std, ax=ax,
+                                     base_alpha=base_alpha,
+                                     envelopes=envelopes, **plot_kwargs)
         elif self.num_dim == 2:
+            if ax is None:
+                f = plt.figure()
+                ax = f.add_subplot(111, projection='3d')
+            elif ax == 'gca':
+                ax = plt.gca()
             if 'linewidths' not in kwargs:
                 kwargs['linewidths'] = 0
             if X is None:
@@ -996,8 +992,8 @@ class GaussianProcess(object):
         else:
             return ax
     
-    def sample_hyperparameter_posterior(self, nwalkers=200, nsamp=500,
-                                        num_proc=None, sampler=None,
+    def sample_hyperparameter_posterior(self, nwalkers=200, nsamp=500, burn=0,
+                                        thin=1, num_proc=None, sampler=None,
                                         plot_posterior=False,
                                         plot_chains=False):
         """Produce samples from the posterior for the hyperparameters using MCMC.
@@ -1005,6 +1001,39 @@ class GaussianProcess(object):
         Returns the sampler created, because storing it stops the GP from being
         pickleable. To add more samples to a previous sampler, pass the sampler
         instance in the `sampler` keyword.
+        
+        Parameters
+        ----------
+        nwalkers : int, optional
+            The number of walkers to use in the sampler. Should be on the order
+            of several hundred. Default is 200.
+        nsamp : int, optional
+            Number of samples (per walker) to take. Default is 500.
+        burn : int, optional
+            This keyword only has an effect on the corner plot produced when
+            `plot_posterior` is True and the flattened chain plot produced
+            when `plot_chains` is True. To perform computations with burn-in,
+            see :py:meth:`compute_from_MCMC`. The number of samples to discard
+            at the beginning of the chain. Default is 0.
+        thin : int, optional
+            This keyword only has an effect on the corner plot produced when
+            `plot_posterior` is True and the flattened chain plot produced
+            when `plot_chains` is True. To perform computations with thinning,
+            see :py:meth:`compute_from_MCMC`. Every `thin`-th sample is kept.
+            Default is 1.
+        num_proc : int or None, optional
+            Number of processors to use. If None, all available processors are
+            used. Default is None (use all available processors).
+        sampler : :py:class:`Sampler` instance
+            The sampler to use. If the sampler already has samples, the most
+            recent sample will be used as the starting point. Otherwise a
+            random sample from the hyperprior will be used.
+        plot_posterior : bool, optional
+            If True, a corner plot of the posterior for the hyperparameters
+            will be generated. Default is False.
+        plot_chains : bool, optional
+            If True, a plot showing the history and autocorrelation of the
+            chains will be produced.
         """
         if num_proc is None:
             num_proc = multiprocessing.cpu_count()
@@ -1023,8 +1052,12 @@ class GaussianProcess(object):
             theta0 = sampler.chain[:, -1, :]
 
         sampler.run_mcmc(theta0, nsamp)
+        if plot_posterior or plot_chains:
+            flat_trace = sampler.chain[:, burn:-1:thin, :]
+            flat_trace = flat_trace.reshape((-1, flat_trace.shape[2]))
+            
         if plot_posterior:
-            triangle.corner(sampler.flatchain,
+            triangle.corner(flat_trace,
                             plot_datapoints=False,
                             labels=['$%s$' % (l,) for l in k_nk.free_param_names])
         if plot_chains:
@@ -1042,10 +1075,10 @@ class GaussianProcess(object):
                 a.set_ylabel('$%s$' % (k_nk.free_param_names[k],))
                 a.set_title('$%s$ all chains' % (k_nk.free_param_names[k],))
                 a = f.add_subplot(3, ndim, 2 * ndim + k + 1)
-                a.plot(sampler.flatchain[:, k])
+                a.plot(flat_trace[:, k])
                 a.set_xlabel('sample')
                 a.set_ylabel('$%s$' % (k_nk.free_param_names[k],))
-                a.set_title('$%s$ flattened chain' % (k_nk.free_param_names[k],))
+                a.set_title('$%s$ flattened, burned and thinned chain' % (k_nk.free_param_names[k],))
             
         return sampler
     

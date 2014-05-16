@@ -851,3 +851,18 @@ def compute_stats(vals, check_nan=False, robust=False, axis=1, plot_QQ=False, bi
         f.canvas.mpl_connect('key_press_event', lambda evt: arrow_respond(slider, evt))
     
     return (mean, std)
+
+def univariate_envelope_plot(x, mean, std, ax=None, base_alpha=0.375, envelopes=[1, 3], **kwargs):
+    """Make a plot of a mean curve with uncertainty envelopes.
+    """
+    if ax is None:
+        f = plt.figure()
+        ax = f.add_subplot(1, 1, 1)
+    elif ax == 'gca':
+        ax = plt.gca()
+    
+    l = ax.plot(x, mean, **kwargs)
+    color = plt.getp(l[0], 'color')
+    for i in envelopes:
+        ax.fill_between(x, mean - i * std, mean + i * std,
+                        facecolor=color, alpha=base_alpha / i)
