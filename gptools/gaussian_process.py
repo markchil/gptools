@@ -575,8 +575,9 @@ class GaussianProcess(object):
                           "starts used." % (str(bounds), str(res_min.x),))
         return res_min
     
-    def predict(self, Xstar, n=0, noise=False, return_std=True, return_cov=False,
-                use_MCMC=False, **kwargs):
+    def predict(self, Xstar, n=0, noise=False, return_std=True,
+                full_output=False, return_samples=False, num_samples=1,
+                samp_kwargs={}, use_MCMC=False, **kwargs):
         """Predict the mean and covariance at the inputs `Xstar`.
         
         The order of the derivative is given by `n`. The keyword `noise` sets
@@ -598,9 +599,27 @@ class GaussianProcess(object):
             Set to True to compute and return the standard deviation for the
             predictions, False to skip this step. Default is True (return tuple
             of (`mean`, `std`)).
-        return_cov : bool, optional
-            Set to True to compute and return the covariance matrix for the
-            predictions, False to skip this step. Default is False.
+        full_output : bool, optional
+            Set to True to return the full outputs in a dictionary with keys:
+            
+                ==== ==========================================================================
+                mean mean of GP at requested points
+                std  standard deviation of GP at requested points
+                cov  covariance matrix for values of GP at requested points
+                samp random samples of GP at requested points (only if `return_sample` is True)
+                ==== ==========================================================================
+        
+        return_samples : bool, optional
+            Set to True to compute and return samples of the GP in addition to
+            computing the mean. Only done if `full_output` is True. Default is
+            False.
+        num_samples : int, optional
+            Number of samples to compute. If using MCMC this is the number of
+            samples per MCMC sample, if using present values of hyperparameters
+            this is the number of samples actually returned. Default is 1.
+        samp_kwargs : dict, optional
+            Additional keywords to pass to :py:meth:`draw_sample` if
+            `return_samples` is True. Default is {}.
         use_MCMC : bool, optional
             Set to True to use :py:meth:`predict_MCMC` to evaluate the prediction
             marginalized over the hyperparameters.
@@ -611,11 +630,11 @@ class GaussianProcess(object):
         Returns
         -------
         mean : :py:class:`Array`, (`M`,)
-            Predicted GP mean.
+            Predicted GP mean. Only returned if `full_output` is False.
         std : :py:class:`Array`, (`M`,)
-            Predicted standard deviation, only returned if `return_std` is True.
-        covariance : :py:class:`Matrix`, (`M`, `M`)
-            Predicted covariance matrix, only returned if `return_cov` is True.
+            Predicted standard deviation, only returned if `return_std` is True and `full_output` is False.
+        full_output : dict
+            Dictionary with fields for mean, std, cov and possibly random samples. Only returned if `full_output` is True.
         
         Raises
         ------
@@ -624,9 +643,19 @@ class GaussianProcess(object):
             composed of non-negative integers.
         """
         if use_MCMC:
-            return self.predict_MCMC(Xstar, n=n, noise=noise,
-                                     return_std=return_std, return_cov=return_cov,
-                                     **kwargs)
+            res = self.predict_MCMC(Xstar, n=n, noise=noise,
+                                    return_std=return_std or full_output,
+                                    return_cov=full_output,
+                                    return_samples=full_output and return_samples,
+                                    num_samples=num_samples,
+                                    samp_kwargs=samp_kwargs,
+                                    **kwargs)
+            if full_output:
+                return res
+            elif return_std:
+                return (res['mean'], res['std'])
+            else:
+                return res['mean']
         else:
             # Process Xstar:
             Xstar = scipy.asmatrix(Xstar, dtype=float)
@@ -658,7 +687,7 @@ class GaussianProcess(object):
             if noise:
                 Kstar = Kstar + self.compute_Kij(self.X, Xstar, self.n, n, noise=True)
             mean = scipy.asarray(Kstar.T * self.alpha).flatten()
-            if return_cov or return_std:
+            if return_std or full_output:
                 try:
                     v = scipy.asmatrix(
                         scipy.linalg.solve_triangular(self.L, Kstar, lower=True, check_finite=False)
@@ -672,14 +701,19 @@ class GaussianProcess(object):
                 if noise:
                     Kstarstar = Kstarstar + self.compute_Kij(Xstar, None, n, None, noise=True)
                 covariance = Kstarstar - v.T * v
-                if return_std:
-                    std = scipy.sqrt(scipy.asarray(scipy.diagonal(covariance)).flatten())
-                    if return_cov:
-                        return (mean, std, covariance)
-                    else:
-                        return (mean, std)
+                std = scipy.sqrt(scipy.diagonal(covariance))
+                if full_output:
+                    out = {'mean': mean,
+                           'std': std,
+                           'cov': covariance}
+                    if return_samples:
+                        out['samp'] = self.draw_sample(
+                            Xstar, n=n, num_samp=num_samples, mean=mean,
+                            cov=covariance, **samp_kwargs
+                        )
+                    return out
                 else:
-                    return (mean, covariance)
+                    return (mean, std)
             else:
                 return mean
     
@@ -768,7 +802,8 @@ class GaussianProcess(object):
     
     def draw_sample(self, Xstar, n=0, num_samp=1, rand_vars=None,
                     rand_type='standard normal', diag_factor=1e3,
-                    method='cholesky', num_eig=None, **kwargs):
+                    method='cholesky', num_eig=None, mean=None, cov=None,
+                    **kwargs):
         """Draw a sample evaluated at the given points `Xstar`.
         
         Parameters
@@ -823,6 +858,14 @@ class GaussianProcess(object):
             number of test points). If it is None, then all eigenvalues are
             computed. Default is None (compute all eigenvalues). This keyword
             only has an effect if `method` is 'eig'.
+        mean : array, (`M`,)
+            If you have pre-computed the mean and covariance matrix, then you
+            can simply pass them in with the `mean` and `cov` keywords to save
+            on having to call :py:meth:`predict`.
+        cov : matrix, (`M`, `M`)
+            If you have pre-computed the mean and covariance matrix, then you
+            can simply pass them in with the `mean` and `cov` keywords to save
+            on having to call :py:meth:`predict`.
         **kwargs : optional kwargs
             All extra keyword arguments are passed to :py:meth:`predict` when
             evaluating the mean and covariance matrix of the GP.
@@ -838,8 +881,10 @@ class GaussianProcess(object):
             If rand_type or method is invalid.
         """
         # All of the input processing for Xstar and n will be done in here:
-        mean, cov = self.predict(Xstar, n=n, return_cov=True, return_std=False,
-                                 **kwargs)
+        if mean is None or cov is None:
+            out = self.predict(Xstar, n=n, full_output=True, **kwargs)
+            mean = out['mean']
+            cov = out['cov']
         if rand_vars is None and method != 'eig':
             return numpy.random.multivariate_normal(mean, cov, num_samp).T
         else:
@@ -878,7 +923,7 @@ class GaussianProcess(object):
             return mean + L * scipy.asmatrix(rand_vars[:num_eig, :], dtype=float)
     
     def plot(self, X=None, n=0, ax=None, envelopes=[1, 3], base_alpha=0.375,
-             return_prediction=False, return_std=True, return_cov=False,
+             return_prediction=False, return_std=True, full_output=False,
              plot_kwargs={}, **kwargs):
         """Plots the Gaussian process using the current hyperparameters. Only for num_dim <= 2.
         
@@ -902,13 +947,20 @@ class GaussianProcess(object):
             Alpha value to use for +/-1*sigma envelope. All other envelopes env
             are drawn with base_alpha/env. Default is 0.375.
         return_prediction : bool, optional
-            If True, the predicted mean, cov are also returned. Default is False.
+            If True, the predicted values are also returned. Default is False.
         return_std : bool, optional
             If True, the standard deviation is computed and returned along with
             the mean when `return_prediction` is True. Default is True.
-        return_cov : bool, optional
-            If True, the covariance is computed and returned along with the
-            mean when `return_prediction` is True. Default is False.
+        full_output : bool, optional
+            Set to True to return the full outputs in a dictionary with keys:
+            
+                ==== ==========================================================================
+                mean mean of GP at requested points
+                std  standard deviation of GP at requested points
+                cov  covariance matrix for values of GP at requested points
+                samp random samples of GP at requested points (only if `return_sample` is True)
+                ==== ==========================================================================
+            
         plot_kwargs : dict, optional
             The entries in this dictionary are passed as kwargs to the plotting
             command used to plot the mean. Use this to, for instance, change the
@@ -920,15 +972,12 @@ class GaussianProcess(object):
         -------
         ax : axis instance
             The axis instance used.
-        mean : array
-            The mean at the desired points `X` of derivative order `n`. Only
-            returned if `return_prediction` is True.
-        std : array
-            The standard deviation of the predicted values. Only returned if
-            `return_prediction` and `return_std` are True.
-        cov : matrix
-            The covariance matrix between all predicted values. Only returned
-            if `return_prediction` and `return_cov` are True.
+        mean : :py:class:`Array`, (`M`,)
+            Predicted GP mean. Only returned if `return_prediction` is True and `full_output` is False.
+        std : :py:class:`Array`, (`M`,)
+            Predicted standard deviation, only returned if `return_prediction` and `return_std` are True and `full_output` is False.
+        full_output : dict
+            Dictionary with fields for mean, std, cov and possibly random samples. Only returned if `return_prediction` and `full_output` are True.
         """
         if self.num_dim > 2:
             raise ValueError("Plotting is not supported for num_dim > 2!")
@@ -936,15 +985,26 @@ class GaussianProcess(object):
         if self.num_dim == 1:
             if X is None:
                 X = scipy.linspace(self.X.min(), self.X.max(), 100)
-            if envelopes or (return_prediction and (return_cov and return_std)):
-                if return_cov:
-                    mean, std, cov = self.predict(X, n=n, return_std=True,
-                                                  return_cov=True, **kwargs)
-                else:
-                    mean, std = self.predict(X, n=n, return_std=True, **kwargs)
+        elif self.num_dim == 2:
+            if X is None:
+                x1 = scipy.linspace(self.X[:, 0].min(), self.X[:, 0].max(), 50)
+                x2 = scipy.linspace(self.X[:, 1].min(), self.X[:, 1].max(), 50)
+                X1, X2 = scipy.meshgrid(x1, x2)
+                X1 = X1.flatten()
+                X2 = X2.flatten()
+                X = scipy.hstack((scipy.atleast_2d(X1).T, scipy.atleast_2d(X2).T))
             else:
-                mean = self.predict(X, n=n, return_std=False, **kwargs)
-                std = None
+                X1 = scipy.asarray(X[:, 0]).flatten()
+                X2 = scipy.asarray(X[:, 1]).flatten()
+        
+        if envelopes or (return_prediction and (return_std or full_output)):
+            out = self.predict(X, n=n, full_output=True, **kwargs)
+            mean = out['mean']
+            std = out['std']
+        else:
+            mean = self.predict(X, n=n, return_std=False, **kwargs)
+        
+        if self.num_dim == 1:
             univariate_envelope_plot(X, mean, std, ax=ax,
                                      base_alpha=base_alpha,
                                      envelopes=envelopes, **plot_kwargs)
@@ -956,24 +1016,6 @@ class GaussianProcess(object):
                 ax = plt.gca()
             if 'linewidths' not in kwargs:
                 kwargs['linewidths'] = 0
-            if X is None:
-                x1 = scipy.linspace(self.X[:, 0].min(), self.X[:, 0].max(), 50)
-                x2 = scipy.linspace(self.X[:, 1].min(), self.X[:, 1].max(), 50)
-                X1, X2 = scipy.meshgrid(x1, x2)
-                X1 = X1.flatten()
-                X2 = X2.flatten()
-                X = scipy.hstack((scipy.atleast_2d(X1).T, scipy.atleast_2d(X2).T))
-            else:
-                X1 = scipy.asarray(X[:, 0]).flatten()
-                X2 = scipy.asarray(X[:, 1]).flatten()
-            if envelopes or (return_prediction and (return_cov or return_std)):
-                if return_cov:
-                    mean, std, cov = self.predict(X, n=n, return_cov=True,
-                                                  return_std=True, **kwargs)
-                else:
-                    mean, std = self.predict(X, n=n, return_std=True, **kwargs)
-            else:
-                mean = self.predict(X, n=n, return_std=False, **kwargs)
             s = ax.plot_trisurf(X1, X2, mean, **plot_kwargs)
             for i in envelopes:
                 kwargs.pop('alpha', base_alpha)
@@ -981,14 +1023,12 @@ class GaussianProcess(object):
                 ax.plot_trisurf(X1, X2, mean+std, alpha=base_alpha / i, **kwargs)
         
         if return_prediction:
-            if return_std and return_cov:
-                return (ax, mean, std, cov)
-            elif return_std and not return_cov:
-                return (ax, mean, std)
-            elif not return_std and return_cov:
-                return (ax, mean, cov)
+            if full_output:
+                return (ax, out)
+            elif return_std:
+                return (ax, out['mean'], out['std'])
             else:
-                return (ax, mean)
+                return (ax, out['mean'])
         else:
             return ax
     
@@ -1083,7 +1123,7 @@ class GaussianProcess(object):
         return sampler
     
     def compute_from_MCMC(self, X, n=0, return_mean=True, return_std=True,
-                          return_cov=False, return_sample=False, num_samples=1,
+                          return_cov=False, return_samples=False, num_samples=1,
                           noise=False, samp_kwargs={}, sampler=None,
                           flat_trace=None, burn=0, thin=1, **kwargs):
         """Compute desired quantities from MCMC samples of the hyperparameter posterior.
@@ -1112,7 +1152,7 @@ class GaussianProcess(object):
         return_cov : bool, optional
             If True, the covariance matrix will be computed at each
             hyperparameter sample. Default is True (compute stddev).
-        return_sample : bool, optional
+        return_samples : bool, optional
             If True, random sample(s) will be computed at each hyperparameter
             sample. Default is False (do not compute samples).
         num_samples : int, optional
@@ -1183,13 +1223,13 @@ class GaussianProcess(object):
         if num_proc > 0:
             pool = multiprocessing.Pool(processes=num_proc)
             res = pool.map(_ComputeGPWrapper(self, X, n, return_mean, return_std,
-                                             return_cov, return_sample,
+                                             return_cov, return_samples,
                                              num_samples, noise, samp_kwargs),
                            flat_trace)
             pool.close()
         else:
             res = map(_ComputeGPWrapper(self, X, n, return_mean, return_std,
-                                        return_cov, return_sample, num_samples,
+                                        return_cov, return_samples, num_samples,
                                         noise, samp_kwargs),
                       flat_trace)
         out = dict()
@@ -1199,7 +1239,7 @@ class GaussianProcess(object):
             out['std'] = [r['std'] for r in res]
         if return_cov:
             out['cov'] = [r['cov'] for r in res]
-        if return_sample:
+        if return_samples:
             out['samp'] = [r['samp'] for r in res]
         return out
     
@@ -1245,22 +1285,21 @@ class GaussianProcess(object):
         means = scipy.asarray(res['mean'])
         mean = scipy.mean(means, axis=0)
         
+        out = {'mean': mean}
+        
         if 'cov' in res:
             covs = scipy.asarray(res['cov'])
-            # TODO: Test to make sure this is doing the right thing...
             cov = scipy.mean(covs, axis=0) + scipy.cov(means, rowvar=0, ddof=ddof)
-            if 'std' in res:
-                std = scipy.sqrt(scipy.asarray(scipy.diagonal(cov)).flatten())
-                return (mean, std, cov)
-            else:
-                return (mean, cov)
+            out['cov'] = cov
+            out['std'] = scipy.sqrt(scipy.diagonal(cov))
         elif 'std' in res:
             vars_ = scipy.asarray(scipy.asarray(res['std']))**2
-            std = scipy.sqrt(scipy.mean(vars_, axis=0) +
-                             scipy.var(means, axis=0, ddof=ddof))
-            return (mean, std)
-        else:
-            return mean
+            out['std'] = scipy.sqrt(scipy.mean(vars_, axis=0) +
+                                    scipy.var(means, axis=0, ddof=ddof))
+        if 'samp' in res:
+            out['samp'] = res['samp']
+        
+        return out
 
 class _ComputeGPWrapper(object):
     """Wrapper to allow parallel evaluation of means, covariances and random draws.
@@ -1302,32 +1341,29 @@ class _ComputeGPWrapper(object):
         self.num_samples = num_samples
         self.noise = noise
         self.samp_kwargs = samp_kwargs
+        self.full_output = return_cov or return_std or return_sample
     
     def __call__(self, p_case):
         """Evaluate the desired quantities with free hyperparameters `p_case`.
         
         Returns a dict with some or all of the fields 'mean', 'cov', 'std', 'samp'
         """
-        out = dict()
         self.gp.update_hyperparameters(list(p_case))
-        if self.return_mean or self.return_std or self.return_cov:
-            predict_out = self.gp.predict(self.X, n=self.n, noise=self.noise,
-                                          return_std=self.return_std,
-                                          return_cov=self.return_cov)
-            if self.return_cov or self.return_std:
-                out['mean'] = scipy.asarray(predict_out[0]).flatten()
-                if self.return_std:
-                    out['std'] = predict_out[1]
-                if self.return_cov and self.return_std:
-                    out['cov'] = predict_out[2]
-                elif self.return_cov and not self.return_std:
-                    out['cov'] = predict_out[1]
-            else:
-                out['mean'] = scipy.asarray(predict_out).flatten()
-        if self.return_sample:
-            out['samp'] = self.gp.draw_sample(self.X, n=self.n, noise=self.noise,
-                                       num_samp=self.num_samples,
-                                       **self.samp_kwargs)
+        out = self.gp.predict(self.X, n=self.n, noise=self.noise,
+                              full_output=self.full_output,
+                              return_samples=self.return_sample,
+                              num_samples=self.num_samples)
+        if not self.full_output:
+            # If full output is True, return_mean must be the only True thing,
+            # since otherwise this isn't computing anything!
+            return {'mean': out}
+        else:
+            if not self.return_mean:
+                out.pop('mean')
+            if not self.return_std:
+                out.pop('std')
+            if not self.return_cov:
+                out.pop('cov')
         return out
 
 class _ComputeLnProbEval(object):
