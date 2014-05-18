@@ -164,17 +164,6 @@ class GaussianProcess(object):
         else:
             self.K_up_to_date = False
     
-    @property
-    def num_dim(self):
-        """The number of dimensions of the input data.
-        
-        Returns
-        -------
-        num_dim: int
-            The number of dimensions of the input data as defined in the kernel.
-        """
-        return self.k.num_dim
-    
     def add_data(self, X, y, err_y=0, n=0):   
         """Add data to the training data set of the GaussianProcess instance.
         
@@ -270,178 +259,67 @@ class GaussianProcess(object):
             self.n = scipy.vstack((self.n, n))
         self.K_up_to_date = False
     
-    def compute_Kij(self, Xi, Xj, ni, nj, noise=False, hyper_deriv=None):
-        r"""Compute covariance matrix between datasets `Xi` and `Xj`.
+    def remove_outliers(self, thresh=3, **predict_kwargs):
+        """Remove outliers from the GP.
         
-        Specify the orders of derivatives at each location with the `ni`, `nj`
-        arrays. The `include_noise` flag is passed to the covariance kernel to
-        indicate whether noise is to be included (i.e., for evaluation of
-        :math:`K+\sigma I` versus :math:`K_*`).
+        Removes points that are more than `thresh` * `err_y` away from the GP
+        mean. Note that this is only very rough in that it ignores the
+        uncertainty in the GP mean at any given point.
         
-        If `Xj` is None, the symmetric matrix :math:`K(X, X)` is formed.
-        
-        Note that type and dimension checking is NOT performed, as it is assumed
-        the data are from inside the instance and have hence been sanitized by
-        :py:meth:`add_data`.
+        Returns the values that were removed and a boolean array indicating
+        where the removed points were.
         
         Parameters
         ----------
-        Xi : :py:class:`Matrix`, (`M`, `N`)
-            `M` input values of dimension `N`.
-        Xj : :py:class:`Matrix`, (`P`, `N`)
-            `P` input values of dimension `N`.
-        ni : :py:class:`Array`, (`M`,), non-negative integers
-            `M` derivative orders with respect to the `Xi` coordinates.
-        nj : :py:class:`Array`, (`P`,), non-negative integers
-            `P` derivative orders with respect to the `Xj` coordinates.
-        noise : bool, optional
-            If True, uses the noise kernel, otherwise uses the regular kernel.
-            Default is False (use regular kernel).
-        hyper_deriv : None or non-negative int
-            Index of the hyperparameter to compute the first derivative with
-            respect to. If None, no derivatives are taken. Default is None (no
-            hyperparameter derivatives).
-                
-        Returns
-        -------
-        Kij : :py:class:`Matrix`, (`M`, `P`)
-            Covariance matrix between `Xi` and `Xj`.
-        """
-        if not noise:
-            k = self.k
-        else:
-            k = self.noise_k
-        
-        if Xj is None:
-            symmetric = True
-            Xj = Xi
-            nj = ni
-        else:
-            symmetric = False
-        
-        # This technically doesn't take advantage of the symmetric case. Might
-        # be worth trying to do that at some point, but this is vastly superior
-        # to the double for loop implementation for which using symmetry is easy.
-        Xi_tile = scipy.repeat(Xi, Xj.shape[0], axis=0)
-        ni_tile = scipy.repeat(ni, Xj.shape[0], axis=0)
-        Xj_tile = scipy.tile(Xj, (Xi.shape[0], 1))
-        nj_tile = scipy.tile(nj, (Xi.shape[0], 1))
-        Kij = k(Xi_tile, Xj_tile, ni_tile, nj_tile, hyper_deriv=hyper_deriv,
-                symmetric=symmetric)
-        Kij = scipy.asmatrix(scipy.reshape(Kij, (Xi.shape[0], -1)))
-        
-        return Kij
-    
-    def compute_K_L_alpha_ll(self):
-        r"""Compute `K`, `L`, `alpha` and log-likelihood according to the first part of Algorithm 2.1 in R&W.
-        
-        Computes `K` and the noise portion of `K` using :py:meth:`compute_Kij`,
-        computes `L` using :py:func:`scipy.linalg.cholesky`, then computes
-        `alpha` as `L.T\\(L\\y)`.
-        
-        Only does the computation if :py:attr:`K_up_to_date` is False --
-        otherwise leaves the existing values.
-        """
-        if not self.K_up_to_date:
-            y = self.y
-            err_y = self.err_y
-            self.K = self.compute_Kij(self.X, None, self.n, None, noise=False)
-            self.noise_K = self.compute_Kij(self.X, None, self.n, None, noise=True)
-            K_tot = (self.K +
-                     scipy.diag(err_y**2.0) +
-                     self.noise_K +
-                     self.diag_factor * sys.float_info.epsilon * scipy.eye(len(y)))
-            try:
-                self.L = scipy.matrix(
-                    scipy.linalg.cholesky(
-                        K_tot,
-                        lower=True,
-                        check_finite=False
-                    )
-                )
-            except TypeError:
-                # Catch lack of check_finite in older scipy:
-                self.L = scipy.matrix(
-                    scipy.linalg.cholesky(
-                        K_tot,
-                        lower=True
-                    )
-                )
-            # Convert the array output to a matrix since scipy treats arrays
-            # as row vectors:
-            try:
-                self.alpha = scipy.linalg.solve_triangular(
-                    self.L.T,
-                    scipy.linalg.solve_triangular(
-                        self.L,
-                        scipy.asmatrix(y).T,
-                        lower=True,
-                        check_finite=False
-                    ),
-                    lower=False,
-                    check_finite=False
-                )
-            except TypeError:
-                self.alpha = scipy.linalg.solve_triangular(
-                    self.L.T,
-                    scipy.linalg.solve_triangular(
-                        self.L,
-                        scipy.asmatrix(y).T,
-                        lower=True
-                    ),
-                    lower=False
-                )
-            self.ll = (-0.5 * scipy.asmatrix(y) * self.alpha -
-                       scipy.log(scipy.diag(self.L)).sum() - 
-                       0.5 * len(y) * scipy.log(2.0 * scipy.pi))[0, 0]
-            # Apply hyperpriors:
-            k_nk = self.k + self.noise_k
-            theta = list(self.k.params) + list(self.noise_k.params)
-            self.ll += self.k.hyperprior(self.k.params)
-            self.ll += self.noise_k.hyperprior(self.noise_k.params)
-            self.K_up_to_date = True
-    
-    def update_hyperparameters(self, new_params, return_jacobian=False):
-        """Update the kernel's hyperparameters to the new parameters.
-        
-        This will call :py:meth:`compute_K_L_alpha_ll` to update the state
-        accordingly.
-        
-        Parameters
-        ----------
-        new_params : :py:class:`Array` or other Array-like, length dictated by kernel
-            New parameters to use.
-        return_jacobian : bool, optional
-            If True, the return is (`ll`, `jac`). Otherwise, return is `ll`
-            only and the execution is faster. Default is False (do not
-            compute Jacobian).
+        thresh : float, optional
+            The threshold as a multiplier times `err_y`. Default is 3 (i.e.,
+            throw away all 3-sigma points).
+        **predict_kwargs : optional kwargs
+            All additional kwargs are passed to :py:meth:`predict`. You can, for
+            instance, use this to make it use MCMC to evaluate the mean. (If you
+            don't use MCMC, then the current value of the hyperparameters is
+            used.)
         
         Returns
         -------
-        -1*ll : float
-            The updated log likelihood.
-        -1*jac : :py:class:`Array`, length equal to the number of parameters
-            The derivative of `ll` with respect to each of the parameters, in
-            order. Only computed and returned if `return_jacobian` is True.
+        X_bad : matrix
+            Input values of the bad points.
+        y_bad : array
+            Bad values.
+        err_y_bad : array
+            Uncertainties on the bad values.
+        n_bad : matrix
+            Derivative order of the bad values.
+        bad_idxs : array
+            Array of booleans with the original shape of X with True wherever
+            a point was taken to be bad and subsequently removed.
         """
-        self.k.set_hyperparams(new_params[:len(self.k.free_params)])
-        self.noise_k.set_hyperparams(new_params[len(self.k.free_params):])
+        # Find where a point lies more than thresh*err_y away from the mean:
+        # This is naive as it does not account for the posterior variance in the
+        # GP itself, but should work as a first-cut approach to deleting
+        # outliers.
+        mean = self.predict(self.X, n=self.n, noise=False, return_std=False,
+                            **predict_kwargs)
+        deltas = scipy.absolute(mean - self.y) / self.err_y
+        deltas[scipy.isnan(deltas)] = 0
+        bad_idxs = (deltas >= thresh)
+        good_idxs = ~bad_idxs
+        
+        # Pull out the old values so they can be returned:
+        X_bad = self.X[bad_idxs, :]
+        y_bad = self.y[bad_idxs]
+        err_y_bad = self.err_y[bad_idxs]
+        n_bad = self.n[bad_idxs, :]
+        
+        # Delete the offending points:
+        self.X = self.X[good_idxs, :]
+        self.y = self.y[good_idxs]
+        self.err_y = self.err_y[good_idxs]
+        self.n = self.n[good_idxs, :]
         self.K_up_to_date = False
-        self.compute_K_L_alpha_ll()
-        if not return_jacobian:
-            return -1 * self.ll
-        else:
-            # Doesn't handle noise!
-            aaKI = self.alpha * self.alpha.T - self.K.I
-            jac = scipy.zeros_like(self.k.free_params, dtype=float)
-            for i in xrange(0, len(jac)):
-                # TODO: Put in noise
-                dKijdHP = self.compute_Kij(self.X, None, self.n, None, hyper_deriv=i)
-                # TODO: Compare timing between doing the full product and
-                # extracting only the trace.
-                jac[i] = 0.5 * scipy.trace(aaKI * dKijdHP)
-            return (-1 * self.ll, -1 * jac)
-
+        
+        return (X_bad, y_bad, err_y_bad, n_bad, bad_idxs)
+    
     def optimize_hyperparameters(self, method='SLSQP', opt_kwargs={},
                                  verbose=False, random_starts=None, num_proc=None):
         r"""Optimize the hyperparameters by maximizing the log likelihood.
@@ -717,88 +595,115 @@ class GaussianProcess(object):
             else:
                 return mean
     
-    def compute_ll_matrix(self, bounds, num_pts):
-        """Compute the log likelihood over the (free) parameter space.
+    def plot(self, X=None, n=0, ax=None, envelopes=[1, 3], base_alpha=0.375,
+             return_prediction=False, return_std=True, full_output=False,
+             plot_kwargs={}, **kwargs):
+        """Plots the Gaussian process using the current hyperparameters. Only for num_dim <= 2.
         
         Parameters
         ----------
-        bounds : 2-tuple or list of 2-tuples with length equal to the number of free parameters
-            Bounds on the range to use for each of the parameters. If a single
-            2-tuple is given, it will be used for each of the parameters.
-        num_pts : int or list of ints with length equal to the number of free parameters
-            If a single int is given, it will be used for each of the parameters.
+        X : array-like (`M`,) or (`M`, `num_dim`), optional
+            The values to evaluate the Gaussian process at. If None, then 100
+            points between the minimum and maximum of the data's X are used.
+            Default is None (use 100 points between min and max).
+        n : int or list, optional
+            The order of derivative to compute. For num_dim=1, this must be an
+            int. For num_dim=2, this must be a list of ints of length 2.
+            Default is 0 (don't take derivative).
+        ax : axis instance, optional
+            Axis to plot the result on. If no axis is passed, one is created.
+            If the string 'gca' is passed, the current axis (from plt.gca())
+            is used. If X_dim = 2, the axis must be 3d.
+        envelopes: list of float, optional
+            +/-n*sigma envelopes to plot. Default is [1, 3].
+        base_alpha : float, optional
+            Alpha value to use for +/-1*sigma envelope. All other envelopes env
+            are drawn with base_alpha/env. Default is 0.375.
+        return_prediction : bool, optional
+            If True, the predicted values are also returned. Default is False.
+        return_std : bool, optional
+            If True, the standard deviation is computed and returned along with
+            the mean when `return_prediction` is True. Default is True.
+        full_output : bool, optional
+            Set to True to return the full outputs in a dictionary with keys:
+            
+                ==== ==========================================================================
+                mean mean of GP at requested points
+                std  standard deviation of GP at requested points
+                cov  covariance matrix for values of GP at requested points
+                samp random samples of GP at requested points (only if `return_sample` is True)
+                ==== ==========================================================================
+            
+        plot_kwargs : dict, optional
+            The entries in this dictionary are passed as kwargs to the plotting
+            command used to plot the mean. Use this to, for instance, change the
+            color, line width and line style.
+        **kwargs : extra arguments for predict, optional
+            Extra arguments that are passed to :py:meth:`predict`.
         
         Returns
         -------
-            ll_vals : :py:class:`Array`
-                The log likelihood for each of the parameter possibilities.
-            param_vals : List of :py:class:`Array`
-                The parameter values used.
+        ax : axis instance
+            The axis instance used.
+        mean : :py:class:`Array`, (`M`,)
+            Predicted GP mean. Only returned if `return_prediction` is True and `full_output` is False.
+        std : :py:class:`Array`, (`M`,)
+            Predicted standard deviation, only returned if `return_prediction` and `return_std` are True and `full_output` is False.
+        full_output : dict
+            Dictionary with fields for mean, std, cov and possibly random samples. Only returned if `return_prediction` and `full_output` are True.
         """
-        present_free_params = scipy.concatenate((self.k.free_params,
-                                                 self.noise_k.free_params))
-        bounds = scipy.atleast_2d(scipy.asarray(bounds, dtype=float))
-        if bounds.shape[1] != 2:
-            raise ValueError("Argument bounds must have shape (n, 2)!")
-        # If bounds is a single tuple, repeat it for each free parameter:
-        if bounds.shape[0] == 1:
-            bounds = scipy.tile(bounds, (len(present_free_params), 1))
-        # If num_pts is a single value, use it for all of the parameters:
-        try:
-            iter(num_pts)
-        except TypeError:
-            num_pts = num_pts * scipy.ones(bounds.shape[0], dtype=int)
+        if self.num_dim > 2:
+            raise ValueError("Plotting is not supported for num_dim > 2!")
+        
+        if self.num_dim == 1:
+            if X is None:
+                X = scipy.linspace(self.X.min(), self.X.max(), 100)
+        elif self.num_dim == 2:
+            if X is None:
+                x1 = scipy.linspace(self.X[:, 0].min(), self.X[:, 0].max(), 50)
+                x2 = scipy.linspace(self.X[:, 1].min(), self.X[:, 1].max(), 50)
+                X1, X2 = scipy.meshgrid(x1, x2)
+                X1 = X1.flatten()
+                X2 = X2.flatten()
+                X = scipy.hstack((scipy.atleast_2d(X1).T, scipy.atleast_2d(X2).T))
+            else:
+                X1 = scipy.asarray(X[:, 0]).flatten()
+                X2 = scipy.asarray(X[:, 1]).flatten()
+        
+        if envelopes or (return_prediction and (return_std or full_output)):
+            out = self.predict(X, n=n, full_output=True, **kwargs)
+            mean = out['mean']
+            std = out['std']
         else:
-            num_pts = scipy.asarray(num_pts, dtype=int)
-            if len(num_pts) != len(present_free_params):
-                raise ValueError("Length of num_pts must match the number of "
-                                 "free parameters of kernel!")
+            mean = self.predict(X, n=n, return_std=False, **kwargs)
         
-        # Form arrays to evaluate parameters over:
-        param_vals = []
-        for k in xrange(0, len(present_free_params)):
-            param_vals.append(scipy.linspace(bounds[k, 0], bounds[k, 1], num_pts[k]))
-        ll_vals = self._compute_ll_matrix(0, param_vals, num_pts)
+        if self.num_dim == 1:
+            univariate_envelope_plot(X, mean, std, ax=ax,
+                                     base_alpha=base_alpha,
+                                     envelopes=envelopes, **plot_kwargs)
+        elif self.num_dim == 2:
+            if ax is None:
+                f = plt.figure()
+                ax = f.add_subplot(111, projection='3d')
+            elif ax == 'gca':
+                ax = plt.gca()
+            if 'linewidths' not in kwargs:
+                kwargs['linewidths'] = 0
+            s = ax.plot_trisurf(X1, X2, mean, **plot_kwargs)
+            for i in envelopes:
+                kwargs.pop('alpha', base_alpha)
+                ax.plot_trisurf(X1, X2, mean-std, alpha=base_alpha / i, **kwargs)
+                ax.plot_trisurf(X1, X2, mean+std, alpha=base_alpha / i, **kwargs)
         
-        # Reset the parameters to what they were before:
-        self.update_hyperparameters(scipy.asarray(present_free_params, dtype=float))
-        
-        return (ll_vals, param_vals)
-    
-    def _compute_ll_matrix(self, idx, param_vals, num_pts):
-        """Recursive helper function for compute_ll_matrix.
-        
-        Parameters
-        ----------
-        idx : int
-            The index of the parameter for this layer of the recursion to
-            work on. `idx` == len(`num_pts`) is the base case that terminates
-            the recursion.
-        param_vals : List of :py:class:`Array`
-            List of arrays of parameter values. Entries in the slots 0:`idx` are
-            set to scalars by the previous levels of recursion.
-        num_pts : :py:class:`Array`
-            The numbers of points for each parameter.
-        
-        Returns
-        -------
-        vals : :py:class:`Array`
-            The log likelihood for each of the parameter possibilities at lower
-            levels.
-        """
-        if idx >= len(num_pts):
-            # Base case: All entries in param_vals should be scalars:
-            return -1.0 * self.update_hyperparameters(scipy.asarray(param_vals,
-                                                                    dtype=float))
+        if return_prediction:
+            if full_output:
+                return (ax, out)
+            elif return_std:
+                return (ax, out['mean'], out['std'])
+            else:
+                return (ax, out['mean'])
         else:
-            # Recursive case: call _compute_ll_matrix for each entry in param_vals[idx]:
-            vals = scipy.zeros(num_pts[idx:], dtype=float)
-            for k in xrange(0, len(param_vals[idx])):
-                specific_param_vals = list(param_vals)
-                specific_param_vals[idx] = param_vals[idx][k]
-                vals[k] = self._compute_ll_matrix(idx + 1, specific_param_vals,
-                                                  num_pts)
-            return vals
+            return ax
     
     def draw_sample(self, Xstar, n=0, num_samp=1, rand_vars=None,
                     rand_type='standard normal', diag_factor=1e3,
@@ -922,115 +827,271 @@ class GaussianProcess(object):
                 raise ValueError("method %s not recognized!" % (method,))
             return mean + L * scipy.asmatrix(rand_vars[:num_eig, :], dtype=float)
     
-    def plot(self, X=None, n=0, ax=None, envelopes=[1, 3], base_alpha=0.375,
-             return_prediction=False, return_std=True, full_output=False,
-             plot_kwargs={}, **kwargs):
-        """Plots the Gaussian process using the current hyperparameters. Only for num_dim <= 2.
+    def update_hyperparameters(self, new_params, return_jacobian=False):
+        """Update the kernel's hyperparameters to the new parameters.
+        
+        This will call :py:meth:`compute_K_L_alpha_ll` to update the state
+        accordingly.
         
         Parameters
         ----------
-        X : array-like (`M`,) or (`M`, `num_dim`), optional
-            The values to evaluate the Gaussian process at. If None, then 100
-            points between the minimum and maximum of the data's X are used.
-            Default is None (use 100 points between min and max).
-        n : int or list, optional
-            The order of derivative to compute. For num_dim=1, this must be an
-            int. For num_dim=2, this must be a list of ints of length 2.
-            Default is 0 (don't take derivative).
-        ax : axis instance, optional
-            Axis to plot the result on. If no axis is passed, one is created.
-            If the string 'gca' is passed, the current axis (from plt.gca())
-            is used. If X_dim = 2, the axis must be 3d.
-        envelopes: list of float, optional
-            +/-n*sigma envelopes to plot. Default is [1, 3].
-        base_alpha : float, optional
-            Alpha value to use for +/-1*sigma envelope. All other envelopes env
-            are drawn with base_alpha/env. Default is 0.375.
-        return_prediction : bool, optional
-            If True, the predicted values are also returned. Default is False.
-        return_std : bool, optional
-            If True, the standard deviation is computed and returned along with
-            the mean when `return_prediction` is True. Default is True.
-        full_output : bool, optional
-            Set to True to return the full outputs in a dictionary with keys:
-            
-                ==== ==========================================================================
-                mean mean of GP at requested points
-                std  standard deviation of GP at requested points
-                cov  covariance matrix for values of GP at requested points
-                samp random samples of GP at requested points (only if `return_sample` is True)
-                ==== ==========================================================================
-            
-        plot_kwargs : dict, optional
-            The entries in this dictionary are passed as kwargs to the plotting
-            command used to plot the mean. Use this to, for instance, change the
-            color, line width and line style.
-        **kwargs : extra arguments for predict, optional
-            Extra arguments that are passed to :py:meth:`predict`.
+        new_params : :py:class:`Array` or other Array-like, length dictated by kernel
+            New parameters to use.
+        return_jacobian : bool, optional
+            If True, the return is (`ll`, `jac`). Otherwise, return is `ll`
+            only and the execution is faster. Default is False (do not
+            compute Jacobian).
         
         Returns
         -------
-        ax : axis instance
-            The axis instance used.
-        mean : :py:class:`Array`, (`M`,)
-            Predicted GP mean. Only returned if `return_prediction` is True and `full_output` is False.
-        std : :py:class:`Array`, (`M`,)
-            Predicted standard deviation, only returned if `return_prediction` and `return_std` are True and `full_output` is False.
-        full_output : dict
-            Dictionary with fields for mean, std, cov and possibly random samples. Only returned if `return_prediction` and `full_output` are True.
+        -1*ll : float
+            The updated log likelihood.
+        -1*jac : :py:class:`Array`, length equal to the number of parameters
+            The derivative of `ll` with respect to each of the parameters, in
+            order. Only computed and returned if `return_jacobian` is True.
         """
-        if self.num_dim > 2:
-            raise ValueError("Plotting is not supported for num_dim > 2!")
-        
-        if self.num_dim == 1:
-            if X is None:
-                X = scipy.linspace(self.X.min(), self.X.max(), 100)
-        elif self.num_dim == 2:
-            if X is None:
-                x1 = scipy.linspace(self.X[:, 0].min(), self.X[:, 0].max(), 50)
-                x2 = scipy.linspace(self.X[:, 1].min(), self.X[:, 1].max(), 50)
-                X1, X2 = scipy.meshgrid(x1, x2)
-                X1 = X1.flatten()
-                X2 = X2.flatten()
-                X = scipy.hstack((scipy.atleast_2d(X1).T, scipy.atleast_2d(X2).T))
-            else:
-                X1 = scipy.asarray(X[:, 0]).flatten()
-                X2 = scipy.asarray(X[:, 1]).flatten()
-        
-        if envelopes or (return_prediction and (return_std or full_output)):
-            out = self.predict(X, n=n, full_output=True, **kwargs)
-            mean = out['mean']
-            std = out['std']
+        self.k.set_hyperparams(new_params[:len(self.k.free_params)])
+        self.noise_k.set_hyperparams(new_params[len(self.k.free_params):])
+        self.K_up_to_date = False
+        self.compute_K_L_alpha_ll()
+        if not return_jacobian:
+            return -1 * self.ll
         else:
-            mean = self.predict(X, n=n, return_std=False, **kwargs)
+            # Doesn't handle noise!
+            aaKI = self.alpha * self.alpha.T - self.K.I
+            jac = scipy.zeros_like(self.k.free_params, dtype=float)
+            for i in xrange(0, len(jac)):
+                # TODO: Put in noise
+                dKijdHP = self.compute_Kij(self.X, None, self.n, None, hyper_deriv=i)
+                # TODO: Compare timing between doing the full product and
+                # extracting only the trace.
+                jac[i] = 0.5 * scipy.trace(aaKI * dKijdHP)
+            return (-1 * self.ll, -1 * jac)
+    
+    def compute_K_L_alpha_ll(self):
+        r"""Compute `K`, `L`, `alpha` and log-likelihood according to the first part of Algorithm 2.1 in R&W.
         
-        if self.num_dim == 1:
-            univariate_envelope_plot(X, mean, std, ax=ax,
-                                     base_alpha=base_alpha,
-                                     envelopes=envelopes, **plot_kwargs)
-        elif self.num_dim == 2:
-            if ax is None:
-                f = plt.figure()
-                ax = f.add_subplot(111, projection='3d')
-            elif ax == 'gca':
-                ax = plt.gca()
-            if 'linewidths' not in kwargs:
-                kwargs['linewidths'] = 0
-            s = ax.plot_trisurf(X1, X2, mean, **plot_kwargs)
-            for i in envelopes:
-                kwargs.pop('alpha', base_alpha)
-                ax.plot_trisurf(X1, X2, mean-std, alpha=base_alpha / i, **kwargs)
-                ax.plot_trisurf(X1, X2, mean+std, alpha=base_alpha / i, **kwargs)
+        Computes `K` and the noise portion of `K` using :py:meth:`compute_Kij`,
+        computes `L` using :py:func:`scipy.linalg.cholesky`, then computes
+        `alpha` as `L.T\\(L\\y)`.
         
-        if return_prediction:
-            if full_output:
-                return (ax, out)
-            elif return_std:
-                return (ax, out['mean'], out['std'])
-            else:
-                return (ax, out['mean'])
+        Only does the computation if :py:attr:`K_up_to_date` is False --
+        otherwise leaves the existing values.
+        """
+        if not self.K_up_to_date:
+            y = self.y
+            err_y = self.err_y
+            self.K = self.compute_Kij(self.X, None, self.n, None, noise=False)
+            self.noise_K = self.compute_Kij(self.X, None, self.n, None, noise=True)
+            K_tot = (self.K +
+                     scipy.diag(err_y**2.0) +
+                     self.noise_K +
+                     self.diag_factor * sys.float_info.epsilon * scipy.eye(len(y)))
+            try:
+                self.L = scipy.matrix(
+                    scipy.linalg.cholesky(
+                        K_tot,
+                        lower=True,
+                        check_finite=False
+                    )
+                )
+            except TypeError:
+                # Catch lack of check_finite in older scipy:
+                self.L = scipy.matrix(
+                    scipy.linalg.cholesky(
+                        K_tot,
+                        lower=True
+                    )
+                )
+            # Convert the array output to a matrix since scipy treats arrays
+            # as row vectors:
+            try:
+                self.alpha = scipy.linalg.solve_triangular(
+                    self.L.T,
+                    scipy.linalg.solve_triangular(
+                        self.L,
+                        scipy.asmatrix(y).T,
+                        lower=True,
+                        check_finite=False
+                    ),
+                    lower=False,
+                    check_finite=False
+                )
+            except TypeError:
+                self.alpha = scipy.linalg.solve_triangular(
+                    self.L.T,
+                    scipy.linalg.solve_triangular(
+                        self.L,
+                        scipy.asmatrix(y).T,
+                        lower=True
+                    ),
+                    lower=False
+                )
+            self.ll = (-0.5 * scipy.asmatrix(y) * self.alpha -
+                       scipy.log(scipy.diag(self.L)).sum() - 
+                       0.5 * len(y) * scipy.log(2.0 * scipy.pi))[0, 0]
+            # Apply hyperpriors:
+            k_nk = self.k + self.noise_k
+            theta = list(self.k.params) + list(self.noise_k.params)
+            self.ll += self.k.hyperprior(self.k.params)
+            self.ll += self.noise_k.hyperprior(self.noise_k.params)
+            self.K_up_to_date = True
+    
+    @property
+    def num_dim(self):
+        """The number of dimensions of the input data.
+        
+        Returns
+        -------
+        num_dim: int
+            The number of dimensions of the input data as defined in the kernel.
+        """
+        return self.k.num_dim
+    
+    def compute_Kij(self, Xi, Xj, ni, nj, noise=False, hyper_deriv=None):
+        r"""Compute covariance matrix between datasets `Xi` and `Xj`.
+        
+        Specify the orders of derivatives at each location with the `ni`, `nj`
+        arrays. The `include_noise` flag is passed to the covariance kernel to
+        indicate whether noise is to be included (i.e., for evaluation of
+        :math:`K+\sigma I` versus :math:`K_*`).
+        
+        If `Xj` is None, the symmetric matrix :math:`K(X, X)` is formed.
+        
+        Note that type and dimension checking is NOT performed, as it is assumed
+        the data are from inside the instance and have hence been sanitized by
+        :py:meth:`add_data`.
+        
+        Parameters
+        ----------
+        Xi : :py:class:`Matrix`, (`M`, `N`)
+            `M` input values of dimension `N`.
+        Xj : :py:class:`Matrix`, (`P`, `N`)
+            `P` input values of dimension `N`.
+        ni : :py:class:`Array`, (`M`,), non-negative integers
+            `M` derivative orders with respect to the `Xi` coordinates.
+        nj : :py:class:`Array`, (`P`,), non-negative integers
+            `P` derivative orders with respect to the `Xj` coordinates.
+        noise : bool, optional
+            If True, uses the noise kernel, otherwise uses the regular kernel.
+            Default is False (use regular kernel).
+        hyper_deriv : None or non-negative int
+            Index of the hyperparameter to compute the first derivative with
+            respect to. If None, no derivatives are taken. Default is None (no
+            hyperparameter derivatives).
+                
+        Returns
+        -------
+        Kij : :py:class:`Matrix`, (`M`, `P`)
+            Covariance matrix between `Xi` and `Xj`.
+        """
+        if not noise:
+            k = self.k
         else:
-            return ax
+            k = self.noise_k
+        
+        if Xj is None:
+            symmetric = True
+            Xj = Xi
+            nj = ni
+        else:
+            symmetric = False
+        
+        # This technically doesn't take advantage of the symmetric case. Might
+        # be worth trying to do that at some point, but this is vastly superior
+        # to the double for loop implementation for which using symmetry is easy.
+        Xi_tile = scipy.repeat(Xi, Xj.shape[0], axis=0)
+        ni_tile = scipy.repeat(ni, Xj.shape[0], axis=0)
+        Xj_tile = scipy.tile(Xj, (Xi.shape[0], 1))
+        nj_tile = scipy.tile(nj, (Xi.shape[0], 1))
+        Kij = k(Xi_tile, Xj_tile, ni_tile, nj_tile, hyper_deriv=hyper_deriv,
+                symmetric=symmetric)
+        Kij = scipy.asmatrix(scipy.reshape(Kij, (Xi.shape[0], -1)))
+        
+        return Kij
+    
+    def compute_ll_matrix(self, bounds, num_pts):
+        """Compute the log likelihood over the (free) parameter space.
+        
+        Parameters
+        ----------
+        bounds : 2-tuple or list of 2-tuples with length equal to the number of free parameters
+            Bounds on the range to use for each of the parameters. If a single
+            2-tuple is given, it will be used for each of the parameters.
+        num_pts : int or list of ints with length equal to the number of free parameters
+            If a single int is given, it will be used for each of the parameters.
+        
+        Returns
+        -------
+            ll_vals : :py:class:`Array`
+                The log likelihood for each of the parameter possibilities.
+            param_vals : List of :py:class:`Array`
+                The parameter values used.
+        """
+        present_free_params = scipy.concatenate((self.k.free_params,
+                                                 self.noise_k.free_params))
+        bounds = scipy.atleast_2d(scipy.asarray(bounds, dtype=float))
+        if bounds.shape[1] != 2:
+            raise ValueError("Argument bounds must have shape (n, 2)!")
+        # If bounds is a single tuple, repeat it for each free parameter:
+        if bounds.shape[0] == 1:
+            bounds = scipy.tile(bounds, (len(present_free_params), 1))
+        # If num_pts is a single value, use it for all of the parameters:
+        try:
+            iter(num_pts)
+        except TypeError:
+            num_pts = num_pts * scipy.ones(bounds.shape[0], dtype=int)
+        else:
+            num_pts = scipy.asarray(num_pts, dtype=int)
+            if len(num_pts) != len(present_free_params):
+                raise ValueError("Length of num_pts must match the number of "
+                                 "free parameters of kernel!")
+        
+        # Form arrays to evaluate parameters over:
+        param_vals = []
+        for k in xrange(0, len(present_free_params)):
+            param_vals.append(scipy.linspace(bounds[k, 0], bounds[k, 1], num_pts[k]))
+        ll_vals = self._compute_ll_matrix(0, param_vals, num_pts)
+        
+        # Reset the parameters to what they were before:
+        self.update_hyperparameters(scipy.asarray(present_free_params, dtype=float))
+        
+        return (ll_vals, param_vals)
+    
+    def _compute_ll_matrix(self, idx, param_vals, num_pts):
+        """Recursive helper function for compute_ll_matrix.
+        
+        Parameters
+        ----------
+        idx : int
+            The index of the parameter for this layer of the recursion to
+            work on. `idx` == len(`num_pts`) is the base case that terminates
+            the recursion.
+        param_vals : List of :py:class:`Array`
+            List of arrays of parameter values. Entries in the slots 0:`idx` are
+            set to scalars by the previous levels of recursion.
+        num_pts : :py:class:`Array`
+            The numbers of points for each parameter.
+        
+        Returns
+        -------
+        vals : :py:class:`Array`
+            The log likelihood for each of the parameter possibilities at lower
+            levels.
+        """
+        if idx >= len(num_pts):
+            # Base case: All entries in param_vals should be scalars:
+            return -1.0 * self.update_hyperparameters(scipy.asarray(param_vals,
+                                                                    dtype=float))
+        else:
+            # Recursive case: call _compute_ll_matrix for each entry in param_vals[idx]:
+            vals = scipy.zeros(num_pts[idx:], dtype=float)
+            for k in xrange(0, len(param_vals[idx])):
+                specific_param_vals = list(param_vals)
+                specific_param_vals[idx] = param_vals[idx][k]
+                vals[k] = self._compute_ll_matrix(idx + 1, specific_param_vals,
+                                                  num_pts)
+            return vals
     
     def sample_hyperparameter_posterior(self, nwalkers=200, nsamp=500, burn=0,
                                         thin=1, num_proc=None, sampler=None,
