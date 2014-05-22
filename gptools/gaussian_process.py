@@ -301,7 +301,7 @@ class GaussianProcess(object):
         mean = self.predict(self.X, n=self.n, noise=False, return_std=False,
                             **predict_kwargs)
         deltas = scipy.absolute(mean - self.y) / self.err_y
-        deltas[scipy.isnan(deltas)] = 0
+        deltas[self.err_y == 0] = 0
         bad_idxs = (deltas >= thresh)
         good_idxs = ~bad_idxs
         
@@ -431,7 +431,7 @@ class GaussianProcess(object):
         
         self.update_hyperparameters(res_min.x, return_jacobian=False)
         if verbose:
-            print("Got %d completed starts, optimal result is:" % (len(res_min),))
+            print("Got %d completed starts, optimal result is:" % (len(res),))
             print(res_min)
             print("\nLL\t%.3f" % (-1 * res_min.fun))
             for v, l in zip(res_min.x, k_nk.free_param_names):
