@@ -392,7 +392,7 @@ class GaussianProcess(object):
             param_samples = param_samples[:, ~k_nk.fixed_params]
         if 'bounds' not in opt_kwargs:
             opt_kwargs['bounds'] = param_ranges
-        if num_proc == 0:
+        if num_proc == 0 or num_proc == 1:
             res = []
             for samp in param_samples:
                 try:
@@ -1150,6 +1150,9 @@ class GaussianProcess(object):
         """
         if num_proc is None:
             num_proc = multiprocessing.cpu_count()
+        # Needed for emcee to do it right:
+        if num_proc == 0:
+            num_proc = 1
         k_nk = self.k + self.noise_k
         ndim = len(k_nk.free_params)
         if sampler is None:
@@ -1293,7 +1296,7 @@ class GaussianProcess(object):
         
         num_proc = kwargs.get('num_proc', multiprocessing.cpu_count())
         
-        if num_proc > 0:
+        if num_proc > 1:
             pool = multiprocessing.Pool(processes=num_proc)
             res = pool.map(_ComputeGPWrapper(self, X, n, return_mean, return_std,
                                              return_cov, return_samples,
