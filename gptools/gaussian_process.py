@@ -600,7 +600,7 @@ class GaussianProcess(object):
                         )
                     return out
                 else:
-                    if return cov:
+                    if return_cov:
                         return (mean, cov)
                     else:
                         return (mean, std)
