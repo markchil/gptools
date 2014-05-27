@@ -453,7 +453,7 @@ class GaussianProcess(object):
                           "starts used." % (str(bounds), str(res_min.x),))
         return res_min
     
-    def predict(self, Xstar, n=0, noise=False, return_std=True,
+    def predict(self, Xstar, n=0, noise=False, return_std=True, return_cov=False,
                 full_output=False, return_samples=False, num_samples=1,
                 samp_kwargs={}, use_MCMC=False, **kwargs):
         """Predict the mean and covariance at the inputs `Xstar`.
@@ -477,6 +477,11 @@ class GaussianProcess(object):
             Set to True to compute and return the standard deviation for the
             predictions, False to skip this step. Default is True (return tuple
             of (`mean`, `std`)).
+        return_cov : bool, optional
+            Set to True to compute and return the full covariance matrix for the
+            predictions. This overrides the `return_std` keyword. If you want
+            both the standard deviation and covariance matrix pre-computed, use
+            the `full_output` keyword.
         full_output : bool, optional
             Set to True to return the full outputs in a dictionary with keys:
             
@@ -510,7 +515,9 @@ class GaussianProcess(object):
         mean : :py:class:`Array`, (`M`,)
             Predicted GP mean. Only returned if `full_output` is False.
         std : :py:class:`Array`, (`M`,)
-            Predicted standard deviation, only returned if `return_std` is True and `full_output` is False.
+            Predicted standard deviation, only returned if `return_std` is True, `return_cov` is False and `full_output` is False.
+        cov : :py:class:`Matrix`, (`M`, `M`)
+            Predicted covariance matrix, only returned if `return_cov` is True and `full_output` is False.
         full_output : dict
             Dictionary with fields for mean, std, cov and possibly random samples. Only returned if `full_output` is True.
         
@@ -523,13 +530,15 @@ class GaussianProcess(object):
         if use_MCMC:
             res = self.predict_MCMC(Xstar, n=n, noise=noise,
                                     return_std=return_std or full_output,
-                                    return_cov=full_output,
+                                    return_cov=return_cov or full_output,
                                     return_samples=full_output and return_samples,
                                     num_samples=num_samples,
                                     samp_kwargs=samp_kwargs,
                                     **kwargs)
             if full_output:
                 return res
+            elif return_cov:
+                return (res['mean'], res['cov'])
             elif return_std:
                 return (res['mean'], res['std'])
             else:
@@ -565,7 +574,7 @@ class GaussianProcess(object):
             if noise:
                 Kstar = Kstar + self.compute_Kij(self.X, Xstar, self.n, n, noise=True)
             mean = scipy.asarray(Kstar.T * self.alpha).flatten()
-            if return_std or full_output:
+            if return_std or return_cov or full_output:
                 try:
                     v = scipy.asmatrix(
                         scipy.linalg.solve_triangular(self.L, Kstar, lower=True, check_finite=False)
@@ -591,7 +600,10 @@ class GaussianProcess(object):
                         )
                     return out
                 else:
-                    return (mean, std)
+                    if return cov:
+                        return (mean, cov)
+                    else:
+                        return (mean, std)
             else:
                 return mean
     
