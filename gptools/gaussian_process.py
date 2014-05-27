@@ -392,7 +392,7 @@ class GaussianProcess(object):
             param_samples = param_samples[:, ~k_nk.fixed_params]
         if 'bounds' not in opt_kwargs:
             opt_kwargs['bounds'] = param_ranges
-        if num_proc == 0 or num_proc == 1:
+        if num_proc <= 1:
             res = []
             for samp in param_samples:
                 try:
