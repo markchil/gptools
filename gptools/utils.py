@@ -863,6 +863,8 @@ def univariate_envelope_plot(x, mean, std, ax=None, base_alpha=0.375, envelopes=
     
     l = ax.plot(x, mean, **kwargs)
     color = plt.getp(l[0], 'color')
+    e = []
     for i in envelopes:
-        ax.fill_between(x, mean - i * std, mean + i * std,
-                        facecolor=color, alpha=base_alpha / i)
+        e.append(ax.fill_between(x, mean - i * std, mean + i * std,
+                        facecolor=color, alpha=base_alpha / i))
+    return (l, e)

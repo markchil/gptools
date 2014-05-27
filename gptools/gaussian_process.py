@@ -433,9 +433,9 @@ class GaussianProcess(object):
         if verbose:
             print("Got %d completed starts, optimal result is:" % (len(res),))
             print(res_min)
-            print("\nLL\t%.3f" % (-1 * res_min.fun))
+            print("\nLL\t%.3e" % (-1 * res_min.fun))
             for v, l in zip(res_min.x, k_nk.free_param_names):
-                print("%s\t%.3f" % (l.translate(None, '\\'), v))
+                print("%s\t%.3e" % (l.translate(None, '\\'), v))
         if not res_min.success:
             warnings.warn("Optimizer %s reports failure, selected hyperparameters "
                           "are likely NOT optimal. Status: %d, Message: '%s'. "
@@ -451,7 +451,7 @@ class GaussianProcess(object):
                           "Bounds are:\n%s\n, solution is:\n%s. Try adjusting "
                           "bounds, initial guesses or the number of random "
                           "starts used." % (str(bounds), str(res_min.x),))
-        return res_min
+        return (res_min, len(res))
     
     def predict(self, Xstar, n=0, noise=False, return_std=True, return_cov=False,
                 full_output=False, return_samples=False, num_samples=1,
