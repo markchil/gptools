@@ -629,7 +629,7 @@ class GaussianProcess(object):
                     return out
                 else:
                     if return_cov:
-                        return (mean, cov)
+                        return (mean, covariance)
                     elif return_std:
                         return (mean, std)
                     else:
