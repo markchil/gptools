@@ -1205,7 +1205,7 @@ class GaussianProcess(object):
 
         sampler.run_mcmc(theta0, nsamp)
         if plot_posterior or plot_chains:
-            flat_trace = sampler.chain[:, burn:-1:thin, :]
+            flat_trace = sampler.chain[:, burn::thin, :]
             flat_trace = flat_trace.reshape((-1, flat_trace.shape[2]))
             
         if plot_posterior:
@@ -1323,10 +1323,10 @@ class GaussianProcess(object):
             if sampler is None:
                 sampler = self.sample_hyperparameter_posterior(**kwargs)
                 
-            flat_trace = sampler.chain[:, burn:-1:thin, :]
+            flat_trace = sampler.chain[:, burn::thin, :]
             flat_trace = flat_trace.reshape((-1, flat_trace.shape[2]))
         else:
-            flat_trace = flat_trace[burn:-1:thin, :]
+            flat_trace = flat_trace[burn::thin, :]
         # TODO: Maybe add some diagnostics to look at how the burned/thinned
         # trace is doing?
         
