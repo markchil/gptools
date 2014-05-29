@@ -29,6 +29,7 @@ import scipy.linalg
 import scipy.optimize
 import scipy.stats
 import numpy.random
+import numpy.linalg
 import sys
 import warnings
 import multiprocessing
@@ -416,9 +417,11 @@ class GaussianProcess(object):
                                   RuntimeWarning)
         else:
             pool = multiprocessing.Pool(processes=num_proc)
-            res = pool.map(_OptimizeHyperparametersEval(self, opt_kwargs),
-                           param_samples)
-            pool.close()
+            try:
+                res = pool.map(_OptimizeHyperparametersEval(self, opt_kwargs),
+                               param_samples)
+            finally:
+                pool.close()
             # Filter out the failed convergences:
             res = [r for r in res if r is not None]
         try:
@@ -455,7 +458,8 @@ class GaussianProcess(object):
     
     def predict(self, Xstar, n=0, noise=False, return_std=True, return_cov=False,
                 full_output=False, return_samples=False, num_samples=1,
-                samp_kwargs={}, use_MCMC=False, **kwargs):
+                samp_kwargs={}, use_MCMC=False, full_MC=False, rejection_func=None,
+                ddof=1, **kwargs):
         """Predict the mean and covariance at the inputs `Xstar`.
         
         The order of the derivative is given by `n`. The keyword `noise` sets
@@ -506,6 +510,17 @@ class GaussianProcess(object):
         use_MCMC : bool, optional
             Set to True to use :py:meth:`predict_MCMC` to evaluate the prediction
             marginalized over the hyperparameters.
+        full_MC : bool, optional
+            Set to True to compute the mean and covariance matrix using Monte
+            Carlo sampling of the posterior. The samples will also be returned
+            if full_output is True. Default is False (don't use full sampling).
+        rejection_func : callable, optional
+            Any samples where this function evaluates False will be rejected,
+            where it evaluates True they will be kept. Default is None (no
+            rejection). Only has an effect if `full_MC` is True.
+        ddof : int, optional
+            The degree of freedom correction to use when computing the covariance
+            matrix when `full_MC` is True. Default is 1 (unbiased estimator).
         **kwargs : optional kwargs
             All additional kwargs are passed to :py:meth:`predict_MCMC` if
             `use_MCMC` is True.
@@ -531,9 +546,12 @@ class GaussianProcess(object):
             res = self.predict_MCMC(Xstar, n=n, noise=noise,
                                     return_std=return_std or full_output,
                                     return_cov=return_cov or full_output,
-                                    return_samples=full_output and return_samples,
+                                    return_samples=full_output and (return_samples or rejection_func),
                                     num_samples=num_samples,
                                     samp_kwargs=samp_kwargs,
+                                    full_MC=full_MC,
+                                    rejection_func=rejection_func,
+                                    ddof=ddof,
                                     **kwargs)
             if full_output:
                 return res
@@ -574,7 +592,7 @@ class GaussianProcess(object):
             if noise:
                 Kstar = Kstar + self.compute_Kij(self.X, Xstar, self.n, n, noise=True)
             mean = scipy.asarray(Kstar.T * self.alpha).flatten()
-            if return_std or return_cov or full_output:
+            if return_std or return_cov or full_output or full_MC:
                 try:
                     v = scipy.asmatrix(
                         scipy.linalg.solve_triangular(self.L, Kstar, lower=True, check_finite=False)
@@ -588,22 +606,34 @@ class GaussianProcess(object):
                 if noise:
                     Kstarstar = Kstarstar + self.compute_Kij(Xstar, None, n, None, noise=True)
                 covariance = Kstarstar - v.T * v
+                if return_samples or full_MC:
+                    samps = self.draw_sample(
+                        Xstar, n=n, num_samp=num_samples, mean=mean,
+                        cov=covariance, **samp_kwargs
+                    )
+                    if rejection_func:
+                        good_samps = []
+                        for samp in samps.T:
+                            if rejection_func(samp):
+                                good_samps.append(samp)
+                        samps = scipy.asarray(good_samps, dtype=float).T
+                    mean = scipy.mean(samps, axis=1)
+                    covariance = scipy.cov(samps, rowvar=1, ddof=ddof)
                 std = scipy.sqrt(scipy.diagonal(covariance))
                 if full_output:
                     out = {'mean': mean,
                            'std': std,
                            'cov': covariance}
-                    if return_samples:
-                        out['samp'] = self.draw_sample(
-                            Xstar, n=n, num_samp=num_samples, mean=mean,
-                            cov=covariance, **samp_kwargs
-                        )
+                    if return_samples or full_MC:
+                        out['samp'] = samps
                     return out
                 else:
                     if return_cov:
                         return (mean, cov)
-                    else:
+                    elif return_std:
                         return (mean, std)
+                    else:
+                        return mean
             else:
                 return mean
     
@@ -803,41 +833,47 @@ class GaussianProcess(object):
             mean = out['mean']
             cov = out['cov']
         if rand_vars is None and method != 'eig':
-            return numpy.random.multivariate_normal(mean, cov, num_samp).T
+            try:
+                return numpy.random.multivariate_normal(mean, cov, num_samp).T
+            except numpy.linalg.LinAlgError as e:
+                warnings.warn("Failure when drawing from MVN! Falling back on "
+                              "eig. Exception was:\n%s" % (e,),
+                              RuntimeWarning)
+                method = 'eig'
+        
+        if num_eig is None or num_eig > len(mean):
+            num_eig = len(mean)
+        elif num_eig < 1:
+            num_eig = 1
+        if rand_vars is None:
+            rand_vars = numpy.random.standard_normal((num_eig, num_samp))
+        valid_types = ('standard normal', 'uniform')
+        if rand_type not in valid_types:
+            raise ValueError("rand_type %s not recognized! Valid options "
+                             "are: %s." % (rand_type, valid_types,))
+        if rand_type == 'uniform':
+            rand_vars = scipy.stats.norm.ppf(rand_vars)
+        
+        # TODO: Should probably do some shape-checking first...
+        
+        if method == 'cholesky':
+            L = scipy.asmatrix(scipy.linalg.cholesky(
+                cov + diag_factor * sys.float_info.epsilon * scipy.eye(cov.shape[0]),
+                lower=True,
+                check_finite=False
+            ), dtype=float)
+        elif method == 'eig':
+            # TODO: Add support for specifying cutoff eigenvalue!
+            # Not technically lower triangular, but we'll keep the name L:
+            eig, Q = scipy.linalg.eigh(
+                cov + diag_factor * sys.float_info.epsilon * scipy.eye(cov.shape[0]),
+                eigvals=(len(mean) - 1 - (num_eig - 1), len(mean) - 1)
+            )
+            Lam_1_2 = scipy.asmatrix(scipy.diag(scipy.sqrt(eig)))
+            L = scipy.asmatrix(Q) * Lam_1_2
         else:
-            if num_eig is None or num_eig > len(mean):
-                num_eig = len(mean)
-            elif num_eig < 1:
-                num_eig = 1
-            if rand_vars is None:
-                rand_vars = numpy.random.standard_normal((num_eig, num_samp))
-            valid_types = ('standard normal', 'uniform')
-            if rand_type not in valid_types:
-                raise ValueError("rand_type %s not recognized! Valid options "
-                                 "are: %s." % (rand_type, valid_types,))
-            if rand_type == 'uniform':
-                rand_vars = scipy.stats.norm.ppf(rand_vars)
-            
-            # TODO: Should probably do some shape-checking first...
-            
-            if method == 'cholesky':
-                L = scipy.asmatrix(scipy.linalg.cholesky(
-                    cov + diag_factor * sys.float_info.epsilon * scipy.eye(cov.shape[0]),
-                    lower=True,
-                    check_finite=False
-                ), dtype=float)
-            elif method == 'eig':
-                # TODO: Add support for specifying cutoff eigenvalue!
-                # Not technically lower triangular, but we'll keep the name L:
-                eig, Q = scipy.linalg.eigh(
-                    cov + diag_factor * sys.float_info.epsilon * scipy.eye(cov.shape[0]),
-                    eigvals=(len(mean) - 1 - (num_eig - 1), len(mean) - 1)
-                )
-                Lam_1_2 = scipy.asmatrix(scipy.diag(scipy.sqrt(eig)))
-                L = scipy.asmatrix(Q) * Lam_1_2
-            else:
-                raise ValueError("method %s not recognized!" % (method,))
-            return mean + L * scipy.asmatrix(rand_vars[:num_eig, :], dtype=float)
+            raise ValueError("method %s not recognized!" % (method,))
+        return mean + L * scipy.asmatrix(rand_vars[:num_eig, :], dtype=float)
     
     def update_hyperparameters(self, new_params, return_jacobian=False):
         """Update the kernel's hyperparameters to the new parameters.
@@ -1298,11 +1334,13 @@ class GaussianProcess(object):
         
         if num_proc > 1:
             pool = multiprocessing.Pool(processes=num_proc)
-            res = pool.map(_ComputeGPWrapper(self, X, n, return_mean, return_std,
-                                             return_cov, return_samples,
-                                             num_samples, noise, samp_kwargs),
-                           flat_trace)
-            pool.close()
+            try:
+                res = pool.map(_ComputeGPWrapper(self, X, n, return_mean, return_std,
+                                                 return_cov, return_samples,
+                                                 num_samples, noise, samp_kwargs),
+                               flat_trace)
+            finally:
+                pool.close()
         else:
             res = map(_ComputeGPWrapper(self, X, n, return_mean, return_std,
                                         return_cov, return_samples, num_samples,
@@ -1319,7 +1357,7 @@ class GaussianProcess(object):
             out['samp'] = [r['samp'] for r in res]
         return out
     
-    def predict_MCMC(self, X, ddof=1, **kwargs):
+    def predict_MCMC(self, X, ddof=1, full_MC=False, rejection_func=None, **kwargs):
         """Make a prediction using MCMC samples.
         
         This is essentially a convenient wrapper of :py:meth:`compute_from_MCMC`,
@@ -1343,37 +1381,66 @@ class GaussianProcess(object):
             Default is 1 (standard Bessel correction for unbiased estimate).
         return_std : bool, optional
             If True, the standard deviation is also computed. Default is True.
+        full_MC : bool, optional
+            Set to True to compute the mean and covariance matrix using Monte
+            Carlo sampling of the posterior. The samples will also be returned
+            if full_output is True. Default is False (don't use full sampling).
+        rejection_func : callable, optional
+            Any samples where this function evaluates False will be rejected,
+            where it evaluates True they will be kept. Default is None (no
+            rejection). Only has an effect if `full_MC` is True.
+        ddof : int, optional
         **kwargs : optional kwargs
             All additional kwargs are passed directly to
             :py:meth:`compute_from_MCMC`.
-        
-        Returns
-        -------
-        mean : :py:class:`Array`, (`M`,)
-            Predicted GP mean.
-        std : :py:class:`Array`, (`M`,)
-            Predicted standard deviation, only returned if `return_std` is True.
-        covariance : :py:class:`Matrix`, (`M`, `M`)
-            Predicted covariance matrix, only returned if `return_cov` is True.
         """
-        kwargs['return_mean'] = True
+        return_std = kwargs.get('return_std', True)
+        return_cov = kwargs.get('return_cov', False)
+        if full_MC:
+            kwargs['return_mean'] = False
+            kwargs['return_std'] = False
+            kwargs['return_cov'] = False
+            kwargs['return_samples'] = True
+        else:
+            kwargs['return_mean'] = True
+        return_samples = kwargs.get('return_samples', True)
         res = self.compute_from_MCMC(X, **kwargs)
-        means = scipy.asarray(res['mean'])
-        mean = scipy.mean(means, axis=0)
         
-        out = {'mean': mean}
+        out = {}
         
-        if 'cov' in res:
-            covs = scipy.asarray(res['cov'])
-            cov = scipy.mean(covs, axis=0) + scipy.cov(means, rowvar=0, ddof=ddof)
+        if return_samples:
+            samps = scipy.asarray(scipy.hstack(res['samp']))
+        
+        if full_MC:
+            if rejection_func:
+                good_samps = []
+                for samp in samps.T:
+                    if rejection_func(samp):
+                        good_samps.append(samp)
+                samps = scipy.asarray(good_samps, dtype=float).T
+            mean = scipy.mean(samps, axis=1)
+            cov = scipy.cov(samps, rowvar=1, ddof=ddof)
+            std = scipy.sqrt(scipy.diagonal(cov))
+        else:
+            means = scipy.asarray(res['mean'])
+            mean = scipy.mean(means, axis=0)
+            
+            if 'cov' in res:
+                covs = scipy.asarray(res['cov'])
+                cov = scipy.mean(covs, axis=0) + scipy.cov(means, rowvar=0, ddof=ddof)
+                std = scipy.sqrt(scipy.diagonal(cov))
+            elif 'std' in res:
+                vars_ = scipy.asarray(scipy.asarray(res['std']))**2
+                std = scipy.sqrt(scipy.mean(vars_, axis=0) +
+                                 scipy.var(means, axis=0, ddof=ddof))
+        
+        out['mean'] = mean
+        if return_samples:
+            out['samp'] = samps
+        if return_std or return_cov:
+            out['std'] = std
+        if return_cov:
             out['cov'] = cov
-            out['std'] = scipy.sqrt(scipy.diagonal(cov))
-        elif 'std' in res:
-            vars_ = scipy.asarray(scipy.asarray(res['std']))**2
-            out['std'] = scipy.sqrt(scipy.mean(vars_, axis=0) +
-                                    scipy.var(means, axis=0, ddof=ddof))
-        if 'samp' in res:
-            out['samp'] = res['samp']
         
         return out
 
