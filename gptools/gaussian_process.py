@@ -80,14 +80,14 @@ class GaussianProcess(object):
         The following are all passed to :py:meth:`add_data`, refer to its
         docstring.
     
-    X : :py:class:`Matrix` or other Array-like, (`M`, `N`), optional
+    X : array, (`M`, `N`), optional
         `M` input values of dimension `N`. Default value is None (no data).
-    y : :py:class:`Array` or other Array-like, (`M`,), optional
+    y : array, (`M`,), optional
         `M` data target values. Default value is None (no data).
-    err_y : :py:class:`Array` or other Array-like, (`M`,), optional
+    err_y : array, (`M`,), optional
         Error (given as standard deviation) in the `M` training target values.
         Default value is 0 (noiseless observations).
-    n : :py:class:`Matrix` or other Array-like (`M`, `N`) or scalar float, optional
+    n : array, (`M`, `N`) or scalar float, optional
         Non-negative integer values only. Degree of derivative for each target.
         If `n` is a scalar it is taken to be the value for all points in `y`.
         Otherwise, the length of n must equal the length of `y`. Default value
@@ -100,23 +100,23 @@ class GaussianProcess(object):
         The non-noise portion of the covariance kernel.
     noise_k : :py:class:`~gptools.kernel.core.Kernel` instance
         The noise portion of the covariance kernel.
-    X : :py:class:`Matrix`, (`M`, `N`)
+    X : array, (`M`, `N`)
         The `M` training input values, each of which is of dimension `N`.
-    y : :py:class:`Array`, (`M`,)
+    y : array, (`M`,)
         The `M` training target values.
-    err_y : :py:class:`Array`, (`M`,)
+    err_y : array, (`M`,)
         The error in the `M` training input values.
-    n : :py:class:`Matrix`, (`M`, `N`)
+    n : array, (`M`, `N`)
         The orders of derivatives that each of the M training points represent, indicating the order of derivative with respect to each of the `N` dimensions.
     K_up_to_date : bool
         True if no data have been added since the last time the internal state was updated with a call to :py:meth:`compute_K_L_alpha_ll`.
-    K : :py:class:`Matrix`, (`M`, `M`)
+    K : array, (`M`, `M`)
         Covariance matrix between all of the training inputs.
-    noise_K : :py:class:`Matrix`, (`M`, `M`)
+    noise_K : array, (`M`, `M`)
         Noise portion of the covariance matrix between all of the training inputs. Only includes the noise from :py:attr:`noise_k`, not from :py:attr:`err_y`.
-    L : :py:class:`Matrix`, (`M`, `M`)
+    L : array, (`M`, `M`)
         Cholesky decomposition of the combined covariance matrix between all of the training inputs.
-    alpha : :py:class:`Matrix`, (`M`, 1)
+    alpha : array, (`M`, 1)
         Solution to :math:`K\alpha=y`.
     ll : float
         Log-likelihood of the data given the model.
@@ -170,17 +170,17 @@ class GaussianProcess(object):
         
         Parameters
         ----------
-        X : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+        X : array, (`M`, `N`)
             `M` input values of dimension `N`.
-        y : :py:class:`Array` or other Array-like, (`M`,)
+        y : array, (`M`,)
             `M` target values.
-        err_y : :py:class:`Array` or other Array-like (`M`,) or scalar float, optional
+        err_y : array, (`M`,) or scalar float, optional
             Non-negative values only. Error given as standard deviation) in the
             `M` target values. If `err_y` is a scalar, the data set is taken to
             be homoscedastic (constant error). Otherwise, the length of `err_y`
             must equal the length of `y`. Default value is 0 (noiseless
             observations).
-        n : :py:class:`Matrix` or other Array-like (`M`, `N`) or scalar float, optional
+        n : array, (`M`, `N`) or scalar float, optional
             Non-negative integer values only. Degree of derivative for each
             target. If `n` is a scalar it is taken to be the value for all
             points in `y`. Otherwise, the length of n must equal the length of
@@ -196,7 +196,7 @@ class GaussianProcess(object):
         try:
             iter(y)
         except TypeError:
-            y = scipy.array([y], dtype=float)
+            y = scipy.asarray([y], dtype=float)
         else:
             y = scipy.asarray(y, dtype=float)
             if len(y.shape) != 1:
@@ -223,9 +223,9 @@ class GaussianProcess(object):
         try:
             iter(n)
         except TypeError:
-            n = n * scipy.asmatrix(scipy.ones((len(y), self.num_dim), dtype=int))
+            n = n * scipy.ones((len(y), self.num_dim), dtype=int)
         else:
-            n = scipy.asmatrix(n, dtype=int)
+            n = scipy.atleast_2d(scipy.asarray(n, dtype=int))
             # Correct single-dimension inputs:
             if self.num_dim == 1 and n.shape[1] != 1:
                 n = n.T
@@ -237,8 +237,12 @@ class GaussianProcess(object):
         if (n < 0).any():
             raise ValueError("All elements of n must be non-negative integers!")
         
-        # Handle scalar training input or convert array input into matrix.
-        X = scipy.asmatrix(X, dtype=float)
+        # Handle scalar training input or convert array input into 2d.
+        try:
+            iter(X)
+        except TypeError:
+            X = [X]
+        X = scipy.atleast_2d(scipy.asarray(X, dtype=float))
         # Correct single-dimension inputs:
         if self.num_dim == 1 and X.shape[0] == 1:
             X = X.T
@@ -283,13 +287,13 @@ class GaussianProcess(object):
         
         Returns
         -------
-        X_bad : matrix
+        X_bad : array
             Input values of the bad points.
         y_bad : array
             Bad values.
         err_y_bad : array
             Uncertainties on the bad values.
-        n_bad : matrix
+        n_bad : array
             Derivative order of the bad values.
         bad_idxs : array
             Array of booleans with the original shape of X with True wherever
@@ -432,7 +436,7 @@ class GaussianProcess(object):
                              "new initial guess or increasing the number of "
                              "random starts.")
         
-        self.update_hyperparameters(res_min.x, return_jacobian=False)
+        self.update_hyperparameters(res_min.x)
         if verbose:
             print("Got %d completed starts, optimal result is:" % (len(res),))
             print(res_min)
@@ -459,7 +463,7 @@ class GaussianProcess(object):
     def predict(self, Xstar, n=0, noise=False, return_std=True, return_cov=False,
                 full_output=False, return_samples=False, num_samples=1,
                 samp_kwargs={}, use_MCMC=False, full_MC=False, rejection_func=None,
-                ddof=1, **kwargs):
+                ddof=1, output_transform=None, **kwargs):
         """Predict the mean and covariance at the inputs `Xstar`.
         
         The order of the derivative is given by `n`. The keyword `noise` sets
@@ -467,9 +471,9 @@ class GaussianProcess(object):
         
         Parameters
         ----------
-        Xstar : :py:class:`Array` or other Array-like, (`M`, `N`)
+        Xstar : array, (`M`, `N`)
             `M` test input values of dimension `N`.
-        n : :py:class:`Matrix` or other Array-like, (`M`, `N`) or scalar, non-negative int, optional
+        n : array, (`M`, `N`) or scalar, non-negative int, optional
             Order of derivative to predict (0 is the base quantity). If `n` is
             scalar, the value is used for all points in `Xstar`. If non-integer
             values are passed, they will be silently rounded. Default is 0
@@ -521,17 +525,20 @@ class GaussianProcess(object):
         ddof : int, optional
             The degree of freedom correction to use when computing the covariance
             matrix when `full_MC` is True. Default is 1 (unbiased estimator).
+        output_transform: array, (`L`, `M`), optional
+            Matrix to use to transform the output vector of length `M` to one of
+            length `L`. This can, for instance, be used to compute integrals.
         **kwargs : optional kwargs
             All additional kwargs are passed to :py:meth:`predict_MCMC` if
             `use_MCMC` is True.
         
         Returns
         -------
-        mean : :py:class:`Array`, (`M`,)
+        mean : array, (`M`,)
             Predicted GP mean. Only returned if `full_output` is False.
-        std : :py:class:`Array`, (`M`,)
+        std : array, (`M`,)
             Predicted standard deviation, only returned if `return_std` is True, `return_cov` is False and `full_output` is False.
-        cov : :py:class:`Matrix`, (`M`, `M`)
+        cov : array, (`M`, `M`)
             Predicted covariance matrix, only returned if `return_cov` is True and `full_output` is False.
         full_output : dict
             Dictionary with fields for mean, std, cov and possibly random samples. Only returned if `full_output` is True.
@@ -563,7 +570,7 @@ class GaussianProcess(object):
                 return res['mean']
         else:
             # Process Xstar:
-            Xstar = scipy.asmatrix(Xstar, dtype=float)
+            Xstar = scipy.atleast_2d(scipy.asarray(Xstar, dtype=float))
             # Handle 1d x case where array is passed in:
             if self.num_dim == 1 and Xstar.shape[0] == 1:
                 Xstar = Xstar.T
@@ -575,9 +582,9 @@ class GaussianProcess(object):
             try:
                 iter(n)
             except TypeError:
-                n = n * scipy.asmatrix(scipy.ones(Xstar.shape, dtype=int))
+                n = n * scipy.ones(Xstar.shape, dtype=int)
             else:
-                n = scipy.asmatrix(n, dtype=int)
+                n = scipy.atleast_2d(scipy.asarray(n, dtype=int))
                 if self.num_dim == 1 and n.shape[0] == 1:
                     n = n.T
                 if n.shape != Xstar.shape:
@@ -591,21 +598,18 @@ class GaussianProcess(object):
             Kstar = self.compute_Kij(self.X, Xstar, self.n, n)
             if noise:
                 Kstar = Kstar + self.compute_Kij(self.X, Xstar, self.n, n, noise=True)
-            mean = scipy.asarray(Kstar.T * self.alpha).flatten()
+            mean = Kstar.T.dot(self.alpha)
+            if output_transform is not None:
+                mean = output_transform.dot(mean)
+            mean = mean.flatten()
             if return_std or return_cov or full_output or full_MC:
-                try:
-                    v = scipy.asmatrix(
-                        scipy.linalg.solve_triangular(self.L, Kstar, lower=True, check_finite=False)
-                    )
-                except TypeError:
-                    # Handle older versions of scipy:
-                    v = scipy.asmatrix(
-                        scipy.linalg.solve_triangular(self.L, Kstar, lower=True)
-                    )
+                v = scipy.linalg.solve_triangular(self.L, Kstar, lower=True)
                 Kstarstar = self.compute_Kij(Xstar, None, n, None)
                 if noise:
                     Kstarstar = Kstarstar + self.compute_Kij(Xstar, None, n, None, noise=True)
-                covariance = Kstarstar - v.T * v
+                covariance = Kstarstar - v.T.dot(v)
+                if output_transform is not None:
+                    covariance = output_transform.dot(covariance.dot(output_transform.T))
                 if return_samples or full_MC:
                     samps = self.draw_sample(
                         Xstar, n=n, num_samp=num_samples, mean=mean,
@@ -734,8 +738,8 @@ class GaussianProcess(object):
             s = ax.plot_trisurf(X1, X2, mean, **plot_kwargs)
             for i in envelopes:
                 kwargs.pop('alpha', base_alpha)
-                ax.plot_trisurf(X1, X2, mean-std, alpha=base_alpha / i, **kwargs)
-                ax.plot_trisurf(X1, X2, mean+std, alpha=base_alpha / i, **kwargs)
+                ax.plot_trisurf(X1, X2, mean - std, alpha=base_alpha / i, **kwargs)
+                ax.plot_trisurf(X1, X2, mean + std, alpha=base_alpha / i, **kwargs)
         
         if return_prediction:
             if full_output:
@@ -755,9 +759,9 @@ class GaussianProcess(object):
         
         Parameters
         ----------
-        Xstar : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+        Xstar : array, (`M`, `N`)
             `M` test input values of dimension `N`.
-        n : :py:class:`Matrix` or other Array-like, (`M`, `N`) or scalar, non-negative int, optional
+        n : array, (`M`, `N`) or scalar, non-negative int, optional
             Derivative order to evaluate at. Default is 0 (evaluate value).
         noise : bool, optional
             Whether or not to include the noise components of the kernel in the
@@ -766,7 +770,7 @@ class GaussianProcess(object):
             Number of samples to draw. Default is 1. Cannot be used in
             conjunction with `rand_vars`: If you pass both `num_samp` and
             `rand_vars`, `num_samp` will be silently ignored.
-        rand_vars : :py:class:`Matrix` or other Array-like (`M`, `P`), optional
+        rand_vars : array, (`M`, `P`), optional
             Vector of random variables :math:`u` to use in constructing the
             sample :math:`y_* = f_* + Lu`, where :math:`K=LL^T`. If None,
             values will be produced using
@@ -809,7 +813,7 @@ class GaussianProcess(object):
             If you have pre-computed the mean and covariance matrix, then you
             can simply pass them in with the `mean` and `cov` keywords to save
             on having to call :py:meth:`predict`.
-        cov : matrix, (`M`, `M`)
+        cov : array, (`M`, `M`)
             If you have pre-computed the mean and covariance matrix, then you
             can simply pass them in with the `mean` and `cov` keywords to save
             on having to call :py:meth:`predict`.
@@ -857,11 +861,11 @@ class GaussianProcess(object):
         # TODO: Should probably do some shape-checking first...
         
         if method == 'cholesky':
-            L = scipy.asmatrix(scipy.linalg.cholesky(
+            L = scipy.linalg.cholesky(
                 cov + diag_factor * sys.float_info.epsilon * scipy.eye(cov.shape[0]),
                 lower=True,
                 check_finite=False
-            ), dtype=float)
+            )
         elif method == 'eig':
             # TODO: Add support for specifying cutoff eigenvalue!
             # Not technically lower triangular, but we'll keep the name L:
@@ -869,13 +873,13 @@ class GaussianProcess(object):
                 cov + diag_factor * sys.float_info.epsilon * scipy.eye(cov.shape[0]),
                 eigvals=(len(mean) - 1 - (num_eig - 1), len(mean) - 1)
             )
-            Lam_1_2 = scipy.asmatrix(scipy.diag(scipy.sqrt(eig)))
-            L = scipy.asmatrix(Q) * Lam_1_2
+            Lam_1_2 = scipy.diag(scipy.sqrt(eig))
+            L = Q.dot(Lam_1_2)
         else:
             raise ValueError("method %s not recognized!" % (method,))
-        return mean + L * scipy.asmatrix(rand_vars[:num_eig, :], dtype=float)
+        return mean + L.dot(rand_vars[:num_eig, :])
     
-    def update_hyperparameters(self, new_params, return_jacobian=False):
+    def update_hyperparameters(self, new_params):
         """Update the kernel's hyperparameters to the new parameters.
         
         This will call :py:meth:`compute_K_L_alpha_ll` to update the state
@@ -885,36 +889,17 @@ class GaussianProcess(object):
         ----------
         new_params : :py:class:`Array` or other Array-like, length dictated by kernel
             New parameters to use.
-        return_jacobian : bool, optional
-            If True, the return is (`ll`, `jac`). Otherwise, return is `ll`
-            only and the execution is faster. Default is False (do not
-            compute Jacobian).
         
         Returns
         -------
         -1*ll : float
             The updated log likelihood.
-        -1*jac : :py:class:`Array`, length equal to the number of parameters
-            The derivative of `ll` with respect to each of the parameters, in
-            order. Only computed and returned if `return_jacobian` is True.
         """
         self.k.set_hyperparams(new_params[:len(self.k.free_params)])
         self.noise_k.set_hyperparams(new_params[len(self.k.free_params):])
         self.K_up_to_date = False
         self.compute_K_L_alpha_ll()
-        if not return_jacobian:
-            return -1 * self.ll
-        else:
-            # Doesn't handle noise!
-            aaKI = self.alpha * self.alpha.T - self.K.I
-            jac = scipy.zeros_like(self.k.free_params, dtype=float)
-            for i in xrange(0, len(jac)):
-                # TODO: Put in noise
-                dKijdHP = self.compute_Kij(self.X, None, self.n, None, hyper_deriv=i)
-                # TODO: Compare timing between doing the full product and
-                # extracting only the trace.
-                jac[i] = 0.5 * scipy.trace(aaKI * dKijdHP)
-            return (-1 * self.ll, -1 * jac)
+        return -1 * self.ll
     
     def compute_K_L_alpha_ll(self):
         r"""Compute `K`, `L`, `alpha` and log-likelihood according to the first part of Algorithm 2.1 in R&W.
@@ -935,52 +920,20 @@ class GaussianProcess(object):
                      scipy.diag(err_y**2.0) +
                      self.noise_K +
                      self.diag_factor * sys.float_info.epsilon * scipy.eye(len(y)))
-            try:
-                self.L = scipy.matrix(
-                    scipy.linalg.cholesky(
-                        K_tot,
-                        lower=True,
-                        check_finite=False
-                    )
-                )
-            except TypeError:
-                # Catch lack of check_finite in older scipy:
-                self.L = scipy.matrix(
-                    scipy.linalg.cholesky(
-                        K_tot,
-                        lower=True
-                    )
-                )
-            # Convert the array output to a matrix since scipy treats arrays
-            # as row vectors:
-            try:
-                self.alpha = scipy.linalg.solve_triangular(
-                    self.L.T,
-                    scipy.linalg.solve_triangular(
-                        self.L,
-                        scipy.asmatrix(y).T,
-                        lower=True,
-                        check_finite=False
-                    ),
-                    lower=False,
-                    check_finite=False
-                )
-            except TypeError:
-                self.alpha = scipy.linalg.solve_triangular(
-                    self.L.T,
-                    scipy.linalg.solve_triangular(
-                        self.L,
-                        scipy.asmatrix(y).T,
-                        lower=True
-                    ),
-                    lower=False
-                )
-            self.ll = (-0.5 * scipy.asmatrix(y) * self.alpha -
+            self.L = scipy.linalg.cholesky(K_tot, lower=True)
+            self.alpha = scipy.linalg.solve_triangular(
+                self.L.T,
+                scipy.linalg.solve_triangular(
+                    self.L,
+                    scipy.atleast_2d(y).T,
+                    lower=True
+                ),
+                lower=False
+            )
+            self.ll = (-0.5 * scipy.atleast_2d(y).dot(self.alpha) -
                        scipy.log(scipy.diag(self.L)).sum() - 
                        0.5 * len(y) * scipy.log(2.0 * scipy.pi))[0, 0]
             # Apply hyperpriors:
-            k_nk = self.k + self.noise_k
-            theta = list(self.k.params) + list(self.noise_k.params)
             self.ll += self.k.hyperprior(self.k.params)
             self.ll += self.noise_k.hyperprior(self.noise_k.params)
             self.K_up_to_date = True
@@ -1012,13 +965,13 @@ class GaussianProcess(object):
         
         Parameters
         ----------
-        Xi : :py:class:`Matrix`, (`M`, `N`)
+        Xi : array, (`M`, `N`)
             `M` input values of dimension `N`.
-        Xj : :py:class:`Matrix`, (`P`, `N`)
+        Xj : array, (`P`, `N`)
             `P` input values of dimension `N`.
-        ni : :py:class:`Array`, (`M`,), non-negative integers
+        ni : array, (`M`,), non-negative integers
             `M` derivative orders with respect to the `Xi` coordinates.
-        nj : :py:class:`Array`, (`P`,), non-negative integers
+        nj : array, (`P`,), non-negative integers
             `P` derivative orders with respect to the `Xj` coordinates.
         noise : bool, optional
             If True, uses the noise kernel, otherwise uses the regular kernel.
@@ -1030,7 +983,7 @@ class GaussianProcess(object):
                 
         Returns
         -------
-        Kij : :py:class:`Matrix`, (`M`, `P`)
+        Kij : array, (`M`, `P`)
             Covariance matrix between `Xi` and `Xj`.
         """
         if not noise:
@@ -1054,7 +1007,7 @@ class GaussianProcess(object):
         nj_tile = scipy.tile(nj, (Xi.shape[0], 1))
         Kij = k(Xi_tile, Xj_tile, ni_tile, nj_tile, hyper_deriv=hyper_deriv,
                 symmetric=symmetric)
-        Kij = scipy.asmatrix(scipy.reshape(Kij, (Xi.shape[0], -1)))
+        Kij = scipy.reshape(Kij, (Xi.shape[0], -1))
         
         return Kij
     

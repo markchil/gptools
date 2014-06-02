@@ -58,9 +58,9 @@ def parallel_compute_ll_matrix(gp, bounds, num_pts, num_proc=None):
     
     Returns
     -------
-    ll_vals : :py:class:`Array`
+    ll_vals : array
         The log likelihood for each of the parameter possibilities.
-    param_vals : list of :py:class:`Array`
+    param_vals : list of array
         The parameter values used.
     """
     if num_proc is None:
@@ -101,14 +101,16 @@ def parallel_compute_ll_matrix(gp, bounds, num_pts, num_proc=None):
         
         num_pts_cases.append(num_pts)
     
-    pool =  multiprocessing.Pool(processes=num_proc)
-    vals = scipy.asarray(
-        pool.map(
-            _compute_ll_matrix_wrapper,
-            zip(gp_cases, pv_cases, num_pts_cases)
+    pool =  multiprocessing.Pool(processes=num_proc)    
+    try:
+        vals = scipy.asarray(
+            pool.map(
+                _compute_ll_matrix_wrapper,
+                zip(gp_cases, pv_cases, num_pts_cases)
+            )
         )
-    )
-    pool.close()
+    finally:
+        pool.close()
     
     return (vals, param_vals)
     
@@ -122,7 +124,7 @@ def _compute_ll_matrix_wrapper(gppv):
     
     Returns
     -------
-    vals : :py:class:`Array`
+    vals : array
         Log likelihood evaluated at the parameters specified in `param_vals`.
     """
     return gppv[0]._compute_ll_matrix(1, gppv[1], gppv[2])
@@ -132,13 +134,13 @@ def slice_plot(*args, **kwargs):
     
     Parameters
     ----------
-    vals : :py:class:`Array`, (`M`, `N`, `P`, ...)
+    vals : array, (`M`, `N`, `P`, ...)
         Multidimensional array to visualize.
-    x_vals_1 : :py:class:`Array`, (`M`,)
+    x_vals_1 : array, (`M`,)
         Values along the first dimension.
-    x_vals_2 : :py:class:`Array`, (`N`,)
+    x_vals_2 : array, (`N`,)
         Values along the second dimension.
-    x_vals_3 : :py:class:`Array`, (`P`,)
+    x_vals_3 : array, (`P`,)
         Values along the third dimension.
         
         **...and so on. At least four arguments must be provided.**
