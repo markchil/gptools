@@ -550,16 +550,20 @@ class GaussianProcess(object):
             composed of non-negative integers.
         """
         if use_MCMC:
-            res = self.predict_MCMC(Xstar, n=n, noise=noise,
-                                    return_std=return_std or full_output,
-                                    return_cov=return_cov or full_output,
-                                    return_samples=full_output and (return_samples or rejection_func),
-                                    num_samples=num_samples,
-                                    samp_kwargs=samp_kwargs,
-                                    full_MC=full_MC,
-                                    rejection_func=rejection_func,
-                                    ddof=ddof,
-                                    **kwargs)
+            res = self.predict_MCMC(
+                Xstar,
+                n=n,
+                noise=noise,
+                return_std=return_std or full_output,
+                return_cov=return_cov or full_output,
+                return_samples=full_output and (return_samples or rejection_func),
+                num_samples=num_samples,
+                samp_kwargs=samp_kwargs,
+                full_MC=full_MC,
+                rejection_func=rejection_func,
+                ddof=ddof,
+                **kwargs
+            )
             if full_output:
                 return res
             elif return_cov:
@@ -621,6 +625,8 @@ class GaussianProcess(object):
                             if rejection_func(samp):
                                 good_samps.append(samp)
                         samps = scipy.asarray(good_samps, dtype=float).T
+                        if len(samps) == 0:
+                            raise ValueError("Did not get any good samples!")
                     mean = scipy.mean(samps, axis=1)
                     covariance = scipy.cov(samps, rowvar=1, ddof=ddof)
                 std = scipy.sqrt(scipy.diagonal(covariance))
