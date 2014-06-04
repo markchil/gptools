@@ -562,6 +562,7 @@ class GaussianProcess(object):
                 full_MC=full_MC,
                 rejection_func=rejection_func,
                 ddof=ddof,
+                output_transform=output_transform,
                 **kwargs
             )
             if full_output:
@@ -624,9 +625,9 @@ class GaussianProcess(object):
                         for samp in samps.T:
                             if rejection_func(samp):
                                 good_samps.append(samp)
-                        samps = scipy.asarray(good_samps, dtype=float).T
-                        if len(samps) == 0:
+                        if len(good_samps) == 0:
                             raise ValueError("Did not get any good samples!")
+                        samps = scipy.asarray(good_samps, dtype=float).T
                     mean = scipy.mean(samps, axis=1)
                     covariance = scipy.cov(samps, rowvar=1, ddof=ddof)
                 std = scipy.sqrt(scipy.diagonal(covariance))
@@ -1261,7 +1262,7 @@ class GaussianProcess(object):
             processors.
         **kwargs : extra optional kwargs
             All additional kwargs are passed to
-            :py:meth:`sampler_hyparparameter_posterior`.
+            :py:meth:`sample_hyparparameter_posterior`.
         
         Returns
         -------
@@ -1278,6 +1279,7 @@ class GaussianProcess(object):
                 samp (`M`, `num_samples`)
                 ==== ====================
         """
+        output_transform = kwargs.pop('output_transform', None)
         if flat_trace is None:
             if sampler is None:
                 sampler = self.sample_hyperparameter_posterior(**kwargs)
@@ -1296,14 +1298,15 @@ class GaussianProcess(object):
             try:
                 res = pool.map(_ComputeGPWrapper(self, X, n, return_mean, return_std,
                                                  return_cov, return_samples,
-                                                 num_samples, noise, samp_kwargs),
+                                                 num_samples, noise, samp_kwargs,
+                                                 output_transform),
                                flat_trace)
             finally:
                 pool.close()
         else:
             res = map(_ComputeGPWrapper(self, X, n, return_mean, return_std,
                                         return_cov, return_samples, num_samples,
-                                        noise, samp_kwargs),
+                                        noise, samp_kwargs, output_transform),
                       flat_trace)
         out = dict()
         if return_mean:
@@ -1376,6 +1379,8 @@ class GaussianProcess(object):
                 for samp in samps.T:
                     if rejection_func(samp):
                         good_samps.append(samp)
+                if len(good_samps) == 0:
+                    raise ValueError("Did not get any good samples!")
                 samps = scipy.asarray(good_samps, dtype=float).T
             mean = scipy.mean(samps, axis=1)
             cov = scipy.cov(samps, rowvar=1, ddof=ddof)
@@ -1432,7 +1437,7 @@ class _ComputeGPWrapper(object):
         The contents of this dictionary will be passed to :py:meth:`draw_sample`.
     """
     def __init__(self, gp, X, n, return_mean, return_std, return_cov,
-                 return_sample, num_samples, noise, samp_kwargs):
+                 return_sample, num_samples, noise, samp_kwargs, output_transform):
         self.gp = gp
         self.X = X
         self.n = n
@@ -1444,6 +1449,7 @@ class _ComputeGPWrapper(object):
         self.noise = noise
         self.samp_kwargs = samp_kwargs
         self.full_output = return_cov or return_std or return_sample
+        self.output_transform = output_transform
     
     def __call__(self, p_case):
         """Evaluate the desired quantities with free hyperparameters `p_case`.
@@ -1454,7 +1460,8 @@ class _ComputeGPWrapper(object):
         out = self.gp.predict(self.X, n=self.n, noise=self.noise,
                               full_output=self.full_output,
                               return_samples=self.return_sample,
-                              num_samples=self.num_samples)
+                              num_samples=self.num_samples,
+                              output_transform=self.output_transform)
         if not self.full_output:
             # If full output is True, return_mean must be the only True thing,
             # since otherwise this isn't computing anything!
