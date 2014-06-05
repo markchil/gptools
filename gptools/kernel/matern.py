@@ -33,7 +33,7 @@ except ImportError:
                   ImportWarning)
 
 def matern_function(Xi, Xj, *args):
-    """Matern covariance function of arbitrary dimension, for use with :py:class:`ArbitraryKernel`.
+    r"""Matern covariance function of arbitrary dimension, for use with :py:class:`ArbitraryKernel`.
     
     The Matern kernel has the following hyperparameters, always referenced in
     the order listed:
@@ -91,7 +91,7 @@ def matern_function(Xi, Xj, *args):
     return k
 
 class MaternKernelArb(ArbitraryKernel):
-    """Matern covariance kernel. Supports arbitrary derivatives. Treats order as a hyperparameter.
+    r"""Matern covariance kernel. Supports arbitrary derivatives. Treats order as a hyperparameter.
     
     This version of the Matern kernel is painfully slow, but uses :py:mod:`mpmath`
     to ensure the derivatives are computed properly, since there may be issues
