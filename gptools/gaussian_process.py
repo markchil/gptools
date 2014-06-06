@@ -884,7 +884,7 @@ class GaussianProcess(object):
             L = Q.dot(Lam_1_2)
         else:
             raise ValueError("method %s not recognized!" % (method,))
-        return mean + L.dot(rand_vars[:num_eig, :])
+        return scipy.atleast_2d(mean).T + L.dot(rand_vars[:num_eig, :])
     
     def update_hyperparameters(self, new_params):
         """Update the kernel's hyperparameters to the new parameters.
