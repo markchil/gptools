@@ -1494,7 +1494,11 @@ class _ComputeLnProbEval(object):
         x : array-like
             The new hyperparameters.
         """
-        return -1 * self.gp.update_hyperparameters(x.flatten())
+        # TODO: This should probably only return -inf if the proposal is out of bounds, and raise the exception otherwise.
+        try:
+            return -1 * self.gp.update_hyperparameters(x.flatten())
+        except:
+            return -scipy.inf
 
 class _OptimizeHyperparametersEval(object):
     """Helper class to support parallel random starts of MAP estimation of hyperparameters.

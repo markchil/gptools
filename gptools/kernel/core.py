@@ -20,7 +20,8 @@
 
 from __future__ import division
 
-from ..utils import unique_rows, generate_set_partitions, UniformJointPrior, ProductJointPrior, IndependentJointPrior
+from ..utils import unique_rows, generate_set_partitions, UniformJointPrior, \
+                    ProductJointPrior, IndependentJointPrior, powerset
 from ..error_handling import GPArgumentError
 
 import scipy
@@ -372,6 +373,46 @@ class BinaryKernel(Kernel):
         self.k1.enforce_bounds = v
         self.k2.enforce_bounds = v
     
+    @property
+    def fixed_params(self):
+        return scipy.concatenate((self.k1.fixed_params, self.k2.fixed_params))
+    
+    @fixed_params.setter
+    def fixed_params(self, v):
+        self.k1.fixed_params = v[:self.k1.num_params]
+        self.k2.fixed_params = v[self.k1.num_params:]
+    
+    @property
+    def free_param_bounds(self):
+        """Returns the bounds of the free hyperparameters.
+        
+        Returns
+        -------
+        free_param_bounds : :py:class:`Array`
+            Array of the bounds of the free parameters, in order.
+        """
+        return scipy.concatenate((self.k1.free_param_bounds, self.k2.free_param_bounds))
+    
+    @property
+    def free_param_names(self):
+        """Returns the names of the free hyperparameters.
+        
+        Returns
+        -------
+        free_param_names : :py:class:`Array`
+            Array of the names of the free parameters, in order.
+        """
+        return scipy.concatenate((self.k1.free_param_names, self.k2.free_param_names))
+    
+    @property
+    def params(self):
+        return scipy.concatenate((self.k1.params, self.k2.params))
+    
+    @params.setter
+    def params(self, v):
+        self.k1.params = v[:self.k1.num_params]
+        self.k2.params = v[self.k1.num_params:]
+    
     def set_hyperparams(self, new_params):
         """Set the (free) hyperparameters.
         
@@ -388,12 +429,11 @@ class BinaryKernel(Kernel):
         new_params = scipy.asarray(new_params, dtype=float)
         
         if new_params.shape == self.free_params.shape:
-            self.params[~self.fixed_params] = new_params
-            num_fixed_k1 = sum(~self.k1.fixed_params)
-            self.k1.set_hyperparams(new_params[:num_fixed_k1])
-            self.k2.set_hyperparams(new_params[num_fixed_k1:])
+            num_free_k1 = sum(~self.k1.fixed_params)
+            self.k1.set_hyperparams(new_params[:num_free_k1])
+            self.k2.set_hyperparams(new_params[num_free_k1:])
         else:
-            raise ValueError("Length of new_params must be %s!" % (self.params.shape,))
+            raise ValueError("Length of new_params must be %s!" % (self.free_params.shape,))
 
 class SumKernel(BinaryKernel):
     """The sum of two kernels.
@@ -433,7 +473,7 @@ class SumKernel(BinaryKernel):
 class ProductKernel(BinaryKernel):
     """The product of two kernels.
     """
-    def __call__(self, *args, **kwargs):
+    def __call__(self, Xi, Xj, ni, nj, **kwargs):
         """Evaluate the covariance between points `Xi` and `Xj` with derivative order `ni`, `nj`.
         
         Parameters
@@ -460,7 +500,43 @@ class ProductKernel(BinaryKernel):
         NotImplementedError
             If the `hyper_deriv` keyword is given and is not None.
         """
-        return self.k1(*args, **kwargs) * self.k2(*args, **kwargs)
+        # Need to process ni, nj to handle the product rule properly.
+        nij = scipy.hstack((ni, nj))
+        nij_unique = unique_rows(nij)
+        
+        result = scipy.zeros(Xi.shape[0])
+        
+        for row in nij_unique:
+            # deriv_pattern is the pattern of partial derivatives, where the
+            # indicies for derivatives with respect to the elements of Xj have
+            # been offset by self.num_dim. For instance, if ni = [1, 2] and
+            # nj = [3, 4], deriv_pattern will be [0, 1, 1, 2, 2, 2, 3, 3, 3, 3].
+            deriv_pattern = []
+            for idx in xrange(0, len(row)):
+                deriv_pattern.extend(row[idx] * [idx])
+            
+            idxs = (nij == row).all(axis=1)
+            
+            S = powerset(deriv_pattern)
+            
+            # little "s" is a member of the power set of S:
+            for s in S:
+                # nij_1 is the combined array of derivative orders for function 1:
+                nij_1 = scipy.zeros((idxs.sum(), 2 * self.num_dim))
+                # sC is the complement of s with respect to S:
+                sC = list(deriv_pattern)
+                for i in s:
+                    nij_1[:, i] += 1
+                    sC.remove(i)
+                # nij_2 is the combined array of derivative orders for function 2:
+                nij_2 = scipy.zeros((idxs.sum(), 2 * self.num_dim))
+                for i in sC:
+                    nij_2[:, i] += 1
+                result[idxs] += (
+                    self.k1(Xi[idxs, :], Xj[idxs, :], nij_1[:, :self.num_dim], nij_1[:, self.num_dim:], **kwargs) *
+                    self.k2(Xi[idxs, :], Xj[idxs, :], nij_2[:, :self.num_dim], nij_2[:, self.num_dim:], **kwargs)
+                )
+        return result
 
 class ChainRuleKernel(Kernel):
     """Abstract class for the common methods in creating kernels that require application of Faa di Bruno's formula.
@@ -638,7 +714,7 @@ class ArbitraryKernel(Kernel):
         self.cov_func = cov_func
         super(ArbitraryKernel, self).__init__(num_dim=num_dim,
                                               num_params=num_params,
-                                              param_names=kwargs.pop('param_names', param_names),
+                                              param_names=kwargs.pop('param_names', None),
                                               **kwargs)
     
     def __call__(self, Xi, Xj, ni, nj, hyper_deriv=None, symmetric=False):
@@ -679,14 +755,14 @@ class ArbitraryKernel(Kernel):
         n_cat_unique = unique_rows(n_cat)
         k = scipy.zeros(Xi.shape[0], dtype=float)
         # Loop over unique derivative patterns:
-        if self.num_proc > 0:
+        if self.num_proc > 1:
             pool = multiprocessing.Pool(processes=self.num_proc)
         for n_cat_state in n_cat_unique:
             idxs = scipy.where(scipy.asarray((n_cat == n_cat_state).all(axis=1)).squeeze())[0]
             if (n_cat_state == 0).all():
                 k[idxs] = self.cov_func(Xi[idxs, :], Xj[idxs, :], *self.params)
             else:
-                if self.num_proc > 0 and len(idxs) > 1:
+                if self.num_proc > 1 and len(idxs) > 1:
                     k[idxs] = scipy.asarray(
                         pool.map(_ArbitraryKernelEval(self, n_cat_state), X_cat[idxs, :]),
                         dtype=float
@@ -745,11 +821,16 @@ class _ArbitraryKernelEval(object):
                                        n=self.n_cat_state,
                                        singular=True))
 
+MASKEDKERNEL_RESERVED_NAMES = ['base', 'mask', 'maskC', 'num_dim', 'scale']
+
 class MaskedKernel(Kernel):
-    """Creates a kernel that is only masked to operate on certain dimensions.
+    """Creates a kernel that is only masked to operate on certain dimensions, or has scaling/shifting.
     
     This can be used, for instance, to put a squared exponential kernel in one
     direction and a Matern kernel in the other.
+    
+    Overrides :py:meth:`__getattribute__` and :py:meth:`__setattr__` to make all
+    setting/accessing go to the `base` kernel.
     
     Parameters
     ----------
@@ -762,11 +843,20 @@ class MaskedKernel(Kernel):
         1d list of indices of dimensions `X` to include when passing to the
         `base` kernel. Length must be `base.num_dim`. Default is [0] (i.e.,
         just pass the first column of `X` to a univariate `base` kernel).
+    scale : list or other array-like, optional
+        1d list of scale factors to apply to the elements in `Xi`, `Xj`. Default
+        is ones. Length must be equal to 2`base.num_dim`.
     """
-    def __init__(self, base, total_dim=2, mask=[0]):
+    def __init__(self, base, total_dim=2, mask=[0], scale=None):
         if len(mask) != base.num_dim:
             raise ValueError("Length of mask must be equal to the number of "
                              "dimensions of the base kernel!")
+        if scale is None:
+            scale = [1] * 2 * base.num_dim
+        elif len(scale) != 2 * base.num_dim:
+            raise ValueError("Length of scale must be equal to twice the number "
+                             "of dimensions of the base kernel!")
+        self.base = base
         super(MaskedKernel, self).__init__(num_dim=total_dim,
                                            num_params=base.num_params,
                                            initial_params=base.params,
@@ -774,11 +864,39 @@ class MaskedKernel(Kernel):
                                            param_names=base.param_names,
                                            enforce_bounds=base.enforce_bounds,
                                            hyperprior=base.hyperprior)
-        self.base = base
         self.mask = mask
+        # maskC is the complement of mask:
+        self.maskC = range(0, self.num_dim)
+        for v in self.mask:
+            self.maskC.remove(v)
+        self.scale = scale
     
-    # TODO: This doesn't make it intuitive to change the parameters of the base
-    # kernel!
+    def __getattribute__(self, name):
+        """Gets all attributes from the base kernel.
+        
+        The exceptions are 'base', 'mask', 'maskC', 'num_dim', 'scale' and any
+        special method (i.e., a method/attribute having leading and trailing
+        double underscores), which are taken from :py:class:`MaskedKernel`.
+        """
+        if not (name.startswith('__') and name.endswith('__')) and name not in MASKEDKERNEL_RESERVED_NAMES:
+            try:
+                return self.base.__getattribute__(name)
+            except AttributeError:
+                return super(MaskedKernel, self).__getattribute__(name)
+        else:
+            return super(MaskedKernel, self).__getattribute__(name)
+    
+    def __setattr__(self, name, value):
+        """Sets all attributes in the base kernel.
+        
+        The exceptions are 'base', 'mask', 'maskC', 'num_dim', 'scale' and any
+        special method (i.e., a method/attribute having leading and trailing
+        double underscores), which are set in :py:class:`MaskedKernel`.
+        """
+        if not (name.startswith('__') and name.endswith('__')) and name not in MASKEDKERNEL_RESERVED_NAMES:
+            return self.base.__setattr__(name, value)
+        else:
+            return super(MaskedKernel, self).__setattr__(name, value)
     
     def __call__(self, Xi, Xj, ni, nj, **kwargs):
         """Evaluate the covariance between points `Xi` and `Xj` with derivative order `ni`, `nj`.
@@ -810,5 +928,19 @@ class MaskedKernel(Kernel):
         Kij : :py:class:`Array`, (`M`,)
             Covariances for each of the `M` `Xi`, `Xj` pairs.
         """
-        return self.base(Xi[:, self.mask], Xj[:, self.mask], ni[:, self.mask], nj[:, self.mask], **kwargs)
+        # Need to see if there are any derivatives of the masked variables:
+        good_idxs = (ni[:, self.maskC] == 0).all(axis=1) & (nj[:, self.maskC] == 0).all(axis=1)
+        result = scipy.zeros(Xi.shape[0])
+        # Need to do the indexing kinda funny to keep the shape right:
+        if good_idxs.any():
+            scale_tile = scipy.tile(self.scale, (good_idxs.sum(), 1))
+            result[good_idxs] = self.base(
+                Xi[good_idxs][:, self.mask] * scale_tile[:, :self.base.num_dim],
+                Xj[good_idxs][:, self.mask] * scale_tile[:, self.base.num_dim:],
+                ni[good_idxs][:, self.mask],
+                nj[good_idxs][:, self.mask],
+                **kwargs
+            ) * (scale_tile**scipy.hstack((ni[good_idxs][:, self.mask], nj[good_idxs][:, self.mask]))).prod(axis=1)
+            # Final factor is to account for the scaling.
+        return result
         

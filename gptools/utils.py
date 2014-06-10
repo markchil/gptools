@@ -28,6 +28,7 @@ import scipy.special
 import scipy.stats
 import numpy.random
 import copy
+import itertools
 try:
     import matplotlib.pyplot as plt
     import matplotlib.widgets as mplw
@@ -214,6 +215,26 @@ class JointPrior(object):
         """
         return ProductJointPrior(self, other)
 
+class CombinedBounds(object):
+    """Object to support reassignment of the bounds from a combined prior.
+    """
+    # TODO: This could use a lot more work!
+    def __init__(self, l1, l2):
+        self.l1 = l1
+        self.l2 = l2
+    
+    def __getitem__(self, pos):
+        return (list(self.l1) + list(self.l2))[pos]
+    
+    def __setitem__(self, pos, value):
+        if pos < len(self.l1):
+            self.l1[pos] = value
+        else:
+            self.l2[pos - len(self.l1)] = value
+    
+    def __len__(self):
+        return len(self.l1) + len(self.l2)
+
 class ProductJointPrior(JointPrior):
     """Product of two independent priors.
     
@@ -231,7 +252,13 @@ class ProductJointPrior(JointPrior):
     
     @property
     def bounds(self):
-        return list(self.p1.bounds) + list(self.p2.bounds)
+        return CombinedBounds(self.p1.bounds, self.p2.bounds)
+    
+    @bounds.setter
+    def bounds(self, v):
+        num_p1_bounds = len(self.p1.bounds)
+        self.p1.bounds = v[:num_p1_bounds]
+        self.p2.bounds = v[num_p1_bounds:]
 
     def __call__(self, theta):
         """Evaluate the prior log-PDF at the given values of the hyperparameters, theta.
@@ -641,6 +668,14 @@ def generate_set_partitions(set_):
         partitions.append(blocks)
     
     return partitions
+
+def powerset(iterable):
+    """powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)
+    
+    From itertools documentation.
+    """
+    s = list(iterable)
+    return itertools.chain.from_iterable(itertools.combinations(s, r) for r in range(len(s) + 1))
 
 def unique_rows(arr):
     """Returns a copy of arr with duplicate rows removed.
