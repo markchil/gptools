@@ -465,6 +465,99 @@ class GibbsKernel1dTanh(GibbsKernel1d):
                                                              'x_0'],
                                                 **kwargs)
 
+def double_tanh_warp(x, n, lcore, lmid, ledge, la, lb, xa, xb):
+    r"""Implements a sum-of-tanh warping function and its derivative.
+    
+    .. math::
+    
+        l = a\tanh\frac{x-x_a}{l_a} + b\tanh\frac{x-x_b}{l_b}
+    
+    Parameters
+    ----------
+    x : float or array of float
+        Locations to evaluate the function at.
+    n : int
+        Derivative order to take. Used for ALL of the points.
+    lcore : float
+        Core length scale.
+    lmid : float
+        Intermediate length scale.
+    ledge : float
+        Edge length scale.
+    la : positive float
+        Transition of first tanh.
+    lb : positive float
+        Transition of second tanh.
+    xa : float
+        Transition of first tanh.
+    xb : float
+        Transition of second tanh.
+    
+    Returns
+    -------
+    l : float or array
+        Warped length scale at the given locations.
+
+    Raises
+    ------
+    NotImplementedError
+        If `n` > 1.
+    """
+    a, b, c = scipy.dot([[-0.5, 0, 0.5], [0, 0.5, -0.5], [0.5, 0.5, 0]],
+                        [[lcore], [ledge], [lmid]])
+    a = a[0]
+    b = b[0]
+    c = c[0]
+    if n == 0:
+        return a * scipy.tanh((x - xa) / la) + b * scipy.tanh((x - xb) / lb) + c
+    elif n == 1:
+        return (a**2 / la * (scipy.cosh((x - xa) / la))**(-2.0) +
+                b**2 / lb * (scipy.cosh((x - xb) / lb))**(-2.0))
+    else:
+        raise NotImplementedError("Only derivatives up to order 1 are supported!")
+
+class GibbsKernel1dDoubleTanh(GibbsKernel1d):
+    r"""Gibbs warped squared exponential covariance function in 1d.
+    
+    Uses hard-coded implementation up to first derivatives.
+    
+    The covariance function is given by
+    
+    .. math::
+
+        k = \left ( \frac{2l(x)l(x')}{l^2(x)+l^2(x')} \right )^{1/2}\exp\left ( -\frac{(x-x')^2}{l^2(x)+l^2(x')} \right )
+    
+    Warps the length scale using two hyperbolic tangents:
+    
+    .. math::
+    
+        l = a\tanh\frac{x-x_a}{l_a} + b\tanh\frac{x-x_b}{l_b}
+    
+    The order of the hyperparameters is:
+    
+    = ====== ====================================
+    0 sigmaf Amplitude of the covariance function
+    1 lcore  Core length scale
+    2 lmid   Intermediate length scale
+    3 ledge  Edge length scale
+    4 la     Width of first tanh
+    5 lb     Width of second tanh
+    6 xa     Center of first tanh
+    7 xb     Center of second tanh
+    = ====== ====================================
+    
+    Parameters
+    ----------
+    **kwargs
+        All parameters are passed to :py:class:`~gptools.kernel.core.Kernel`.
+    """
+    def __init__(self, **kwargs):
+        super(GibbsKernel1dDoubleTanh, self).__init__(
+            double_tanh_warp,
+            param_names=[r'\sigma_f', 'l_c', 'l_m', 'l_e', 'l_a', 'l_b', 'x_a', 'x_b'],
+            **kwargs
+        )
+
 def cubic_bucket_warp(x, n, l1, l2, l3, x0, w1, w2, w3):
     """Warps the length scale with a piecewise cubic "bucket" shape.
     

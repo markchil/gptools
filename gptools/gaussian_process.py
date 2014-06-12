@@ -886,7 +886,7 @@ class GaussianProcess(object):
             raise ValueError("method %s not recognized!" % (method,))
         return scipy.atleast_2d(mean).T + L.dot(rand_vars[:num_eig, :])
     
-    def update_hyperparameters(self, new_params):
+    def update_hyperparameters(self, new_params, exit_on_bounds=True):
         """Update the kernel's hyperparameters to the new parameters.
         
         This will call :py:meth:`compute_K_L_alpha_ll` to update the state
@@ -896,6 +896,11 @@ class GaussianProcess(object):
         ----------
         new_params : :py:class:`Array` or other Array-like, length dictated by kernel
             New parameters to use.
+        exit_on_bounds : bool, optional
+            If True, the method will automatically exit if the hyperparameters
+            are impossible given the hyperprior, without trying to update the
+            internal state. This is useful during MCMC sampling and optimization.
+            Default is True (don't perform update for impossible hyperparameters).
         
         Returns
         -------
@@ -905,6 +910,13 @@ class GaussianProcess(object):
         self.k.set_hyperparams(new_params[:len(self.k.free_params)])
         self.noise_k.set_hyperparams(new_params[len(self.k.free_params):])
         self.K_up_to_date = False
+        if exit_on_bounds:
+            L_k = self.k.hyperprior(self.k.params)
+            if scipy.isinf(L_k) or scipy.isnan(L_k):
+                return scipy.inf
+            L_nk = self.noise_k.hyperprior(self.noise_k.params)
+            if scipy.isinf(L_nk) or scipy.isnan(L_nk):
+                return scipy.inf
         self.compute_K_L_alpha_ll()
         return -1 * self.ll
     
@@ -1494,11 +1506,7 @@ class _ComputeLnProbEval(object):
         x : array-like
             The new hyperparameters.
         """
-        # TODO: This should probably only return -inf if the proposal is out of bounds, and raise the exception otherwise.
-        try:
-            return -1 * self.gp.update_hyperparameters(x.flatten())
-        except:
-            return -scipy.inf
+        return -1 * self.gp.update_hyperparameters(x.flatten())
 
 class _OptimizeHyperparametersEval(object):
     """Helper class to support parallel random starts of MAP estimation of hyperparameters.

@@ -384,6 +384,75 @@ class CoreEdgeJointPrior(UniformJointPrior):
         else:
             return out.ravel()
 
+class CoreMidEdgeJointPrior(UniformJointPrior):
+    """Prior for use with Gibbs kernel warping functions with an inequality constraint between the core, mid and edge length scales and the core-mid and mid-edge joins.
+    """
+    
+    def __call__(self, theta):
+        """Evaluate the prior log-PDF at the given values of the hyperparameters, theta.
+        
+        Parameters
+        ----------
+        theta : array-like, (`num_params`,)
+            The hyperparameters to evaluate the log-PDF at.
+        """
+        ll = 0
+        bounds_new = copy.copy(self.bounds)
+        # lc < lm:
+        bounds_new[1] = (self.bounds[1][0], theta[2])
+        # le < lm:
+        bounds_new[3] = (self.bounds[3][0], theta[2])
+        # xa < xb:
+        bounds_new[6] = (self.bounds[6][0], theta[7])
+        for v, b in zip(theta, bounds_new):
+            if b[0] <= v and v <= b[1]:
+                ll += -scipy.log(b[1] - b[0])
+            else:
+                ll = -scipy.inf
+                break
+        return ll
+    
+    def random_draw(self, size=None):
+        """Draw random samples of the hyperparameters.
+        
+        Parameters
+        ----------
+        size : None, int or array-like, optional
+            The number/shape of samples to draw. If None, only one sample is
+            returned. Default is None.
+        """
+        if size is None:
+            size = 1
+            single_val = True
+        else:
+            single_val = False
+        
+        out_shape = [len(self.bounds)]
+        try:
+            out_shape.extend(size)
+        except TypeError:
+            out_shape.append(size)
+        
+        out = scipy.zeros(out_shape)
+        # sigma_f, lm, la, lb, xb:
+        for j in [0, 2, 4, 5, 7]:
+            out[j, :] = numpy.random.uniform(low=self.bounds[j][0],
+                                             high=self.bounds[j][1],
+                                             size=size)
+        # lc, le:
+        for j in [1, 3]:
+            out[j, :] = numpy.random.uniform(low=self.bounds[j][0],
+                                             high=out[2, :],
+                                             size=size)
+        # xa:
+        out[6, :] = numpy.random.uniform(low=self.bounds[6][0],
+                                         high=out[7, :],
+                                         size=size)
+        if not single_val:
+            return out
+        else:
+            return out.ravel()
+
 class IndependentJointPrior(JointPrior):
     """Joint prior for which each hyperparameter is independent.
     
