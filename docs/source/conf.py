@@ -192,7 +192,8 @@ latex_elements = {
 #'pointsize': '10pt',
 
 # Additional stuff for the LaTeX preamble.
-'preamble': r'\hypersetup{bookmarksdepth=4}',
+'preamble': r"""\hypersetup{bookmarksdepth=4}
+\setcounter{tocdepth}{4}""",
 }
 
 # Grouping the document tree into LaTeX files. List of tuples
