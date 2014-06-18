@@ -134,8 +134,8 @@ class GaussianProcess(object):
     --------
     add_data : Used to process `X`, `y`, `err_y` and to add data to the process.
     """
-    def __init__(self, k, noise_k=None, X=None, y=None, err_y=0, n=0,
-                 diag_factor=1e2):
+    def __init__(self, k, noise_k=None, X=None, y=None, err_y=0, n=0, T=None,
+                 diag_factor=1e2, **kwargs):
         if not isinstance(k, Kernel):
             raise TypeError("Argument k must be an instance of Kernel when "
                             "constructing GaussianProcess!")
@@ -153,19 +153,21 @@ class GaussianProcess(object):
         self.X = None
         self.err_y = scipy.array([], dtype=float)
         self.n = None
+        self.T = None
+        
         if X is not None:
             if y is None:
                 raise GPArgumentError("Must pass both X and y when "
                                       "constructing GaussianProcess!")
             else:
-                self.add_data(X, y, err_y=err_y, n=n)
+                self.add_data(X, y, err_y=err_y, n=n, T=T)
         elif X is None and y is not None:
             raise GPArgumentError("Must pass both X and y when constructing "
                                   "GaussianProcess!")
         else:
             self.K_up_to_date = False
     
-    def add_data(self, X, y, err_y=0, n=0):   
+    def add_data(self, X, y, err_y=0, n=0, T=None):   
         """Add data to the training data set of the GaussianProcess instance.
         
         Parameters
@@ -218,25 +220,6 @@ class GaussianProcess(object):
         if (err_y < 0).any():
             raise ValueError("All elements of err_y must be non-negative!")
         
-        # Handle scalar derivative orders or verify shape of array derivative
-        # orders matches shape of y:
-        try:
-            iter(n)
-        except TypeError:
-            n = n * scipy.ones((len(y), self.num_dim), dtype=int)
-        else:
-            n = scipy.atleast_2d(scipy.asarray(n, dtype=int))
-            # Correct single-dimension inputs:
-            if self.num_dim == 1 and n.shape[1] != 1:
-                n = n.T
-            if n.shape != (len(y), self.num_dim):
-                raise ValueError("When using array-like n, shape must be "
-                                 "(len(y), k.num_dim)! Shape of n given is %s, "
-                                 "shape of y given is %s and num_dim=%d."
-                                 % (n.shape, y.shape, self.num_dim))
-        if (n < 0).any():
-            raise ValueError("All elements of n must be non-negative integers!")
-        
         # Handle scalar training input or convert array input into 2d.
         try:
             iter(X)
@@ -246,11 +229,53 @@ class GaussianProcess(object):
         # Correct single-dimension inputs:
         if self.num_dim == 1 and X.shape[0] == 1:
             X = X.T
-        if X.shape != (len(y), self.num_dim):
+        if T is None and X.shape != (len(y), self.num_dim):
             raise ValueError("Shape of training inputs must be (len(y), "
                              "k.num_dim)! X given has shape %s, shape of y is "
                              "%s and num_dim=%d."
                              % (X.shape, y.shape, self.num_dim))
+        
+        # Handle scalar derivative orders or verify shape of array derivative
+        # orders matches shape of y:
+        try:
+            iter(n)
+        except TypeError:
+            n = n * scipy.ones_like(X, dtype=int)
+        else:
+            n = scipy.atleast_2d(scipy.asarray(n, dtype=int))
+            # Correct single-dimension inputs:
+            if self.num_dim == 1 and n.shape[1] != 1:
+                n = n.T
+            if n.shape != X.shape:
+                raise ValueError("When using array-like n, shape must be "
+                                 "(len(y), k.num_dim)! Shape of n given is %s, "
+                                 "shape of y given is %s and num_dim=%d."
+                                 % (n.shape, y.shape, self.num_dim))
+        if (n < 0).any():
+            raise ValueError("All elements of n must be non-negative integers!")
+        
+        # Handle transform:
+        if T is None and self.T is not None:
+            T = scipy.eye(len(y))
+        if T is not None:
+            T = scipy.atleast_2d(scipy.asarray(T, dtype=float))
+            if T.ndim != 2:
+                raise ValueError("T must have exactly 2 dimensions!")
+            if T.shape[0] != len(y):
+                raise ValueError(
+                    "T must have as many rows are there are elements in y!"
+                )
+            if T.shape[1] != X.shape[0]:
+                raise ValueError(
+                    "There must be as many columns in T as there are rows in X!"
+                )
+            if self.T is None and self.X is not None:
+                self.T = scipy.eye(len(self.y))
+            
+            self.T = scipy.vstack((
+                scipy.hstack((self.T, scipy.zeros((self.T.shape[0], T.shape[1])))),
+                scipy.hstack((scipy.zeros((T.shape[0], self.T.shape[1])), T))
+            ))
         
         if self.X is None:
             self.X = X
@@ -303,6 +328,9 @@ class GaussianProcess(object):
         # This is naive as it does not account for the posterior variance in the
         # GP itself, but should work as a first-cut approach to deleting
         # outliers.
+        # TODO: Update this to handle T properly!
+        if self.T is not None:
+            raise NotImplementedError("Removal of outliers not yet supported for transformed data!")
         mean = self.predict(self.X, n=self.n, noise=False, return_std=False,
                             **predict_kwargs)
         deltas = scipy.absolute(mean - self.y) / self.err_y
@@ -311,9 +339,12 @@ class GaussianProcess(object):
         good_idxs = ~bad_idxs
         
         # Pull out the old values so they can be returned:
-        X_bad = self.X[bad_idxs, :]
         y_bad = self.y[bad_idxs]
         err_y_bad = self.err_y[bad_idxs]
+        if self.T is not None:
+            T_bad = self.T[bad_idxs, :]
+            # TODO: Figure out what to do about X_bad!
+        X_bad = self.X[bad_idxs, :]
         n_bad = self.n[bad_idxs, :]
         
         # Delete the offending points:
@@ -440,9 +471,9 @@ class GaussianProcess(object):
         if verbose:
             print("Got %d completed starts, optimal result is:" % (len(res),))
             print(res_min)
-            print("\nLL\t%.3e" % (-1 * res_min.fun))
+            print("\nLL\t%.3g" % (-1 * res_min.fun))
             for v, l in zip(res_min.x, k_nk.free_param_names):
-                print("%s\t%.3e" % (l.translate(None, '\\'), v))
+                print("%s\t%.3g" % (l.translate(None, '\\'), v))
         if not res_min.success:
             warnings.warn("Optimizer %s reports failure, selected hyperparameters "
                           "are likely NOT optimal. Status: %d, Message: '%s'. "
@@ -583,6 +614,24 @@ class GaussianProcess(object):
                 raise ValueError("Second dimension of Xstar must be equal to "
                                  "self.num_dim! Shape of Xstar given is %s, "
                                  "num_dim is %d." % (Xstar.shape, self.num_dim))
+            
+            # Process T:
+            if output_transform is not None:
+                output_transform = scipy.atleast_2d(scipy.asarray(output_transform, dtype=float))
+                if output_transform.ndim != 2:
+                    raise ValueError(
+                        "output_transform must have exactly 2 dimensions! Shape "
+                        "of output_transform given is %s."
+                        % (output_transform.shape,)
+                    )
+                if output_transform.shape[1] != Xstar.shape[0]:
+                    raise ValueError(
+                        "output_transform must have the same number of columns "
+                        "the number of rows in Xstar! Shape of output_transform "
+                        "given is %s, shape of Xstar is %s."
+                        % (output_transform.shape, Xstar.shape,)
+                    )
+            
             # Process n:
             try:
                 iter(n)
@@ -603,10 +652,12 @@ class GaussianProcess(object):
             Kstar = self.compute_Kij(self.X, Xstar, self.n, n)
             if noise:
                 Kstar = Kstar + self.compute_Kij(self.X, Xstar, self.n, n, noise=True)
+            if self.T is not None:
+                Kstar = self.T.dot(Kstar)
             mean = Kstar.T.dot(self.alpha)
             if output_transform is not None:
                 mean = output_transform.dot(mean)
-            mean = mean.flatten()
+            mean = mean.ravel()
             if return_std or return_cov or full_output or full_MC:
                 v = scipy.linalg.solve_triangular(self.L, Kstar, lower=True)
                 Kstarstar = self.compute_Kij(Xstar, None, n, None)
@@ -705,6 +756,7 @@ class GaussianProcess(object):
         full_output : dict
             Dictionary with fields for mean, std, cov and possibly random samples. Only returned if `return_prediction` and `full_output` are True.
         """
+        # TODO: Make this handle T properly!
         if self.num_dim > 2:
             raise ValueError("Plotting is not supported for num_dim > 2!")
         
@@ -865,8 +917,6 @@ class GaussianProcess(object):
         if rand_type == 'uniform':
             rand_vars = scipy.stats.norm.ppf(rand_vars)
         
-        # TODO: Should probably do some shape-checking first...
-        
         if method == 'cholesky':
             L = scipy.linalg.cholesky(
                 cov + diag_factor * sys.float_info.epsilon * scipy.eye(cov.shape[0]),
@@ -935,9 +985,14 @@ class GaussianProcess(object):
             err_y = self.err_y
             self.K = self.compute_Kij(self.X, None, self.n, None, noise=False)
             self.noise_K = self.compute_Kij(self.X, None, self.n, None, noise=True)
-            K_tot = (self.K +
+            K = self.K
+            noise_K = self.noise_K
+            if self.T is not None:
+                K = self.T.dot(K).dot(self.T.T)
+                noise_K = self.T.dot(noise_K).dot(self.T.T)
+            K_tot = (K +
                      scipy.diag(err_y**2.0) +
-                     self.noise_K +
+                     noise_K +
                      self.diag_factor * sys.float_info.epsilon * scipy.eye(len(y)))
             self.L = scipy.linalg.cholesky(K_tot, lower=True)
             self.alpha = scipy.linalg.solve_triangular(
