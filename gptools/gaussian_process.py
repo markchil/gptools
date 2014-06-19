@@ -135,7 +135,7 @@ class GaussianProcess(object):
     add_data : Used to process `X`, `y`, `err_y` and to add data to the process.
     """
     def __init__(self, k, noise_k=None, X=None, y=None, err_y=0, n=0, T=None,
-                 diag_factor=1e2, **kwargs):
+                 diag_factor=1e2):
         if not isinstance(k, Kernel):
             raise TypeError("Argument k must be an instance of Kernel when "
                             "constructing GaussianProcess!")
@@ -272,10 +272,14 @@ class GaussianProcess(object):
             if self.T is None and self.X is not None:
                 self.T = scipy.eye(len(self.y))
             
-            self.T = scipy.vstack((
-                scipy.hstack((self.T, scipy.zeros((self.T.shape[0], T.shape[1])))),
-                scipy.hstack((scipy.zeros((T.shape[0], self.T.shape[1])), T))
-            ))
+            if self.T is None:
+                self.T = T
+            else:
+                self.T = scipy.linalg.block_diag(self.T, T)
+                # self.T = scipy.vstack((
+                #     scipy.hstack((self.T, scipy.zeros((self.T.shape[0], T.shape[1])))),
+                #     scipy.hstack((scipy.zeros((T.shape[0], self.T.shape[1])), T))
+                # ))
         
         if self.X is None:
             self.X = X
@@ -323,16 +327,18 @@ class GaussianProcess(object):
         bad_idxs : array
             Array of booleans with the original shape of X with True wherever
             a point was taken to be bad and subsequently removed.
+        T_bad : array
+            Transformation matrix of returned points. Only returned if
+            :py:attr:`T` is not None for the instance.
         """
         # Find where a point lies more than thresh*err_y away from the mean:
         # This is naive as it does not account for the posterior variance in the
         # GP itself, but should work as a first-cut approach to deleting
         # outliers.
-        # TODO: Update this to handle T properly!
-        if self.T is not None:
-            raise NotImplementedError("Removal of outliers not yet supported for transformed data!")
-        mean = self.predict(self.X, n=self.n, noise=False, return_std=False,
-                            **predict_kwargs)
+        mean = self.predict(
+            self.X, n=self.n, noise=False, return_std=False,
+            output_transform=self.T, **predict_kwargs
+        )
         deltas = scipy.absolute(mean - self.y) / self.err_y
         deltas[self.err_y == 0] = 0
         bad_idxs = (deltas >= thresh)
@@ -343,18 +349,32 @@ class GaussianProcess(object):
         err_y_bad = self.err_y[bad_idxs]
         if self.T is not None:
             T_bad = self.T[bad_idxs, :]
-            # TODO: Figure out what to do about X_bad!
-        X_bad = self.X[bad_idxs, :]
-        n_bad = self.n[bad_idxs, :]
+            non_zero_cols = (T_bad != 0).all(axis=0)
+            T_bad = T_bad[:, non_zero_cols]
+            X_bad = self.X[non_zero_cols, :]
+            n_bad = self.n[non_zero_cols, :]
+        else:
+            X_bad = self.X[bad_idxs, :]
+            n_bad = self.n[bad_idxs, :]
         
         # Delete the offending points:
-        self.X = self.X[good_idxs, :]
+        if self.T is None:
+            self.X = self.X[good_idxs, :]
+            self.n = self.n[good_idxs, :]
+        else:
+            self.T = self.T[good_idxs, :]
+            non_zero_cols = (self.T != 0).all(axis=0)
+            self.T = self.T[:, non_zero_cols]
+            self.X = self.X[non_zero_cols, :]
+            self.n = self.n[non_zero_cols, :]
         self.y = self.y[good_idxs]
         self.err_y = self.err_y[good_idxs]
-        self.n = self.n[good_idxs, :]
         self.K_up_to_date = False
         
-        return (X_bad, y_bad, err_y_bad, n_bad, bad_idxs)
+        if self.T is None:
+            return (X_bad, y_bad, err_y_bad, n_bad, bad_idxs)
+        else:
+            return (X_bad, y_bad, err_y_bad, n_bad, bad_idxs, T_bad)
     
     def optimize_hyperparameters(self, method='SLSQP', opt_kwargs={},
                                  verbose=False, random_starts=None, num_proc=None):
@@ -756,7 +776,6 @@ class GaussianProcess(object):
         full_output : dict
             Dictionary with fields for mean, std, cov and possibly random samples. Only returned if `return_prediction` and `full_output` are True.
         """
-        # TODO: Make this handle T properly!
         if self.num_dim > 2:
             raise ValueError("Plotting is not supported for num_dim > 2!")
         
@@ -1355,8 +1374,6 @@ class GaussianProcess(object):
             flat_trace = flat_trace.reshape((-1, flat_trace.shape[2]))
         else:
             flat_trace = flat_trace[burn::thin, :]
-        # TODO: Maybe add some diagnostics to look at how the burned/thinned
-        # trace is doing?
         
         num_proc = kwargs.get('num_proc', multiprocessing.cpu_count())
         
