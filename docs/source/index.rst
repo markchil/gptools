@@ -6,6 +6,8 @@
 gptools: Gaussian process regression with support for arbitrary derivatives
 ===========================================================================
 
+Source home: https://github.com/markchil/gptools
+
 Overview
 --------
 
