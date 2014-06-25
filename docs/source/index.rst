@@ -18,7 +18,7 @@ There are two key classes:
 * :py:class:`~gptools.gaussian_process.GaussianProcess` is the main class to represent a GP.
 * :py:class:`~gptools.kernel.core.Kernel` (and its many subclasses) represents a covariance kernel, and must be provided when constructing a :py:class:`~gptools.gaussian_process.GaussianProcess`. Separate kernels to describe the underlying signal and the noise are supported.
 
-A third class, :py:class:`~gptools.utils.JointPrior` allows you to construct a hyperprior of arbitrary complexity to dictate how the hyperparameters are handled.
+A third class, :py:class:`~gptools.utils.JointPrior`, allows you to construct a hyperprior of arbitrary complexity to dictate how the hyperparameters are handled.
 
 Creating a Gaussian process is as simple as::
     
@@ -48,13 +48,13 @@ The simplest approach is to use an empirical Bayes approach and compute the maxi
 
 This will randomly start the optimizer at points distributed according to the hyperprior several times in order to ensure that the global maximum is obtained. If you have a machine with multiple cores, these random starts will be performed in parallel. You can set the number of starts using the `random_starts` keyword, and you can set the number of processes used using the `num_proc` keyword.
 
-For a more complete accounting of the uncertainties in the model, you can choose to use a fully Bayesian approach by using Markov chain Monte Carlo techniques to produce samples of the hyperposterior. The samples are produced directly with :py:meth:`~gptools.gaussian_process.GaussianProcess.sample_hyperparameter_posterior`, though it will typically be more convenient to simply call :py:meth:`~gptools.gaussian_process.GaussianProcess.predict` with the `use_MCMC` keyword set to True.
+For a more complete accounting of the uncertainties in the model, you can choose to use a fully Bayesian approach by using Markov chain Monte Carlo (MCMC) techniques to produce samples of the hyperposterior. The samples are produced directly with :py:meth:`~gptools.gaussian_process.GaussianProcess.sample_hyperparameter_posterior`, though it will typically be more convenient to simply call :py:meth:`~gptools.gaussian_process.GaussianProcess.predict` with the `use_MCMC` keyword set to True.
 
 In order to make predictions, use the :py:meth:`~gptools.gaussian_process.GaussianProcess.predict` method::
     
     y_star, err_y_star = gp.predict(x_star)
 
-By default, the mean and standard deviation of the GP posterior are returned. The compute only the mean and save some time, set the `return_std` keyword to False. To make predictions of derivatives, set the `n` keyword. To make a prediction of a linearly transformed quantity, set the `output_transform` keyword.
+By default, the mean and standard deviation of the GP posterior are returned. To compute only the mean and save some time, set the `return_std` keyword to False. To make predictions of derivatives, set the `n` keyword. To make a prediction of a linearly transformed quantity, set the `output_transform` keyword.
 
 Kernels
 -------
@@ -65,10 +65,11 @@ A number of kernels are provided to allow many types of data to be fit:
 * :py:class:`~gptools.kernel.squared_exponential.SquaredExponentialKernel` implements the SE kernel which is infinitely differentiable.
 * :py:class:`~gptools.kernel.matern.MaternKernel` implements the entire Matern class of covariance functions, which are characterized by a hyperparameter :math:`\nu`. A process having the Matern kernel is only mean-square differentiable for derivative order :math:`n<\nu`. Note that this class does not support arbitrary derivatives at this point. If you need this feature, try using :py:class:`~gptools.kernel.matern.MaternKernelArb`, but note that this is very slow!
 * :py:class:`~gptools.kernel.rational_quadratic.RationalQuadraticKernel` implements the rational quadratic kernel, which is a scale mixture over SE kernels.
-* :py:class:`~gptools.kernel.gibbs.GibbsKernel1d` and its subclasses implements the Gibbs kernel, which is nonstationary form of the SE kernel.
+* :py:class:`~gptools.kernel.gibbs.GibbsKernel1d` and its subclasses implements the Gibbs kernel, which is a nonstationary form of the SE kernel.
 * :py:class:`~gptools.kernel.core.MaskedKernel` creates a kernel that only operates on a subset of dimensions. Use this along with the sum and product operations to create kernels that encode different properties in different dimensions.
+* :py:class:`~gptools.kernel.core.ArbitraryKernel` creates a kernel with an arbitrary covariance function and computes the derivatives as needed using :py:mod:`mpmath` to perform numerical differentiation. Naturally, this is very slow but is useful to let you explore the properties of arbitrary kernels without having to write a complete implementation.
 
-In all cases, these kernels have been constructed in a way to allow inputs of arbitrary dimension. Each dimension has a length scale hyperparameter that can be separately optimized over or held fixed. Arbitrary derivatives with respect to each dimension can be taken, including computation of the covariance for those observations.
+In most cases, these kernels have been constructed in a way to allow inputs of arbitrary dimension. Each dimension has a length scale hyperparameter that can be separately optimized over or held fixed. Arbitrary derivatives with respect to each dimension can be taken, including computation of the covariance for those observations.
 
 Other kernels can be implemented by extending the :py:class:`~gptools.kernel.core.Kernel` class. Furthermore, kernels may be added or multiplied together to yield a new, valid kernel.
 
