@@ -1,4 +1,4 @@
-# Copyright 2013 Mark Chilenski
+# Copyright 2014 Mark Chilenski
 # This program is distributed under the terms of the GNU General Purpose License (GPL).
 # Refer to http://www.gnu.org/licenses/gpl.txt
 # 
