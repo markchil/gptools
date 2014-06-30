@@ -11,6 +11,6 @@ setup(
     author_email='mark.chilenski@gmail.com',
     url='https://github.com/markchil/gptools',
     description='Gaussian process regression with derivative constraints and predictions.',
-    long_description=open('README', 'r').read(),
+    long_description=open('README.rst', 'r').read(),
     license='GPL'
 )
