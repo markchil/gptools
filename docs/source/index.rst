@@ -8,6 +8,12 @@ gptools: Gaussian process regression with support for arbitrary derivatives
 
 Source home: https://github.com/markchil/gptools
 
+Releases: https://pypi.python.org/pypi/gptools/
+
+Installation is as simple as::
+
+    pip install gptools
+
 Overview
 --------
 
