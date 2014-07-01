@@ -80,7 +80,7 @@ Notes
 
 If you find this software useful, please be sure to cite it:
 
-M.A. Chilenski (2013). gptools: Gaussian processes with arbitrary derivative constraints and predictions, GNU General Public License. github.com/markchil/gptools
+M.A. Chilenski (2014). gptools: Gaussian processes with arbitrary derivative constraints and predictions, GNU General Public License. github.com/markchil/gptools
 
 Once I put together a formal publication on this software and its applications, this readme will be updated with the relevant citation.
 
