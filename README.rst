@@ -11,6 +11,12 @@ Full package documentation is located at http://gptools.readthedocs.org/
 
 A printable PDF is available at https://media.readthedocs.org/pdf/gptools/latest/gptools.pdf
 
+Releases are available in PyPI at https://pypi.python.org/pypi/gptools/
+
+To install, simply execute::
+
+    pip install gptools
+
 If you find this software useful, please be sure to cite it:
 
 M.A. Chilenski (2014). gptools: Gaussian processes with arbitrary derivative constraints and predictions, GNU General Public License. github.com/markchil/gptools
