@@ -62,6 +62,8 @@ In order to make predictions, use the :py:meth:`~gptools.gaussian_process.Gaussi
 
 By default, the mean and standard deviation of the GP posterior are returned. To compute only the mean and save some time, set the `return_std` keyword to False. To make predictions of derivatives, set the `n` keyword. To make a prediction of a linearly transformed quantity, set the `output_transform` keyword.
 
+For a convenient wrapper for applying :py:mod:`gptools` to multivariate data, see :py:mod:`profiletools` at https://github.com/markchil/profiletools
+
 Kernels
 -------
 
@@ -88,7 +90,7 @@ If you find this software useful, please be sure to cite it:
 
 M.A. Chilenski (2014). gptools: Gaussian processes with arbitrary derivative constraints and predictions, GNU General Public License. github.com/markchil/gptools
 
-Once I put together a formal publication on this software and its applications, this readme will be updated with the relevant citation.
+A formal publication on this software and its applications is in preparation. Once this is published, this readme will be updated with the relevant citation.
 
 Contents
 --------
