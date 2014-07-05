@@ -28,4 +28,4 @@ def test_matern_52():
     k1 = gp1.compute_Kij(gp1.X, None, gp1.n, None)
     k2 = gp2.compute_Kij(gp1.X, None, gp1.n, None)
 
-    np.testing.assert_array_almost_equal(k1, k2, decimal=12)
+    np.testing.assert_array_almost_equal(k1, k2)
