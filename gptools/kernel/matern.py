@@ -496,8 +496,8 @@ class Matern52Kernel(Kernel):
         if scipy.any(scipy.sum(ni, axis=1) > 1) or scipy.any(scipy.sum(nj, axis=1) > 1):
             raise ValueError("Matern52Kernel only supports 0th and 1st order derivatives")
 
-        Xi = scipy.asarray(Xi, dtype=float)
-        Xj = scipy.asarray(Xj, dtype=float)
+        Xi = scipy.asarray(Xi, dtype=scipy.float64)
+        Xj = scipy.asarray(Xj, dtype=scipy.float64)
         var = scipy.square(self.params[-self.num_dim:])
 
         value = _matern52(
