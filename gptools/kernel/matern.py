@@ -498,11 +498,9 @@ class Matern52Kernel(Kernel):
 
         Xi = scipy.asarray(Xi, dtype=scipy.float64)
         Xj = scipy.asarray(Xj, dtype=scipy.float64)
+        ni = scipy.array(ni, dtype=scipy.int32)
+        nj = scipy.array(nj, dtype=scipy.int32)
         var = scipy.square(self.params[-self.num_dim:])
 
-        value = _matern52(
-            Xi, Xj,
-            scipy.array(ni, dtype=scipy.int32), scipy.array(nj, dtype=scipy.int32),
-            var)
-
+        value = _matern52(Xi, Xj, ni, nj, var)
         return self.params[0]**2 * value
