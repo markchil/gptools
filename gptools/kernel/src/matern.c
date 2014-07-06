@@ -114,8 +114,7 @@ static double d2kernel_dXndYm(const double *X, const double *Y,
                               const double* var)
 {
 
-    double r2, r, dr_dXn, dr_dYm;
-    double d2r_dXndYm_times_r3, dkernel_dr_over_r3, s5r;
+    double r2, r, dr_dXn, dr_dYm, d2r_dXndYm_times_r3, s5r;
     double exp_minus_s5r, dkernel_dr_over_r, d2kernel_dr2;
     double term1, term2;
 
