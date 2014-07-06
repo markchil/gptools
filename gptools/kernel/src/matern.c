@@ -29,7 +29,7 @@ static const double FIVE_THIRDS = 1.6666666666666667;
  * Return the index of the first appearance of the needle in the haystack,
  * or -1 if not found
  */
-static int index(const int32_t *haystack, int32_t n, int32_t needle)
+static int32_t index(const int32_t *haystack, int32_t n, int32_t needle)
 {
     int32_t i;
     for (i = 0; i < n; i++)
@@ -39,10 +39,10 @@ static int index(const int32_t *haystack, int32_t n, int32_t needle)
 }
 
 /**
- * Calculate the sum of an array of integers of lengt hn
+ * Calculate the sum of an array of integers of length n
  *
  */
-static int sum(const int32_t* x, int32_t n) {
+static int32_t sum(const int32_t* x, int32_t n) {
     int32_t i;
     int32_t s = 0;
     for (i = 0; i < n; i++) {
@@ -78,13 +78,12 @@ static double kernel(const double *X, const double *Y,
                      int32_t d, const double* var)
 {
 
-    const double r2 = seuclidean2(X, Y, var, d);
+    double r2 = seuclidean2(X, Y, var, d);
     if (r2 == 0)
         return 1;
 
-    const double s5r = SQRT_5 * sqrt(r2);
-    const double value = (1.0 + s5r + FIVE_THIRDS * r2) * exp(-s5r);
-    return value;
+    double s5r = SQRT_5 * sqrt(r2);
+    return (1.0 + s5r + FIVE_THIRDS * r2) * exp(-s5r);
 }
 
 
@@ -95,12 +94,12 @@ static double kernel(const double *X, const double *Y,
 static double dkernel_dXn(const double *X, const double *Y,
                           int32_t n, int32_t d, const double* var)
 {
-    const double r2 = seuclidean2(X, Y, var, d);
+    double r2 = seuclidean2(X, Y, var, d);
     if (r2 == 0)
         return 0;
-    const double s5r = SQRT_5 * sqrt(r2);
-    const double dr_dXn_times_r = (X[n] - Y[n]) / var[n];
-    const double dkernel_dr_over_r = - FIVE_THIRDS * (1 + s5r) * exp(-s5r);
+    double s5r = SQRT_5 * sqrt(r2);
+    double dr_dXn_times_r = (X[n] - Y[n]) / var[n];
+    double dkernel_dr_over_r = - FIVE_THIRDS * (1 + s5r) * exp(-s5r);
     return dkernel_dr_over_r * dr_dXn_times_r;
 }
 
@@ -113,7 +112,7 @@ static double d2kernel_dXndYm(const double *X, const double *Y,
                               const double* var)
 {
 
-    const double r2 = seuclidean2(X, Y, var, d);
+    double r2 = seuclidean2(X, Y, var, d);
 
     if (r2 == 0) {
         if (n == m)
@@ -161,10 +160,10 @@ double matern52(const double *xi, const double *xj,
            const int32_t* ni, const int32_t* nj,
            int32_t d, const double* var)
 {
-    int indexi = index(ni, d, 1);
-    int indexj = index(nj, d, 1);
-    int si = sum(ni, d);
-    int sj = sum(nj, d);
+    int32_t indexi = index(ni, d, 1);
+    int32_t indexj = index(nj, d, 1);
+    int32_t si = sum(ni, d);
+    int32_t sj = sum(nj, d);
     if (si > 1 || sj > 1) {
         fprintf(stderr, "Derivative orders above 1 are not supported");
         exit(1);
