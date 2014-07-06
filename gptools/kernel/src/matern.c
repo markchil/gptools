@@ -78,11 +78,12 @@ static double kernel(const double *X, const double *Y,
                      int32_t d, const double* var)
 {
 
-    double r2 = seuclidean2(X, Y, var, d);
+    double r2, s5r;
+    r2 = seuclidean2(X, Y, var, d);
     if (r2 == 0)
         return 1;
 
-    double s5r = SQRT_5 * sqrt(r2);
+    s5r = SQRT_5 * sqrt(r2);
     return (1.0 + s5r + FIVE_THIRDS * r2) * exp(-s5r);
 }
 
@@ -94,12 +95,13 @@ static double kernel(const double *X, const double *Y,
 static double dkernel_dXn(const double *X, const double *Y,
                           int32_t n, int32_t d, const double* var)
 {
-    double r2 = seuclidean2(X, Y, var, d);
+    double r2, s5r, dr_dXn_times_r, dkernel_dr_over_r;
+    r2 = seuclidean2(X, Y, var, d);
     if (r2 == 0)
         return 0;
-    double s5r = SQRT_5 * sqrt(r2);
-    double dr_dXn_times_r = (X[n] - Y[n]) / var[n];
-    double dkernel_dr_over_r = - FIVE_THIRDS * (1 + s5r) * exp(-s5r);
+    s5r = SQRT_5 * sqrt(r2);
+    dr_dXn_times_r = (X[n] - Y[n]) / var[n];
+    dkernel_dr_over_r = - FIVE_THIRDS * (1 + s5r) * exp(-s5r);
     return dkernel_dr_over_r * dr_dXn_times_r;
 }
 
@@ -112,7 +114,12 @@ static double d2kernel_dXndYm(const double *X, const double *Y,
                               const double* var)
 {
 
-    double r2 = seuclidean2(X, Y, var, d);
+    double r2, r, dr_dXn, dr_dYm;
+    double d2r_dXndYm_times_r3, dkernel_dr_over_r3, s5r;
+    double exp_minus_s5r, dkernel_dr_over_r, d2kernel_dr2;
+    double term1, term2;
+
+    r2 = seuclidean2(X, Y, var, d);
 
     if (r2 == 0) {
         if (n == m)
@@ -120,22 +127,22 @@ static double d2kernel_dXndYm(const double *X, const double *Y,
         return 0;
     }
 
-    double r = sqrt(r2);
-    double dr_dXn = (X[n] - Y[n]) / (r * var[n]);
-    double dr_dYm = -(X[m] - Y[m]) / (r * var[m]);
+    r = sqrt(r2);
+    dr_dXn = (X[n] - Y[n]) / (r * var[n]);
+    dr_dYm = -(X[m] - Y[m]) / (r * var[m]);
 
-    double d2r_dXndYm_times_r3 = (X[n] - Y[n]) * (X[m] - Y[m]) / (var[n]*var[m]);
+    d2r_dXndYm_times_r3 = (X[n] - Y[n]) * (X[m] - Y[m]) / (var[n]*var[m]);
 
     if (n == m)
         d2r_dXndYm_times_r3 -= r*r / (var[n]);
 
-    double s5r = SQRT_5 * r;
-    double exp_minus_s5r = exp(-s5r);
-    double dkernel_dr_over_r = - FIVE_THIRDS * (1 + s5r) * exp_minus_s5r;
-    double d2kernel_dr2 = FIVE_THIRDS * (5*r2 - s5r - 1) * exp_minus_s5r;
+    s5r = SQRT_5 * r;
+    exp_minus_s5r = exp(-s5r);
+    dkernel_dr_over_r = - FIVE_THIRDS * (1 + s5r) * exp_minus_s5r;
+    d2kernel_dr2 = FIVE_THIRDS * (5*r2 - s5r - 1) * exp_minus_s5r;
 
-    double term1 = dkernel_dr_over_r * d2r_dXndYm_times_r3 / r2;
-    double term2 = d2kernel_dr2 * dr_dXn * dr_dYm;
+    term1 = dkernel_dr_over_r * d2r_dXndYm_times_r3 / r2;
+    term2 = d2kernel_dr2 * dr_dXn * dr_dYm;
 
     return term1 + term2;
 }
