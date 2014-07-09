@@ -20,8 +20,9 @@
 
 from __future__ import division
 
-from .core import ChainRuleKernel, ArbitraryKernel
+from .core import ChainRuleKernel, ArbitraryKernel, Kernel
 from ..utils import generate_set_partitions
+from ._matern import _matern52
 
 import scipy
 import scipy.special
@@ -413,3 +414,93 @@ class MaternKernel(ChainRuleKernel):
         r"""Returns the value of the order :math:`\nu`.
         """
         return self.params[1]
+
+
+class Matern52Kernel(Kernel):
+    r"""Matern 5/2 covariance kernel. Supports only 0th and 1st derivatives
+    and is fixed at nu=5/2. Because of these limitations, it is quite a bit
+    faster than the more general Matern kernels.
+
+    The Matern52 kernel has the following hyperparameters, always referenced in
+    the order listed:
+
+    = ===== ====================================
+    0 sigma prefactor
+    1 l1    length scale for the first dimension
+    2 l2    ...and so on for all dimensions
+    = ===== ====================================
+
+    The kernel is defined as:
+
+    .. math::
+
+        k_M(x, x') = \sigma^2 \left(1 + \sqrt{5r^2} + \frac{5}{3}r^2\right) \exp(-\sqrt{5r^2}) \\
+        r^2 = \sum_{d=1}^D \frac{(x_d - x'_d)^2}{l_d^2}
+
+    Parameters
+    ----------
+    num_dim : int
+        Number of dimensions of the input data. Must be consistent with the `X`
+        and `Xstar` values passed to the :py:class:`~gptools.gaussian_process.GaussianProcess`
+        you wish to use the covariance kernel with.
+    **kwargs
+        All keyword parameters are passed to :py:class:`~gptools.kernel.core.Kernel`.
+
+    Raises
+    ------
+    ValueError
+        If `num_dim` is not a positive integer or the lengths of the input
+        vectors are inconsistent.
+    GPArgumentError
+        If `fixed_params` is passed but `initial_params` is not.
+    """
+    def __init__(self, num_dim=1, **kwargs):
+        param_names = [r'\sigma_f'] + ['l_%d' % (i + 1,) for i in range(0, num_dim)]
+        super(Matern52Kernel, self).__init__(num_dim=num_dim,
+                                             num_params=num_dim + 1,
+                                             param_names=param_names,
+                                             **kwargs)
+    def __call__(self, Xi, Xj, ni, nj, hyper_deriv=None, symmetric=False):
+        """Evaluate the covariance between points `Xi` and `Xj` with derivative order `ni`, `nj`.
+
+        Parameters
+        ----------
+        Xi : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+            `M` inputs with dimension `N`.
+        Xj : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+            `M` inputs with dimension `N`.
+        ni : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+            `M` derivative orders for set `i`.
+        nj : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+            `M` derivative orders for set `j`.
+        hyper_deriv : Non-negative int or None, optional
+            The index of the hyperparameter to compute the first derivative
+            with respect to. If None, no derivatives are taken. Hyperparameter
+            derivatives are not supported at this point. Default is None.
+        symmetric : bool
+            Whether or not the input `Xi`, `Xj` are from a symmetric matrix.
+            Default is False.
+
+        Returns
+        -------
+        Kij : :py:class:`Array`, (`M`,)
+            Covariances for each of the `M` `Xi`, `Xj` pairs.
+
+        Raises
+        ------
+        NotImplementedError
+            If the `hyper_deriv` keyword is not None.
+        """
+        if hyper_deriv is not None:
+            raise NotImplementedError("Hyperparameter derivatives have not been implemented!")
+        if scipy.any(scipy.sum(ni, axis=1) > 1) or scipy.any(scipy.sum(nj, axis=1) > 1):
+            raise ValueError("Matern52Kernel only supports 0th and 1st order derivatives")
+
+        Xi = scipy.asarray(Xi, dtype=scipy.float64)
+        Xj = scipy.asarray(Xj, dtype=scipy.float64)
+        ni = scipy.array(ni, dtype=scipy.int32)
+        nj = scipy.array(nj, dtype=scipy.int32)
+        var = scipy.square(self.params[-self.num_dim:])
+
+        value = _matern52(Xi, Xj, ni, nj, var)
+        return self.params[0]**2 * value

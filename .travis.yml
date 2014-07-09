@@ -1,0 +1,15 @@
+language: c
+
+install:
+    - wget http://repo.continuum.io/miniconda/Miniconda-3.0.5-Linux-x86_64.sh
+    - bash Miniconda-3.0.5-Linux-x86_64.sh -b
+    - export PATH=$HOME/miniconda/bin:$PATH
+    - conda install --yes -q numpy scipy matplotlib pip nose cython
+    - pip install -q mpmath emcee triangle_plot  # no conda packages :(
+    - sudo rm -rf /dev/shm && sudo ln -s /run/shm /dev/shm 
+    
+script:
+    - export CC="gcc -std=c89"
+    - python setup.py install
+    - cd tests
+    - nosetests
