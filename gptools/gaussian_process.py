@@ -800,6 +800,7 @@ class GaussianProcess(object):
             std = out['std']
         else:
             mean = self.predict(X, n=n, return_std=False, **kwargs)
+            std = None
         
         if self.num_dim == 1:
             univariate_envelope_plot(X, mean, std, ax=ax,
