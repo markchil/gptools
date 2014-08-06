@@ -105,7 +105,7 @@ class WarpingFunction(object):
     hyperprior : :py:class:`JointPrior` instance or list, optional
         Joint prior distribution for all hyperparameters. Can either be given
         as a :py:class:`JointPrior` instance or a list of `num_params`
-        callables or py:class:`rv_frozen` instances from :py:mod:`scipy.stats`,
+        callables or :py:class:`rv_frozen` instances from :py:mod:`scipy.stats`,
         in which case a :py:class:`IndependentJointPrior` is constructed with
         these as the independent priors on each hyperparameter. Default is a
         uniform PDF on all hyperparameters.
@@ -285,7 +285,7 @@ class WarpingFunction(object):
         return scipy.asarray(self.param_names)[~self.fixed_params]
 
 def beta_cdf_warp(X, d, n, *args):
-    """Warp inputs that are confined to the unit hypercube using the regularized incomplete beta function.
+    r"""Warp inputs that are confined to the unit hypercube using the regularized incomplete beta function.
     
     Applies separately to each dimension, designed for use with
     :py:class:`WarpingFunction`.
