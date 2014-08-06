@@ -113,7 +113,7 @@ class Kernel(object):
         elif len(param_names) != self.num_params:
             raise ValueError("param_names must be a list of length num_params!")
         self.param_names = param_names
-
+        
         if num_dim < 1 or not isinstance(num_dim, (int, long)):
             raise ValueError("num_dim must be an integer > 0!")
         self.num_dim = num_dim
@@ -138,7 +138,7 @@ class Kernel(object):
                 if len(fixed_params) != num_params:
                     raise ValueError("Length of fixed_params must be equal to num_params!")
         
-        # Handle default case for parameter bounds -- set them all to (0, double_max):
+        # Handle default case for parameter bounds -- set them all to (0, 1e16):
         if param_bounds is None:
             param_bounds = num_params * [(0.0, 1e16)]
         else:
@@ -226,7 +226,7 @@ class Kernel(object):
                         new_params[idx] = bound[1]
             self.params[~self.fixed_params] = new_params
         else:
-            raise ValueError("Length of new_params must be %s!" % (self.params.shape,))
+            raise ValueError("Length of new_params must be %s!" % (self.free_params.shape,))
     
     @property
     def free_params(self):

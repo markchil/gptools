@@ -26,3 +26,4 @@ from .noise import *
 from .squared_exponential import *
 from .rational_quadratic import *
 from .gibbs import *
+from .warping import *

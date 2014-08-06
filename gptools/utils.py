@@ -500,6 +500,56 @@ class IndependentJointPrior(JointPrior):
         """
         return [p.rvs(size=size) for p in self.univariate_priors]
 
+class LogNormalJointPrior(JointPrior):
+    """Joint prior for which each hyperparameter has a log-normal prior with fixed hyper-hyperparameters.
+    
+    Parameters
+    ----------
+    mu : list of float, same size as `sigma`
+        Means of the logarithms of the hyperparameters.
+    sigma : list of float
+        Standard deviations of the logarithms of the hyperparameters.
+    """
+    def __init__(self, mu, sigma):
+        sigma = scipy.atleast_1d(scipy.asarray(sigma, dtype=float))
+        mu = scipy.atleast_1d(scipy.asarray(mu, dtype=float))
+        if sigma.shape != mu.shape:
+            raise ValueError("sigma and mu must have the same shape!")
+        if sigma.ndim != 1:
+            raise ValueError("sigma and mu must both be one dimensional!")
+        self.sigma = sigma
+        self.emu = scipy.exp(mu)
+    
+    def __call__(self, theta):
+        """Evaluate the prior log-PDF at the given values of the hyperparameters, theta.
+        
+        Parameters
+        ----------
+        theta : array-like, (`num_params`,)
+            The hyperparameters to evaluate the log-PDF at.
+        """
+        ll = 0
+        for v, s, em in zip(theta, self.sigma, self.emu):
+            ll += scipy.stats.lognorm.logpdf(v, s, loc=0, scale=em)
+        return ll
+    
+    @property
+    def bounds(self):
+        """The bounds of the random variable.
+        """
+        return [scipy.stats.lognorm.interval(1, s, loc=0, scale=em) for s, em in zip(self.sigma, self.emu)]
+    
+    def random_draw(self, size=None):
+        """Draw random samples of the hyperparameters.
+        
+        Parameters
+        ----------
+        size : None, int or array-like, optional
+            The number/shape of samples to draw. If None, only one sample is
+            returned. Default is None.
+        """
+        return [scipy.stats.lognorm.rvs(s, loc=0, scale=em, size=size) for s, em in zip(self.sigma, self.emu)]
+
 def wrap_fmin_slsqp(fun, guess, opt_kwargs={}):
     """Wrapper for :py:func:`fmin_slsqp` to allow it to be called with :py:func:`minimize`-like syntax.
 
