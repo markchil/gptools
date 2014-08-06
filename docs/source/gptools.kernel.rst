@@ -52,6 +52,14 @@ gptools.kernel.squared_exponential module
     :undoc-members:
     :show-inheritance:
 
+gptools.kernel.warping module
+-----------------------------
+
+.. automodule:: gptools.kernel.warping
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 Module contents
 ---------------
