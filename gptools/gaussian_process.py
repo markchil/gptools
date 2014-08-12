@@ -956,7 +956,7 @@ class GaussianProcess(object):
             raise ValueError("method %s not recognized!" % (method,))
         return scipy.atleast_2d(mean).T + L.dot(rand_vars[:num_eig, :])
     
-    def update_hyperparameters(self, new_params, exit_on_bounds=True):
+    def update_hyperparameters(self, new_params, exit_on_bounds=True, inf_on_error=True):
         """Update the kernel's hyperparameters to the new parameters.
         
         This will call :py:meth:`compute_K_L_alpha_ll` to update the state
@@ -971,6 +971,10 @@ class GaussianProcess(object):
             are impossible given the hyperprior, without trying to update the
             internal state. This is useful during MCMC sampling and optimization.
             Default is True (don't perform update for impossible hyperparameters).
+        inf_on_error : bool, optional
+            If True, the method will return `scipy.inf` if the hyperparameters
+            produce a linear algebra error upon trying to update the Gaussian
+            process. Default is True (catch errors and return infinity).
         
         Returns
         -------
@@ -987,7 +991,20 @@ class GaussianProcess(object):
             L_nk = self.noise_k.hyperprior(self.noise_k.params)
             if scipy.isinf(L_nk) or scipy.isnan(L_nk):
                 return scipy.inf
-        self.compute_K_L_alpha_ll()
+        try:
+            self.compute_K_L_alpha_ll()
+        except numpy.linalg.LinAlgError as e:
+            warnings.warn(
+                "Failure when updating GP! Exception was:\n%s\n"
+                "State of params is: %s %s"
+                % (
+                    e,
+                    str(self.k.free_params),
+                    str(self.noise_k.free_params)
+                ),
+                RuntimeWarning
+            )
+            return scipy.inf
         return -1 * self.ll
     
     def compute_K_L_alpha_ll(self):
