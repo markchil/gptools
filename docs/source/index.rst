@@ -32,7 +32,11 @@ Creating a Gaussian process is as simple as::
     k = gptools.SquaredExponentialKernel()
     gp = gptools.GaussianProcess(k)
 
-You then add the training data using the :py:meth:`~gptools.gaussian_process.GaussianProcess.add_data` method::
+But, the default bounds on the hyperparameters are very wide and can cause the optimizer/MCMC sampler to fail. So, it is usually a better idea to define the covariance kernel as::
+    
+    k = gptools.SquaredExponentialKernel(param_bounds=[(0, 1e3), (0, 100)])
+
+You will have to pick appropriate numbers by inspecting the typical range of your data. You then add the training data using the :py:meth:`~gptools.gaussian_process.GaussianProcess.add_data` method::
     
     gp.add_data(x, y, err_y=stddev_y)
 
