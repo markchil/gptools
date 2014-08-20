@@ -234,6 +234,25 @@ class CombinedBounds(object):
     
     def __len__(self):
         return len(self.l1) + len(self.l2)
+    
+    def __invert__(self):
+        return ~scipy.asarray(self)
+
+class MaskedBounds(object):
+    """Object to support reassignment of free parameter bounds.
+    """
+    def __init__(self, a, m):
+        self.a = a
+        self.m = m
+    
+    def __getitem__(self, pos):
+        return self.a[self.m[pos]]
+    
+    def __setitem__(self, pos, value):
+        self.a[self.m[pos]] = value
+    
+    def __len__(self):
+        return len(self.m)
 
 class ProductJointPrior(JointPrior):
     """Product of two independent priors.
@@ -1019,6 +1038,50 @@ def univariate_envelope_plot(x, mean, std, ax=None, base_alpha=0.375, envelopes=
     color = plt.getp(l[0], 'color')
     e = []
     for i in envelopes:
-        e.append(ax.fill_between(x, mean - i * std, mean + i * std,
-                        facecolor=color, alpha=base_alpha / i))
+        e.append(
+            ax.fill_between(
+                x,
+                mean - i * std,
+                mean + i * std,
+                facecolor=color,
+                alpha=base_alpha / i
+            )
+        )
     return (l, e)
+
+def summarize_sampler(sampler, burn=0, thin=1, ci=0.95):
+    r"""Create summary statistics of the flattened chain of the sampler.
+    
+    The confidence regions are computed from the quantiles of the data.
+    
+    Parameters
+    ----------
+    sampler : :py:class:`emcee.EnsembleSampler` instance
+        The sampler to summarize the chains of.
+    burn : int, optional
+        The number of samples to burn from the beginning of the chain. Default
+        is 0 (no burn).
+    thin : int, optional
+        The step size to thin with. Default is 1 (no thinning).
+    ci : float, optional
+        A number between 0 and 1 indicating the confidence region to compute.
+        Default is 0.95 (return upper and lower bounds of the 95% confidence
+        interval).
+    
+    Returns
+    -------
+    mean : array, (num_params,)
+        Mean values of each of the parameters sampled.
+    ci_l : array, (num_params,)
+        Lower bounds of the `ci*100%` confidence intervals.
+    ci_u : array, (num_params,)
+        Upper bounds of the `ci*100%` confidence intervals.
+    """
+    flat_trace = sampler.chain[:, burn::thin, :]
+    flat_trace = flat_trace.reshape((-1, flat_trace.shape[2]))
+    
+    mean = scipy.mean(flat_trace, axis=0)
+    cibdry = 100.0 * (1.0 - ci) / 2.0
+    ci_l, ci_u = scipy.percentile(flat_trace, [cibdry, 100.0 - cibdry], axis=0)
+    
+    return (mean, ci_l, ci_u)

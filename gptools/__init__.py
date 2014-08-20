@@ -27,3 +27,4 @@ from .error_handling import *
 from .kernel import *
 from .utils import *
 from .gp_utils import *
+from .mean import *

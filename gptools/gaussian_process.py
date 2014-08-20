@@ -22,7 +22,7 @@ from __future__ import division
 
 from .error_handling import GPArgumentError
 from .kernel import Kernel, ZeroKernel
-from .utils import wrap_fmin_slsqp, univariate_envelope_plot
+from .utils import wrap_fmin_slsqp, univariate_envelope_plot, CombinedBounds
 
 import scipy
 import scipy.linalg
@@ -75,6 +75,9 @@ class GaussianProcess(object):
         diagonal of the total `K` matrix to improve the stability of the
         Cholesky decomposition. If you are having issues, try increasing this by
         a factor of 10 at a time. Default is 1e2.
+    mu : :py:class:`~gptools.mean.MeanFunction` instance
+        The mean function of the Gaussian process. Default is None (zero mean
+        prior).
     
     NOTE
         The following are all passed to :py:meth:`add_data`, refer to its
@@ -122,6 +125,9 @@ class GaussianProcess(object):
         Log-likelihood of the data given the model.
     diag_factor : float
         The factor of :py:attr:`sys.float_info.epsilon` which is added to the diagonal of the `K` matrix to improve stability.
+    mu : :py:class:`~gptools.mean.MeanFunction` instance
+        The mean function.
+        
     
     Raises
     ------
@@ -135,17 +141,22 @@ class GaussianProcess(object):
     add_data : Used to process `X`, `y`, `err_y` and to add data to the process.
     """
     def __init__(self, k, noise_k=None, X=None, y=None, err_y=0, n=0, T=None,
-                 diag_factor=1e2):
+                 diag_factor=1e2, mu=None):
         if not isinstance(k, Kernel):
-            raise TypeError("Argument k must be an instance of Kernel when "
-                            "constructing GaussianProcess!")
+            raise TypeError(
+                "Argument k must be an instance of Kernel when constructing "
+                "GaussianProcess!"
+            )
         if noise_k is None:
             noise_k = ZeroKernel(k.num_dim)
         else:
             if not isinstance(noise_k, Kernel):
-                raise TypeError("Keyword noise_k must be an instance of Kernel "
-                                "when constructing GaussianProcess!")
-
+                raise TypeError(
+                    "Keyword noise_k must be an instance of Kernel when "
+                    "constructing GaussianProcess!"
+                )
+        
+        self.mu = mu
         self.diag_factor = diag_factor
         self.k = k
         self.noise_k = noise_k
@@ -157,15 +168,139 @@ class GaussianProcess(object):
         
         if X is not None:
             if y is None:
-                raise GPArgumentError("Must pass both X and y when "
-                                      "constructing GaussianProcess!")
+                raise GPArgumentError(
+                    "Must pass both X and y when constructing GaussianProcess!"
+                )
             else:
                 self.add_data(X, y, err_y=err_y, n=n, T=T)
         elif X is None and y is not None:
-            raise GPArgumentError("Must pass both X and y when constructing "
-                                  "GaussianProcess!")
+            raise GPArgumentError(
+                "Must pass both X and y when constructing GaussianProcess!"
+            )
         else:
             self.K_up_to_date = False
+    
+    # The following are getters/setters for the (hyper)parameters of the model.
+    # Right now they pull from the kernel, noise kernel and mean function.
+    # Modify them to add more complicated things you want to infer.
+    
+    # TODO: These getters don't handle assignment by index!
+    
+    @property
+    def hyperprior(self):
+        """Combined hyperprior for the kernel, noise kernel and (if present) mean function.
+        """
+        hp = self.k.hyperprior * self.noise_k.hyperprior
+        if self.mu is not None:
+            hp *= self.mu.hyperprior
+        return hp
+    
+    # TODO: Is there a clever way to globally set the hyperprior?
+    # @hyperprior.setter
+    # def hyperprior(self, value):
+    #     pass
+    
+    @property
+    def fixed_params(self):
+        fp = CombinedBounds(self.k.fixed_params, self.noise_k.fixed_params)
+        if self.mu is not None:
+            fp = CombinedBounds(fp, self.mu.fixed_params)
+        return fp
+    
+    @fixed_params.setter
+    def fixed_params(self, value):
+        value = scipy.asarray(value, dtype=bool)
+        self.k.fixed_params = value[:self.k.num_params]
+        self.noise_k.fixed_params = value[self.k.num_params:self.k.num_params + self.noise_k.num_params]
+        if self.mu is not None:
+            self.mu.fixed_params = value[self.k.num_params + self.noise_k.num_params:]
+    
+    @property
+    def params(self):
+        p = CombinedBounds(self.k.params, self.noise_k.params)
+        if self.mu is not None:
+            p = CombinedBounds(p, self.mu.params)
+        return p
+    
+    @params.setter
+    def params(self, value):
+        value = scipy.asarray(value, dtype=float)
+        self.K_up_to_date = False
+        self.k.params = value[:self.k.num_params]
+        self.noise_k.params = value[self.k.num_params:self.k.num_params + self.noise_k.num_params]
+        if self.mu is not None:
+            self.mu.params = value[self.k.num_params + self.noise_k.num_params:]
+    
+    @property
+    def param_bounds(self):
+        return self.hyperprior.bounds
+    
+    @param_bounds.setter
+    def param_bounds(self, value):
+        self.hyperprior.bounds = value
+    
+    @property
+    def param_names(self):
+        pn = CombinedBounds(self.k.param_names, self.noise_k.param_names)
+        if self.mu is not None:
+            pn = CombinedBounds(pn, self.mu.param_names)
+        return pn
+    
+    @param_names.setter
+    def param_names(self, value):
+        self.k.param_names = value[:self.k.num_params]
+        self.noise_k.param_names = value[self.k.num_params:self.k.num_params + self.noise_k.num_params]
+        if self.mu is not None:
+            self.mu.param_names = value[self.k.num_params + self.noise_k.num_params:]
+    
+    @property
+    def free_params(self):
+        p = CombinedBounds(self.k.free_params, self.noise_k.free_params)
+        if self.mu is not None:
+            p = CombinedBounds(p, self.mu.free_params)
+        return p
+    
+    @free_params.setter
+    def free_params(self, value):
+        """Set the free parameters. Note that this bypasses enforce_bounds.
+        """
+        value = scipy.asarray(value, dtype=float)
+        self.K_up_to_date = False
+        self.k.free_params = value[:self.k.num_free_params]
+        self.noise_k.free_params = value[self.k.num_free_params:self.k.num_free_params + self.noise_k.num_free_params]
+        if self.mu is not None:
+            self.mu.free_params = value[self.k.num_free_params + self.noise_k.num_free_params:]
+    
+    @property
+    def free_param_bounds(self):
+        fpb = CombinedBounds(self.k.free_param_bounds, self.noise_k.free_param_bounds)
+        if self.mu is not None:
+            fpb = CombinedBounds(fpb, self.mu.free_param_bounds)
+        return fpb
+    
+    @free_param_bounds.setter
+    def free_param_bounds(self, value):
+        value = scipy.asarray(value, dtype=float)
+        self.k.free_param_bounds = value[:self.k.num_free_params]
+        self.noise_k.free_param_bounds = value[self.k.num_free_params:self.k.num_free_params + self.noise_k.num_free_params]
+        if self.mu is not None:
+            self.mu.free_param_bounds = value[self.k.num_free_params + self.noise_k.num_free_params:]
+    
+    @property
+    def free_param_names(self):
+        p = CombinedBounds(self.k.free_param_names, self.noise_k.free_param_names)
+        if self.mu is not None:
+            p = CombinedBounds(p, self.mu.free_param_names)
+        return p
+    
+    @free_param_names.setter
+    def free_param_names(self, value):
+        value = scipy.asarray(value, dtype=str)
+        self.K_up_to_date = False
+        self.k.free_param_names = value[:self.k.num_free_params]
+        self.noise_k.free_param_names = value[self.k.num_free_params:self.k.num_free_params + self.noise_k.num_free_params]
+        if self.mu is not None:
+            self.mu.free_param_names = value[self.k.num_free_params + self.noise_k.num_free_params:]
     
     def add_data(self, X, y, err_y=0, n=0, T=None):   
         """Add data to the training data set of the GaussianProcess instance.
@@ -276,10 +411,6 @@ class GaussianProcess(object):
                 self.T = T
             else:
                 self.T = scipy.linalg.block_diag(self.T, T)
-                # self.T = scipy.vstack((
-                #     scipy.hstack((self.T, scipy.zeros((self.T.shape[0], T.shape[1])))),
-                #     scipy.hstack((scipy.zeros((T.shape[0], self.T.shape[1])), T))
-                # ))
         
         if self.X is None:
             self.X = X
@@ -298,7 +429,8 @@ class GaussianProcess(object):
         
         Removes points that are more than `thresh` * `err_y` away from the GP
         mean. Note that this is only very rough in that it ignores the
-        uncertainty in the GP mean at any given point.
+        uncertainty in the GP mean at any given point. But you should only be
+        using this as a rough way of removing bad channels, anyways!
         
         Returns the values that were removed and a boolean array indicating
         where the removed points were.
@@ -422,59 +554,75 @@ class GaussianProcess(object):
         else:
             opt_kwargs = dict(opt_kwargs)
         if 'method' in opt_kwargs:
-            warnings.warn("Key 'method' is present in opt_kwargs, will override "
-                          "option specified with method kwarg.",
-                          RuntimeWarning)
+            warnings.warn(
+                "Key 'method' is present in opt_kwargs, will override option "
+                "specified with method kwarg.",
+                RuntimeWarning
+            )
         else:
             opt_kwargs['method'] = method
         
         if num_proc is None:
             num_proc = multiprocessing.cpu_count()
         
-        k_nk = self.k + self.noise_k
-        
-        param_ranges = scipy.asarray(k_nk.free_param_bounds, dtype=float)
+        param_ranges = scipy.asarray(self.free_param_bounds, dtype=float)
         # Replace unbounded variables with something big:
         param_ranges[scipy.where(scipy.isnan(param_ranges[:, 0])), 0] = -1e16
         param_ranges[scipy.where(scipy.isnan(param_ranges[:, 1])), 1] = 1e16
         if random_starts == 0:
             num_proc = 0
-            param_samples = [k_nk.free_params]
+            param_samples = [self.free_params]
         else:
             if random_starts is None:
                 random_starts = max(num_proc, 1)
             # Distribute random guesses according to the hyperprior:
-            param_samples = k_nk.hyperprior.random_draw(size=random_starts).T
-            param_samples = param_samples[:, ~k_nk.fixed_params]
+            param_samples = self.hyperprior.random_draw(size=random_starts).T
+            param_samples = param_samples[:, ~self.fixed_params]
         if 'bounds' not in opt_kwargs:
             opt_kwargs['bounds'] = param_ranges
         if num_proc <= 1:
             res = []
             for samp in param_samples:
                 try:
-                    res += [scipy.optimize.minimize(self.update_hyperparameters,
-                                                    samp,
-                                                    **opt_kwargs)]
+                    res += [
+                        scipy.optimize.minimize(
+                            self.update_hyperparameters,
+                            samp,
+                            **opt_kwargs
+                        )
+                    ]
                 except AttributeError:
-                    warnings.warn("scipy.optimize.minimize not available, "
-                                  "defaulting to fmin_slsqp.",
-                                  RuntimeWarning)
-                    res += [wrap_fmin_slsqp(self.update_hyperparameters,
-                                            samp,
-                                            opt_kwargs=opt_kwargs)]
+                    warnings.warn(
+                        "scipy.optimize.minimize not available, defaulting to "
+                        "fmin_slsqp.",
+                        RuntimeWarning
+                    )
+                    res += [
+                        wrap_fmin_slsqp(
+                            self.update_hyperparameters,
+                            samp,
+                            opt_kwargs=opt_kwargs
+                        )
+                    ]
                 except:
-                    warnings.warn("Minimizer failed, skipping sample. Error "
-                                  "is: %s: %s. State of params is: %s %s"
-                                  % (sys.exc_info()[0],
-                                     sys.exc_info()[1],
-                                     str(self.k.free_params),
-                                     str(self.noise_k.free_params)),
-                                  RuntimeWarning)
+                    warnings.warn(
+                        "Minimizer failed, skipping sample. Error is: %s: %s. "
+                        "State of params is: %s %s"
+                        % (
+                            sys.exc_info()[0],
+                            sys.exc_info()[1],
+                            str(self.k.free_params),
+                            str(self.noise_k.free_params)
+                        ),
+                        RuntimeWarning
+                    )
         else:
             pool = multiprocessing.Pool(processes=num_proc)
             try:
-                res = pool.map(_OptimizeHyperparametersEval(self, opt_kwargs),
-                               param_samples)
+                res = pool.map(
+                    _OptimizeHyperparametersEval(self, opt_kwargs),
+                    param_samples
+                )
             finally:
                 pool.close()
             # Filter out the failed convergences:
@@ -482,33 +630,41 @@ class GaussianProcess(object):
         try:
             res_min = min(res, key=lambda r: r.fun)
         except ValueError:
-            raise ValueError("Optimizer failed to find a valid solution. "
-                             "Try changing the parameter bounds, picking a "
-                             "new initial guess or increasing the number of "
-                             "random starts.")
+            raise ValueError(
+                "Optimizer failed to find a valid solution. Try changing the "
+                "parameter bounds, picking a new initial guess or increasing the "
+                "number of random starts."
+            )
         
         self.update_hyperparameters(res_min.x)
         if verbose:
             print("Got %d completed starts, optimal result is:" % (len(res),))
             print(res_min)
             print("\nLL\t%.3g" % (-1 * res_min.fun))
-            for v, l in zip(res_min.x, k_nk.free_param_names):
+            for v, l in zip(res_min.x, self.free_param_names):
                 print("%s\t%.3g" % (l.translate(None, '\\'), v))
         if not res_min.success:
-            warnings.warn("Optimizer %s reports failure, selected hyperparameters "
-                          "are likely NOT optimal. Status: %d, Message: '%s'. "
-                          "Try adjusting bounds, initial guesses or the number "
-                          "of random starts used."
-                          % (method, res_min.status, res_min.message),
-                          RuntimeWarning)
-        bounds = scipy.asarray(k_nk.free_param_bounds)
+            warnings.warn(
+                "Optimizer %s reports failure, selected hyperparameters are "
+                "likely NOT optimal. Status: %d, Message: '%s'. Try adjusting "
+                "bounds, initial guesses or the number of random starts used."
+                % (
+                    method,
+                    res_min.status,
+                    res_min.message
+                ),
+                RuntimeWarning
+            )
+        bounds = scipy.asarray(self.free_param_bounds)
         # Augment the bounds a little bit to catch things that are one step away:
         if ((res_min.x <= 1.001 * bounds[:, 0]).any() or
             (res_min.x >= 0.999 * bounds[:, 1]).any()):
-            warnings.warn("Optimizer appears to have hit/exceeded the bounds. "
-                          "Bounds are:\n%s\n, solution is:\n%s. Try adjusting "
-                          "bounds, initial guesses or the number of random "
-                          "starts used." % (str(bounds), str(res_min.x),))
+            warnings.warn(
+                "Optimizer appears to have hit/exceeded the bounds. Bounds are:\n"
+                "%s\n, solution is:\n%s. Try adjusting bounds, initial guesses "
+                "or the number of random starts used."
+                % (str(bounds), str(res_min.x),)
+            )
         return (res_min, len(res))
     
     def predict(self, Xstar, n=0, noise=False, return_std=True, return_cov=False,
@@ -631,9 +787,11 @@ class GaussianProcess(object):
             if self.num_dim == 1 and Xstar.shape[0] == 1:
                 Xstar = Xstar.T
             if Xstar.shape[1] != self.num_dim:
-                raise ValueError("Second dimension of Xstar must be equal to "
-                                 "self.num_dim! Shape of Xstar given is %s, "
-                                 "num_dim is %d." % (Xstar.shape, self.num_dim))
+                raise ValueError(
+                    "Second dimension of Xstar must be equal to self.num_dim! "
+                    "Shape of Xstar given is %s, num_dim is %d."
+                    % (Xstar.shape, self.num_dim)
+                )
             
             # Process T:
             if output_transform is not None:
@@ -662,12 +820,14 @@ class GaussianProcess(object):
                 if self.num_dim == 1 and n.shape[0] == 1:
                     n = n.T
                 if n.shape != Xstar.shape:
-                    raise ValueError("When using array-like n, shape must match "
-                                     "shape of Xstar! Shape of n given is %s, "
-                                     "shape of Xstar given is %s." % (n.shape, Xstar.shape))
+                    raise ValueError(
+                        "When using array-like n, shape must match shape of Xstar! "
+                        "Shape of n given is %s, shape of Xstar given is %s."
+                        % (n.shape, Xstar.shape)
+                    )
             if (n < 0).any():
                 raise ValueError("All elements of n must be non-negative integers!")
-        
+            
             self.compute_K_L_alpha_ll()
             Kstar = self.compute_Kij(self.X, Xstar, self.n, n)
             if noise:
@@ -675,6 +835,8 @@ class GaussianProcess(object):
             if self.T is not None:
                 Kstar = self.T.dot(Kstar)
             mean = Kstar.T.dot(self.alpha)
+            if self.mu is not None:
+                mean += scipy.atleast_2d(self.mu(Xstar, n)).T
             if output_transform is not None:
                 mean = output_transform.dot(mean)
             mean = mean.ravel()
@@ -703,9 +865,11 @@ class GaussianProcess(object):
                     covariance = scipy.cov(samps, rowvar=1, ddof=ddof)
                 std = scipy.sqrt(scipy.diagonal(covariance))
                 if full_output:
-                    out = {'mean': mean,
-                           'std': std,
-                           'cov': covariance}
+                    out = {
+                        'mean': mean,
+                        'std': std,
+                        'cov': covariance
+                    }
                     if return_samples or full_MC:
                         out['samp'] = samps
                     return out
@@ -803,9 +967,15 @@ class GaussianProcess(object):
             std = None
         
         if self.num_dim == 1:
-            univariate_envelope_plot(X, mean, std, ax=ax,
-                                     base_alpha=base_alpha,
-                                     envelopes=envelopes, **plot_kwargs)
+            univariate_envelope_plot(
+                X,
+                mean,
+                std,
+                ax=ax,
+                base_alpha=base_alpha,
+                envelopes=envelopes,
+                **plot_kwargs
+            )
         elif self.num_dim == 2:
             if ax is None:
                 f = plt.figure()
@@ -919,9 +1089,12 @@ class GaussianProcess(object):
             try:
                 return numpy.random.multivariate_normal(mean, cov, num_samp).T
             except numpy.linalg.LinAlgError as e:
-                warnings.warn("Failure when drawing from MVN! Falling back on "
-                              "eig. Exception was:\n%s" % (e,),
-                              RuntimeWarning)
+                warnings.warn(
+                    "Failure when drawing from MVN! Falling back on eig. "
+                    "Exception was:\n%s"
+                    % (e,),
+                    RuntimeWarning
+                )
                 method = 'eig'
         
         if num_eig is None or num_eig > len(mean):
@@ -982,28 +1155,37 @@ class GaussianProcess(object):
             The updated log likelihood.
         """
         self.k.set_hyperparams(new_params[:len(self.k.free_params)])
-        self.noise_k.set_hyperparams(new_params[len(self.k.free_params):])
+        self.noise_k.set_hyperparams(
+            new_params[len(self.k.free_params):len(self.k.free_params) + len(self.noise_k.free_params)]
+        )
+        if self.mu is not None:
+            self.mu.set_hyperparams(
+                new_params[len(self.k.free_params) + len(self.noise_k.free_params):]
+            )
         self.K_up_to_date = False
         if exit_on_bounds:
-            L_k = self.k.hyperprior(self.k.params)
-            if scipy.isinf(L_k) or scipy.isnan(L_k):
-                return scipy.inf
-            L_nk = self.noise_k.hyperprior(self.noise_k.params)
-            if scipy.isinf(L_nk) or scipy.isnan(L_nk):
+            if scipy.isinf(self.hyperprior(self.params)):
                 return scipy.inf
         try:
             self.compute_K_L_alpha_ll()
         except numpy.linalg.LinAlgError as e:
-            warnings.warn(
-                "Failure when updating GP! Exception was:\n%s\n"
-                "State of params is: %s %s"
-                % (
-                    e,
-                    str(self.k.free_params),
-                    str(self.noise_k.free_params)
-                ),
-                RuntimeWarning
-            )
+            if inf_on_error:
+                warnings.warn(
+                    "Failure when updating GP! Exception was:\n%s\n"
+                    "State of params is: %s"
+                    % (
+                        e,
+                        str(self.free_params[:]),
+                    ),
+                    RuntimeWarning
+                )
+                return scipy.inf
+            else:
+                raise e
+        except Exception as e:
+            print("Unhandled exception!")
+            print(e)
+            print(self.free_params[:])
             return scipy.inf
         return -1 * self.ll
     
@@ -1027,26 +1209,38 @@ class GaussianProcess(object):
             if self.T is not None:
                 K = self.T.dot(K).dot(self.T.T)
                 noise_K = self.T.dot(noise_K).dot(self.T.T)
-            K_tot = (K +
-                     scipy.diag(err_y**2.0) +
-                     noise_K +
-                     self.diag_factor * sys.float_info.epsilon * scipy.eye(len(y)))
+            K_tot = (
+                K +
+                scipy.diag(err_y**2.0) +
+                noise_K +
+                self.diag_factor * sys.float_info.epsilon * scipy.eye(len(y))
+            )
             self.L = scipy.linalg.cholesky(K_tot, lower=True)
+            # Need to make the mean-subtracted y that appears in the expression
+            # for alpha:
+            if self.mu is not None:
+                mu_alph = self.mu(self.X, self.n)
+                if self.T is not None:
+                    mu_alph = self.T.dot(mu_alph)
+                y_alph = self.y - mu_alph
+            else:
+                y_alph = self.y
             self.alpha = scipy.linalg.solve_triangular(
                 self.L.T,
                 scipy.linalg.solve_triangular(
                     self.L,
-                    scipy.atleast_2d(y).T,
+                    scipy.atleast_2d(y_alph).T,
                     lower=True
                 ),
                 lower=False
             )
-            self.ll = (-0.5 * scipy.atleast_2d(y).dot(self.alpha) -
-                       scipy.log(scipy.diag(self.L)).sum() - 
-                       0.5 * len(y) * scipy.log(2.0 * scipy.pi))[0, 0]
+            self.ll = (
+                -0.5 * scipy.atleast_2d(y_alph).dot(self.alpha) -
+                scipy.log(scipy.diag(self.L)).sum() - 
+                0.5 * len(y) * scipy.log(2.0 * scipy.pi)
+            )[0, 0]
             # Apply hyperpriors:
-            self.ll += self.k.hyperprior(self.k.params)
-            self.ll += self.noise_k.hyperprior(self.noise_k.params)
+            self.ll += self.hyperprior(self.params)
             self.K_up_to_date = True
     
     @property
@@ -1116,8 +1310,14 @@ class GaussianProcess(object):
         ni_tile = scipy.repeat(ni, Xj.shape[0], axis=0)
         Xj_tile = scipy.tile(Xj, (Xi.shape[0], 1))
         nj_tile = scipy.tile(nj, (Xi.shape[0], 1))
-        Kij = k(Xi_tile, Xj_tile, ni_tile, nj_tile, hyper_deriv=hyper_deriv,
-                symmetric=symmetric)
+        Kij = k(
+            Xi_tile,
+            Xj_tile,
+            ni_tile,
+            nj_tile,
+            hyper_deriv=hyper_deriv,
+            symmetric=symmetric
+        )
         Kij = scipy.reshape(Kij, (Xi.shape[0], -1))
         
         return Kij
@@ -1140,8 +1340,9 @@ class GaussianProcess(object):
             param_vals : List of :py:class:`Array`
                 The parameter values used.
         """
-        present_free_params = scipy.concatenate((self.k.free_params,
-                                                 self.noise_k.free_params))
+        present_free_params = scipy.concatenate(
+            (self.k.free_params, self.noise_k.free_params)
+        )
         bounds = scipy.atleast_2d(scipy.asarray(bounds, dtype=float))
         if bounds.shape[1] != 2:
             raise ValueError("Argument bounds must have shape (n, 2)!")
@@ -1193,16 +1394,20 @@ class GaussianProcess(object):
         """
         if idx >= len(num_pts):
             # Base case: All entries in param_vals should be scalars:
-            return -1.0 * self.update_hyperparameters(scipy.asarray(param_vals,
-                                                                    dtype=float))
+            return -1.0 * self.update_hyperparameters(
+                scipy.asarray(param_vals, dtype=float)
+            )
         else:
             # Recursive case: call _compute_ll_matrix for each entry in param_vals[idx]:
             vals = scipy.zeros(num_pts[idx:], dtype=float)
             for k in xrange(0, len(param_vals[idx])):
                 specific_param_vals = list(param_vals)
                 specific_param_vals[idx] = param_vals[idx][k]
-                vals[k] = self._compute_ll_matrix(idx + 1, specific_param_vals,
-                                                  num_pts)
+                vals[k] = self._compute_ll_matrix(
+                    idx + 1,
+                    specific_param_vals,
+                    num_pts
+                )
             return vals
     
     def sample_hyperparameter_posterior(self, nwalkers=200, nsamp=500, burn=0,
@@ -1253,16 +1458,17 @@ class GaussianProcess(object):
         # Needed for emcee to do it right:
         if num_proc == 0:
             num_proc = 1
-        k_nk = self.k + self.noise_k
-        ndim = len(k_nk.free_params)
+        ndim = len(self.free_params)
         if sampler is None:
-            sampler = emcee.EnsembleSampler(nwalkers,
-                                            ndim,
-                                            _ComputeLnProbEval(self),
-                                            threads=num_proc)
+            sampler = emcee.EnsembleSampler(
+                nwalkers,
+                ndim,
+                _ComputeLnProbEval(self),
+                threads=num_proc
+            )
         if sampler.chain.size == 0:
-            theta0 = k_nk.hyperprior.random_draw(size=nwalkers).T
-            theta0 = theta0[:, ~k_nk.fixed_params]
+            theta0 = self.hyperprior.random_draw(size=nwalkers).T
+            theta0 = theta0[:, ~self.fixed_params]
         else:
             # Start from the stopping point of the previous chain:
             theta0 = sampler.chain[:, -1, :]
@@ -1273,28 +1479,33 @@ class GaussianProcess(object):
             flat_trace = flat_trace.reshape((-1, flat_trace.shape[2]))
             
         if plot_posterior:
-            triangle.corner(flat_trace,
-                            plot_datapoints=False,
-                            labels=['$%s$' % (l,) for l in k_nk.free_param_names])
+            triangle.corner(
+                flat_trace,
+                plot_datapoints=False,
+                labels=['$%s$' % (l,) for l in self.free_param_names]
+            )
         if plot_chains:
             f = plt.figure()
             for k in xrange(0, ndim):
                 a = f.add_subplot(3, ndim, k + 1)
-                a.acorr(sampler.flatchain[:, k], maxlags=100,
-                        detrend=plt.mlab.detrend_mean)
+                a.acorr(
+                    sampler.flatchain[:, k],
+                    maxlags=100,
+                    detrend=plt.mlab.detrend_mean
+                )
                 a.set_xlabel('lag')
-                a.set_title('$%s$ autocorrelation' % (k_nk.free_param_names[k],))
+                a.set_title('$%s$ autocorrelation' % (self.free_param_names[k],))
                 a = f.add_subplot(3, ndim, ndim + k + 1)
                 for chain in sampler.chain[:, :, k]:
                     a.plot(chain)
                 a.set_xlabel('sample')
-                a.set_ylabel('$%s$' % (k_nk.free_param_names[k],))
-                a.set_title('$%s$ all chains' % (k_nk.free_param_names[k],))
+                a.set_ylabel('$%s$' % (self.free_param_names[k],))
+                a.set_title('$%s$ all chains' % (self.free_param_names[k],))
                 a = f.add_subplot(3, ndim, 2 * ndim + k + 1)
                 a.plot(flat_trace[:, k])
                 a.set_xlabel('sample')
-                a.set_ylabel('$%s$' % (k_nk.free_param_names[k],))
-                a.set_title('$%s$ flattened, burned and thinned chain' % (k_nk.free_param_names[k],))
+                a.set_ylabel('$%s$' % (self.free_param_names[k],))
+                a.set_title('$%s$ flattened, burned and thinned chain' % (self.free_param_names[k],))
             
         return sampler
     
@@ -1398,18 +1609,41 @@ class GaussianProcess(object):
         if num_proc > 1:
             pool = multiprocessing.Pool(processes=num_proc)
             try:
-                res = pool.map(_ComputeGPWrapper(self, X, n, return_mean, return_std,
-                                                 return_cov, return_samples,
-                                                 num_samples, noise, samp_kwargs,
-                                                 output_transform),
-                               flat_trace)
+                res = pool.map(
+                    _ComputeGPWrapper(
+                        self,
+                        X,
+                        n,
+                        return_mean,
+                        return_std,
+                        return_cov,
+                        return_samples,
+                        num_samples,
+                        noise,
+                        samp_kwargs,
+                        output_transform
+                    ),
+                    flat_trace
+                )
             finally:
                 pool.close()
         else:
-            res = map(_ComputeGPWrapper(self, X, n, return_mean, return_std,
-                                        return_cov, return_samples, num_samples,
-                                        noise, samp_kwargs, output_transform),
-                      flat_trace)
+            res = map(
+                _ComputeGPWrapper(
+                    self,
+                    X,
+                    n,
+                    return_mean,
+                    return_std,
+                    return_cov,
+                    return_samples,
+                    num_samples,
+                    noise,
+                    samp_kwargs,
+                    output_transform
+                    ),
+                    flat_trace
+                )
         out = dict()
         if return_mean:
             out['mean'] = [r['mean'] for r in res]
@@ -1559,11 +1793,15 @@ class _ComputeGPWrapper(object):
         Returns a dict with some or all of the fields 'mean', 'cov', 'std', 'samp'
         """
         self.gp.update_hyperparameters(list(p_case))
-        out = self.gp.predict(self.X, n=self.n, noise=self.noise,
-                              full_output=self.full_output,
-                              return_samples=self.return_sample,
-                              num_samples=self.num_samples,
-                              output_transform=self.output_transform)
+        out = self.gp.predict(
+            self.X,
+            n=self.n,
+            noise=self.noise,
+            full_output=self.full_output,
+            return_samples=self.return_sample,
+            num_samples=self.num_samples,
+            output_transform=self.output_transform
+        )
         if not self.full_output:
             # If full output is True, return_mean must be the only True thing,
             # since otherwise this isn't computing anything!
@@ -1615,24 +1853,31 @@ class _OptimizeHyperparametersEval(object):
     
     def __call__(self, samp):
         try:
-            return scipy.optimize.minimize(self.gp.update_hyperparameters,
-                                           samp,
-                                           **self.opt_kwargs)
+            return scipy.optimize.minimize(
+                self.gp.update_hyperparameters,
+                samp,
+                **self.opt_kwargs
+            )
         except AttributeError:
             warnings.warn("scipy.optimize.minimize not available, defaulting "
                           "to fmin_slsqp.",
                           RuntimeWarning)
-            return wrap_fmin_slsqp(self.gp.update_hyperparameters,
-                                   samp,
-                                   opt_kwargs=self.opt_kwargs)
+            return wrap_fmin_slsqp(
+                self.gp.update_hyperparameters,
+                samp,
+                opt_kwargs=self.opt_kwargs
+            )
         except:
-            warnings.warn("Minimizer failed, skipping sample. Error "
-                          "is: %s: %s. State of params is: %s %s"
-                          % (sys.exc_info()[0],
-                             sys.exc_info()[1],
-                             str(self.gp.k.free_params),
-                             str(self.gp.noise_k.free_params)),
-                          RuntimeWarning)
+            warnings.warn(
+                "Minimizer failed, skipping sample. Error is: %s: %s. "
+                "State of params is: %s"
+                % (
+                    sys.exc_info()[0],
+                    sys.exc_info()[1],
+                    str(self.gp.free_params),
+                ),
+                RuntimeWarning
+            )
             return None
 
 class Constraint(object):

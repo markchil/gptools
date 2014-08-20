@@ -66,7 +66,7 @@ def parallel_compute_ll_matrix(gp, bounds, num_pts, num_proc=None):
     if num_proc is None:
         num_proc = multiprocessing.cpu_count()
     
-    present_free_params = scipy.concatenate((gp.k.free_params, gp.noise_k.free_params))
+    present_free_params = gp.free_params
     
     bounds = scipy.atleast_2d(scipy.asarray(bounds, dtype=float))
     if bounds.shape[1] != 2:
@@ -199,7 +199,14 @@ def slice_plot(*args, **kwargs):
         
         a_main.set_xlabel(names[1])
         a_main.set_ylabel(names[0])
-        cs = a_main.contour(args[2], args[1], args[0][scipy.s_[:, :] + tuple(idxs)].squeeze(), n, vmin=args[0].min(), vmax=args[1].max())
+        cs = a_main.contour(
+            args[2],
+            args[1],
+            args[0][scipy.s_[:, :] + tuple(idxs)].squeeze(),
+            n,
+            vmin=args[0].min(),
+            vmax=args[1].max()
+        )
         cbar = f.colorbar(cs, cax=a_cbar)
         cbar.set_label("LL")
         
@@ -208,12 +215,16 @@ def slice_plot(*args, **kwargs):
     idxs_0 = (num_axes - 2) * [0]
     sliders = []
     for idx in xrange(0, num_axes - 2):
-        sliders.append(mplw.Slider(a_sliders[idx],
-                                   '%s index' % names[idx + 2],
-                                   0,
-                                   len(args[idx + 3]) - 1,
-                                   valinit=idxs_0[idx],
-                                   valfmt='%d'))
+        sliders.append(
+            mplw.Slider(
+                a_sliders[idx],
+                '%s index' % names[idx + 2],
+                0,
+                len(args[idx + 3]) - 1,
+                valinit=idxs_0[idx],
+                valfmt='%d'
+            )
+        )
         sliders[-1].on_changed(update)
     
     update(idxs_0)

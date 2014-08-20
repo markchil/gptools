@@ -21,7 +21,7 @@
 from __future__ import division
 
 from ..utils import unique_rows, generate_set_partitions, UniformJointPrior, \
-                    ProductJointPrior, IndependentJointPrior, powerset
+                    ProductJointPrior, IndependentJointPrior, powerset, MaskedBounds
 from ..error_handling import GPArgumentError
 
 import scipy
@@ -208,7 +208,7 @@ class Kernel(object):
     
     def set_hyperparams(self, new_params):
         """Sets the free hyperparameters to the new parameter values in new_params.
-
+        
         Parameters
         ----------
         new_params : :py:class:`Array` or other Array-like, (len(:py:attr:`self.params`),)
@@ -217,7 +217,7 @@ class Kernel(object):
         """
         new_params = scipy.asarray(new_params, dtype=float)
         
-        if new_params.shape == self.free_params.shape:
+        if len(new_params) == len(self.free_params):
             if self.enforce_bounds:
                 for idx, new_param, bound in zip(range(0, len(new_params)), new_params, self.free_param_bounds):
                     if bound[0] is not None and new_param < bound[0]:
@@ -226,7 +226,19 @@ class Kernel(object):
                         new_params[idx] = bound[1]
             self.params[~self.fixed_params] = new_params
         else:
-            raise ValueError("Length of new_params must be %s!" % (self.free_params.shape,))
+            raise ValueError("Length of new_params must be %s!" % (len(self.free_params),))
+    
+    @property
+    def num_free_params(self):
+        """Returns the number of free parameters.
+        """
+        return sum(~self.fixed_params)
+    
+    @property
+    def free_param_idxs(self):
+        """Returns the indices of the free parameters in the main arrays of parameters, etc.
+        """
+        return scipy.arange(0, self.num_params)[~self.fixed_params]
     
     @property
     def free_params(self):
@@ -237,7 +249,11 @@ class Kernel(object):
         free_params : :py:class:`Array`
             Array of the free parameters, in order.
         """
-        return self.params[~self.fixed_params]
+        return MaskedBounds(self.params, self.free_param_idxs)
+    
+    @free_params.setter
+    def free_params(self, value):
+        self.params[self.free_param_idxs] = scipy.asarray(value, dtype=float)
     
     @property
     def free_param_bounds(self):
@@ -248,7 +264,13 @@ class Kernel(object):
         free_param_bounds : :py:class:`Array`
             Array of the bounds of the free parameters, in order.
         """
-        return scipy.asarray(self.param_bounds, dtype=float)[~self.fixed_params]
+        return MaskedBounds(self.hyperprior.bounds, self.free_param_idxs)
+    
+    @free_param_bounds.setter
+    def free_param_bounds(self, value):
+        # Need to use a loop since self.hyperprior.bounds is NOT guaranteed to support fancy indexing.
+        for i, v in zip(self.free_param_idxs, value):
+            self.hyperprior.bounds[i] = v
     
     @property
     def free_param_names(self):
@@ -259,7 +281,13 @@ class Kernel(object):
         free_param_names : :py:class:`Array`
             Array of the names of the free parameters, in order.
         """
-        return scipy.asarray(self.param_names)[~self.fixed_params]
+        return MaskedBounds(self.param_names, self.free_param_idxs)
+    
+    @free_param_names.setter
+    def free_param_names(self, value):
+        # Cast to array in case it hasn't been done already:
+        self.param_names = scipy.asarray(self.param_names, dtype=str)
+        self.param_names[~self.fixed_params] = value
     
     def __add__(self, other):
         """Add two Kernels together.
@@ -428,12 +456,12 @@ class BinaryKernel(Kernel):
         """
         new_params = scipy.asarray(new_params, dtype=float)
         
-        if new_params.shape == self.free_params.shape:
+        if len(new_params) == len(self.free_params):
             num_free_k1 = sum(~self.k1.fixed_params)
             self.k1.set_hyperparams(new_params[:num_free_k1])
             self.k2.set_hyperparams(new_params[num_free_k1:])
         else:
-            raise ValueError("Length of new_params must be %s!" % (self.free_params.shape,))
+            raise ValueError("Length of new_params must be %s!" % (len(self.free_params),))
 
 class SumKernel(BinaryKernel):
     """The sum of two kernels.

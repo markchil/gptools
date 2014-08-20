@@ -53,7 +53,7 @@ you should use a linear transformation to map them to it::
 from __future__ import division
 
 from .core import Kernel
-from ..utils import UniformJointPrior, LogNormalJointPrior
+from ..utils import UniformJointPrior, LogNormalJointPrior, CombinedBounds, MaskedBounds
 
 import inspect
 import scipy
@@ -240,7 +240,7 @@ class WarpingFunction(object):
         """
         new_params = scipy.asarray(new_params, dtype=float)
         
-        if new_params.shape == self.free_params.shape:
+        if len(new_params) == len(self.free_params):
             if self.enforce_bounds:
                 for idx, new_param, bound in zip(range(0, len(new_params)), new_params, self.free_param_bounds):
                     if bound[0] is not None and new_param < bound[0]:
@@ -249,7 +249,19 @@ class WarpingFunction(object):
                         new_params[idx] = bound[1]
             self.params[~self.fixed_params] = new_params
         else:
-            raise ValueError("Length of new_params must be %s!" % (self.free_params.shape,))
+            raise ValueError("Length of new_params must be %s!" % (len(self.free_params),))
+    
+    @property
+    def num_free_params(self):
+        """Returns the number of free parameters.
+        """
+        return sum(~self.fixed_params)
+    
+    @property
+    def free_param_idxs(self):
+        """Returns the indices of the free parameters in the main arrays of parameters, etc.
+        """
+        return scipy.arange(0, self.num_params)[~self.fixed_params]
     
     @property
     def free_params(self):
@@ -260,7 +272,11 @@ class WarpingFunction(object):
         free_params : :py:class:`Array`
             Array of the free parameters, in order.
         """
-        return self.params[~self.fixed_params]
+        return MaskedBounds(self.params, self.free_param_idxs)
+    
+    @free_params.setter
+    def free_params(self, value):
+        self.params[self.free_param_idxs] = scipy.asarray(value, dtype=float)
     
     @property
     def free_param_bounds(self):
@@ -271,7 +287,13 @@ class WarpingFunction(object):
         free_param_bounds : :py:class:`Array`
             Array of the bounds of the free parameters, in order.
         """
-        return scipy.asarray(self.param_bounds, dtype=float)[~self.fixed_params]
+        return MaskedBounds(self.hyperprior.bounds, self.free_param_idxs)
+    
+    @free_param_bounds.setter
+    def free_param_bounds(self, value):
+        # Need to use a loop since self.hyperprior.bounds is NOT guaranteed to support fancy indexing.
+        for i, v in zip(self.free_param_idxs, value):
+            self.hyperprior.bounds[i] = v
     
     @property
     def free_param_names(self):
@@ -282,7 +304,13 @@ class WarpingFunction(object):
         free_param_names : :py:class:`Array`
             Array of the names of the free parameters, in order.
         """
-        return scipy.asarray(self.param_names)[~self.fixed_params]
+        return MaskedBounds(self.param_names, self.free_param_idxs)
+    
+    @free_param_names.setter
+    def free_param_names(self, value):
+        # Cast to array in case it hasn't been done already:
+        self.param_names = scipy.asarray(self.param_names, dtype=str)
+        self.param_names[~self.fixed_params] = value
 
 def beta_cdf_warp(X, d, n, *args):
     r"""Warp inputs that are confined to the unit hypercube using the regularized incomplete beta function.
@@ -427,43 +455,67 @@ class WarpedKernel(Kernel):
     
     @property
     def fixed_params(self):
-        return scipy.concatenate((self.k.fixed_params, self.w.fixed_params))
+        return CombinedBounds(self.k.fixed_params, self.w.fixed_params)
     
     @fixed_params.setter
-    def fixed_params(self, v):
-        self.k.fixed_params = v[:self.k.num_params]
-        self.w.fixed_params = v[self.k.num_params:]
-    
-    @property
-    def free_param_bounds(self):
-        """Returns the bounds of the free hyperparameters.
-        
-        Returns
-        -------
-        free_param_bounds : :py:class:`Array`
-            Array of the bounds of the free parameters, in order.
-        """
-        return scipy.concatenate((self.k.free_param_bounds, self.w.free_param_bounds))
-    
-    @property
-    def free_param_names(self):
-        """Returns the names of the free hyperparameters.
-        
-        Returns
-        -------
-        free_param_names : :py:class:`Array`
-            Array of the names of the free parameters, in order.
-        """
-        return scipy.concatenate((self.k.free_param_names, self.w.free_param_names))
+    def fixed_params(self, value):
+        value = scipy.asarray(value, dtype=bool)
+        self.k.fixed_params = value[:self.k.num_params]
+        self.w.fixed_params = value[self.k.num_params:self.k.num_params + self.w.num_params]
     
     @property
     def params(self):
-        return scipy.concatenate((self.k.params, self.w.params))
+        return CombinedBounds(self.k.params, self.w.params)
     
     @params.setter
-    def params(self, v):
-        self.k.params = v[:self.k.num_params]
-        self.w.params = v[self.k.num_params:]
+    def params(self, value):
+        value = scipy.asarray(value, dtype=float)
+        self.K_up_to_date = False
+        self.k.params = value[:self.k.num_params]
+        self.w.params = value[self.k.num_params:self.k.num_params + self.w.num_params]
+    
+    @property
+    def param_names(self):
+        return CombinedBounds(self.k.param_names, self.w.param_names)
+    
+    @param_names.setter
+    def param_names(self, value):
+        self.k.param_names = value[:self.k.num_params]
+        self.w.param_names = value[self.k.num_params:self.k.num_params + self.w.num_params]
+    
+    @property
+    def free_params(self):
+        return CombinedBounds(self.k.free_params, self.w.free_params)
+    
+    @free_params.setter
+    def free_params(self, value):
+        """Set the free parameters. Note that this bypasses enforce_bounds.
+        """
+        value = scipy.asarray(value, dtype=float)
+        self.K_up_to_date = False
+        self.k.free_params = value[:self.k.num_free_params]
+        self.w.free_params = value[self.k.num_free_params:self.k.num_free_params + self.w.num_free_params]
+    
+    @property
+    def free_param_bounds(self):
+        return CombinedBounds(self.k.free_param_bounds, self.w.free_param_bounds)
+    
+    @free_param_bounds.setter
+    def free_param_bounds(self, value):
+        value = scipy.asarray(value, dtype=float)
+        self.k.free_param_bounds = value[:self.k.num_free_params]
+        self.w.free_param_bounds = value[self.k.num_free_params:self.k.num_free_params + self.w.num_free_params]
+    
+    @property
+    def free_param_names(self):
+        return CombinedBounds(self.k.free_param_names, self.w.free_param_names)
+    
+    @free_param_names.setter
+    def free_param_names(self, value):
+        value = scipy.asarray(value, dtype=str)
+        self.K_up_to_date = False
+        self.k.free_param_names = value[:self.k.num_free_params]
+        self.w.free_param_names = value[self.k.num_free_params:self.k.num_free_params + self.w.num_free_params]
     
     def set_hyperparams(self, new_params):
         """Set the (free) hyperparameters.
@@ -480,12 +532,12 @@ class WarpedKernel(Kernel):
         """
         new_params = scipy.asarray(new_params, dtype=float)
         
-        if new_params.shape == self.free_params.shape:
+        if len(new_params) == len(self.free_params):
             num_free_k = sum(~self.k.fixed_params)
             self.k.set_hyperparams(new_params[:num_free_k])
             self.w.set_hyperparams(new_params[num_free_k:])
         else:
-            raise ValueError("Length of new_params must be %s!" % (self.free_params.shape,))
+            raise ValueError("Length of new_params must be %s!" % (len(self.free_params),))
 
 class BetaWarpedKernel(WarpedKernel):
     r"""Class to warp any existing :py:class:`Kernel` with the beta CDF.
@@ -501,22 +553,23 @@ class BetaWarpedKernel(WarpedKernel):
     ----------
     k : :py:class:`Kernel`
         The :py:class:`Kernel` to warp.
-    hyperprior : :py:class:`JointPrior`
-        The hyperprior to use for the hyperparameters of the beta CDF warping.
-        If none is provided, takes each :math:`\alpha`, :math:`\beta` to be
-        follow the log-normal distribution.
+    **w_kwargs : optional kwargs
+        All additional kwargs are passed to the constructor of
+        :py:class:`WarpingFunction`. If no hyperprior or param_bounds are
+        provided, takes each :math:`\alpha`, :math:`\beta` to follow the
+        log-normal distribution.
     
     References
     ----------
     .. [1] J. Snoek, K. Swersky, R. Zemel, R. P. Adams, "Input Warping for
        Bayesian Optimization of Non-stationary Functions" ICML (2014)
     """
-    def __init__(self, k, hyperprior=None):
+    def __init__(self, k, **w_kwargs):
         param_names = []
         for d in xrange(0, k.num_dim):
             param_names += ['\\alpha_%d' % (d,), '\\beta_%d' % (d,)]
-        if hyperprior is None:
-            hyperprior = LogNormalJointPrior(
+        if 'hyperprior' not in w_kwargs and 'param_bounds' not in w_kwargs:
+            w_kwargs['hyperprior'] = LogNormalJointPrior(
                 [0, 0] * k.num_dim,
                 [0.5, 0.5] * k.num_dim
             )
@@ -524,7 +577,7 @@ class BetaWarpedKernel(WarpedKernel):
             beta_cdf_warp,
             num_dim=k.num_dim,
             param_names=param_names,
-            hyperprior=hyperprior
+            **w_kwargs
         )
         super(BetaWarpedKernel, self).__init__(k, w)
 
