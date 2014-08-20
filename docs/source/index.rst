@@ -36,10 +36,17 @@ But, the default bounds on the hyperparameters are very wide and can cause the o
     
     k = gptools.SquaredExponentialKernel(param_bounds=[(0, 1e3), (0, 100)])
 
-You will have to pick appropriate numbers by inspecting the typical range of your data. Furthermore, you can include an explicit mean function by passing
+You will have to pick appropriate numbers by inspecting the typical range of your data.
+
+Furthermore, you can include an explicit mean function by passing
 the appropriate :py:class:`~gptools.mean.MeanFunction` instance into the `mu` keyword::
     
     gp = gptools.GaussianProcess(k, mu=gptools.LinearMeanFunction())
+
+This will enable you to perform inference (both empirical and full Bayes) for
+the hyperparameters of the mean function. Essentially, :py:mod:`gptools` can
+perform nonlinear Bayesian regression with a Gaussian process fit to the
+residuals.
 
 You then add the training data using the :py:meth:`~gptools.gaussian_process.GaussianProcess.add_data` method::
     
