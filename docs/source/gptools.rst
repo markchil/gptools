@@ -35,6 +35,14 @@ gptools.gp_utils module
     :undoc-members:
     :show-inheritance:
 
+gptools.mean module
+-------------------
+
+.. automodule:: gptools.mean
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 gptools.utils module
 --------------------
 
