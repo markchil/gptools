@@ -36,7 +36,12 @@ But, the default bounds on the hyperparameters are very wide and can cause the o
     
     k = gptools.SquaredExponentialKernel(param_bounds=[(0, 1e3), (0, 100)])
 
-You will have to pick appropriate numbers by inspecting the typical range of your data. You then add the training data using the :py:meth:`~gptools.gaussian_process.GaussianProcess.add_data` method::
+You will have to pick appropriate numbers by inspecting the typical range of your data. Furthermore, you can include an explicit mean function by passing
+the appropriate :py:class:`~gptools.mean.MeanFunction` instance into the `mu` keyword::
+    
+    gp = gptools.GaussianProcess(k, mu=gptools.LinearMeanFunction())
+
+You then add the training data using the :py:meth:`~gptools.gaussian_process.GaussianProcess.add_data` method::
     
     gp.add_data(x, y, err_y=stddev_y)
 
