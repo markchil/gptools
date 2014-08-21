@@ -20,13 +20,21 @@
 
 from __future__ import division
 
+import warnings
+
 from .core import ChainRuleKernel, ArbitraryKernel, Kernel
 from ..utils import generate_set_partitions
-from ._matern import _matern52
+try:
+    from ._matern import _matern52
+except ImportError:
+    warnings.warn(
+        "Could not import _matern, the extension might not have been built "
+        "properly. The optimized Matern52Kernel will not be available.",
+        ImportWarning
+    )
 
 import scipy
 import scipy.special
-import warnings
 try:
     import mpmath
 except ImportError:
