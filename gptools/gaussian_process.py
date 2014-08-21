@@ -1183,10 +1183,17 @@ class GaussianProcess(object):
             else:
                 raise e
         except Exception as e:
-            print("Unhandled exception!")
-            print(e)
-            print(self.free_params[:])
-            return scipy.inf
+            if inf_on_error:
+                warnings.warn(
+                    "Unhandled exception! Exception was:\n%s\n"
+                    "State of params is: %s"
+                    % (
+                    e,
+                    str(self.free_params[:]))
+                )
+                return scipy.inf
+            else:
+                raise e
         return -1 * self.ll
     
     def compute_K_L_alpha_ll(self):
@@ -1646,13 +1653,13 @@ class GaussianProcess(object):
                 )
         out = dict()
         if return_mean:
-            out['mean'] = [r['mean'] for r in res]
+            out['mean'] = [r['mean'] for r in res if r is not None]
         if return_std:
-            out['std'] = [r['std'] for r in res]
+            out['std'] = [r['std'] for r in res if r is not None]
         if return_cov:
-            out['cov'] = [r['cov'] for r in res]
+            out['cov'] = [r['cov'] for r in res if r is not None]
         if return_samples:
-            out['samp'] = [r['samp'] for r in res]
+            out['samp'] = [r['samp'] for r in res if r is not None]
         return out
     
     def predict_MCMC(self, X, ddof=1, full_MC=False, rejection_func=None, **kwargs):
@@ -1792,27 +1799,38 @@ class _ComputeGPWrapper(object):
         
         Returns a dict with some or all of the fields 'mean', 'cov', 'std', 'samp'
         """
-        self.gp.update_hyperparameters(list(p_case))
-        out = self.gp.predict(
-            self.X,
-            n=self.n,
-            noise=self.noise,
-            full_output=self.full_output,
-            return_samples=self.return_sample,
-            num_samples=self.num_samples,
-            output_transform=self.output_transform
-        )
-        if not self.full_output:
-            # If full output is True, return_mean must be the only True thing,
-            # since otherwise this isn't computing anything!
-            return {'mean': out}
-        else:
-            if not self.return_mean:
-                out.pop('mean')
-            if not self.return_std:
-                out.pop('std')
-            if not self.return_cov:
-                out.pop('cov')
+        try:
+            self.gp.update_hyperparameters(list(p_case))
+            out = self.gp.predict(
+                self.X,
+                n=self.n,
+                noise=self.noise,
+                full_output=self.full_output,
+                return_samples=self.return_sample,
+                num_samples=self.num_samples,
+                output_transform=self.output_transform
+            )
+            if not self.full_output:
+                # If full output is True, return_mean must be the only True thing,
+                # since otherwise this isn't computing anything!
+                return {'mean': out}
+            else:
+                if not self.return_mean:
+                    out.pop('mean')
+                if not self.return_std:
+                    out.pop('std')
+                if not self.return_cov:
+                    out.pop('cov')
+        except Exception as e:
+            out = None
+            warnings.warn(
+                "Encountered exception during evaluation of MCMC samples. "
+                "Exception is:\n%s\nParams are:\n%s"
+                % (
+                    e,
+                    str(list(p_case))
+                )
+            )
         return out
 
 class _ComputeLnProbEval(object):
