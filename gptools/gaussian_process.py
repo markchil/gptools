@@ -1605,6 +1605,8 @@ class GaussianProcess(object):
         if flat_trace is None:
             if sampler is None:
                 sampler = self.sample_hyperparameter_posterior(**kwargs)
+                # If we create the sampler, we need to make sure we clean up its pool:
+                sampler.pool.close()
                 
             flat_trace = sampler.chain[:, burn::thin, :]
             flat_trace = flat_trace.reshape((-1, flat_trace.shape[2]))
