@@ -285,10 +285,10 @@ class GibbsKernel1d(Kernel):
         ------
         NotImplementedError
             If the `hyper_deriv` keyword is not None.
-        
+        """
         if hyper_deriv is not None:
             raise NotImplementedError("Hyperparameter derivatives have not been implemented!")
-        """
+        
         n_combined = scipy.asarray(scipy.hstack((ni, nj)), dtype=int)
         n_combined_unique = unique_rows(n_combined)
         

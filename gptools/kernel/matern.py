@@ -23,7 +23,7 @@ from __future__ import division
 import warnings
 
 from .core import ChainRuleKernel, ArbitraryKernel, Kernel
-from ..utils import generate_set_partitions
+from ..utils import generate_set_partitions, unique_rows
 try:
     from ._matern import _matern52
 except ImportError:
@@ -142,9 +142,116 @@ class MaternKernelArb(ArbitraryKernel):
         """
         return self.params[1]
 
+class MaternKernel1d(Kernel):
+    r"""Matern covariance kernel. Only for univariate data. Only supports up to first derivatives. Treats order as a hyperparameter.
+    
+    The Matern kernel has the following hyperparameters, always referenced in
+    the order listed:
+    
+    = ===== ===============
+    0 sigma prefactor
+    1 nu    order of kernel
+    2 l1    length scale
+    = ===== ===============
+    
+    The kernel is defined as:
+    
+    .. math::
+    
+        k_M = \sigma^2 \frac{2^{1-\nu}}{\Gamma(\nu)}
+        \left (\sqrt{2\nu \left (\frac{\tau^2}{l_1^2}\right )}\right )^\nu
+        K_\nu\left(\sqrt{2\nu \left(\frac{\tau^2}{l_1^2}\right)}\right)
+    
+    where :math:`\tau=X_i-X_j`.
+    
+    Note that the expressions for the derivatives break down for :math:`\nu < 1`.
+
+    Parameters
+    ----------
+    **kwargs
+        All keyword parameters are passed to :py:class:`~gptools.kernel.core.Kernel`.
+    """
+    def __init__(self, **kwargs):
+        param_names = [r'\sigma_f', r'\nu', r'l_1']
+        super(MaternKernel1d, self).__init__(
+            num_dim=1,
+            num_params=3,
+            param_names=param_names,
+            **kwargs
+        )
+    
+    def __call__(self, Xi, Xj, ni, nj, hyper_deriv=None, symmetric=False):
+        """Evaluate the covariance between points `Xi` and `Xj` with derivative order `ni`, `nj`.
+        
+        Parameters
+        ----------
+        Xi : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+            `M` inputs with dimension `N`.
+        Xj : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+            `M` inputs with dimension `N`.
+        ni : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+            `M` derivative orders for set `i`.
+        nj : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+            `M` derivative orders for set `j`.
+        hyper_deriv : Non-negative int or None, optional
+            The index of the hyperparameter to compute the first derivative
+            with respect to. If None, no derivatives are taken. Hyperparameter
+            derivatives are not supported at this point. Default is None.
+        symmetric : bool, optional
+            Whether or not the input `Xi`, `Xj` are from a symmetric matrix.
+            Default is False.
+        
+        Returns
+        -------
+        Kij : :py:class:`Array`, (`M`,)
+            Covariances for each of the `M` `Xi`, `Xj` pairs.
+        
+        Raises
+        ------
+        NotImplementedError
+            If the `hyper_deriv` keyword is not None.
+        """
+        if hyper_deriv is not None:
+            raise NotImplementedError("Hyperparameter derivatives have not been implemented!")
+        
+        n_combined = scipy.asarray(scipy.hstack((ni, nj)), dtype=int)
+        n_combined_unique = unique_rows(n_combined)
+        
+        x_y = scipy.asarray(Xi, dtype=float).ravel() - scipy.asarray(Xj, dtype=float).ravel()
+        
+        zero_mask = x_y == 0
+        
+        q = scipy.sqrt(2 * self.params[1] * x_y**2) / self.params[2]
+        
+        k = scipy.zeros(Xi.shape[0], dtype=float)
+        for n_combined_state in n_combined_unique:
+            idxs = (n_combined == n_combined_state).all(axis=1)
+            # Derviative expressions evaluated with Mathematica, assuming l>0.
+            if (n_combined_state == scipy.asarray([0, 0])).all():
+                k[idxs] = q[idxs]**self.params[1] * scipy.special.kv(self.params[1], q[idxs])
+                k[idxs & zero_mask] = 2**(self.params[1] - 1) * scipy.special.gamma(self.params[1])
+            elif (n_combined_state == scipy.asarray([1, 0])).all():
+                k[idxs] = -1.0 / x_y[idxs] * q[idxs]**(1 + self.params[1]) * scipy.special.kv(self.params[1] - 1, q[idxs])
+                k[idxs & zero_mask] = 0.0
+            elif (n_combined_state == scipy.asarray([0, 1])).all():
+                k[idxs] = 1.0 / x_y[idxs] * q[idxs]**(1 + self.params[1]) * scipy.special.kv(self.params[1] - 1, q[idxs])
+                k[idxs & zero_mask] = 0.0
+            elif (n_combined_state == scipy.asarray([1, 1])).all():
+                k[idxs] = 2.0 * self.params[1] / (self.params[2])**2 * q[idxs]**self.params[1] * (
+                    -scipy.special.kv(self.params[1] - 2, q[idxs]) +
+                    scipy.special.kv(self.params[1] - 1, q[idxs]) / q[idxs]
+                )
+                # Had to assume nu > 1 for this to work: CHECK THIS!
+                k[idxs & zero_mask] = 2**(self.params[1] - 1) * self.params[1] * scipy.special.gamma(self.params[1] - 1) / (self.params[2]**2)
+            else:
+                raise NotImplementedError("Derivatives greater than [1, 1] are not supported!")
+        k = (self.params[0]**2 * 2**(1 - self.params[1]) / scipy.special.gamma(self.params[1])) * k
+        return k
 
 class MaternKernel(ChainRuleKernel):
     r"""Matern covariance kernel. Supports arbitrary derivatives. Treats order as a hyperparameter.
+    
+    EXPERIMENTAL IMPLEMENTATION! DO NOT TRUST FOR HIGHER DERIVATIVES!
     
     The Matern kernel has the following hyperparameters, always referenced in
     the order listed:
