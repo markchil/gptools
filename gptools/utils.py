@@ -418,9 +418,9 @@ class CoreMidEdgeJointPrior(UniformJointPrior):
         ll = 0
         bounds_new = copy.copy(self.bounds)
         # lc < lm:
-        bounds_new[1] = (self.bounds[1][0], theta[2])
+        # bounds_new[1] = (self.bounds[1][0], theta[2])
         # le < lm:
-        bounds_new[3] = (self.bounds[3][0], theta[2])
+        # bounds_new[3] = (self.bounds[3][0], theta[2])
         # xa < xb:
         bounds_new[6] = (self.bounds[6][0], theta[7])
         for v, b in zip(theta, bounds_new):
@@ -454,15 +454,15 @@ class CoreMidEdgeJointPrior(UniformJointPrior):
         
         out = scipy.zeros(out_shape)
         # sigma_f, lm, la, lb, xb:
-        for j in [0, 2, 4, 5, 7]:
+        for j in [0, 1, 2, 3, 4, 5, 7]:
             out[j, :] = numpy.random.uniform(low=self.bounds[j][0],
                                              high=self.bounds[j][1],
                                              size=size)
         # lc, le:
-        for j in [1, 3]:
-            out[j, :] = numpy.random.uniform(low=self.bounds[j][0],
-                                             high=out[2, :],
-                                             size=size)
+        # for j in [1, 3]:
+        #     out[j, :] = numpy.random.uniform(low=self.bounds[j][0],
+        #                                      high=out[2, :],
+        #                                      size=size)
         # xa:
         out[6, :] = numpy.random.uniform(low=self.bounds[6][0],
                                          high=out[7, :],

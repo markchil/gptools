@@ -243,15 +243,16 @@ class GibbsKernel1d(Kernel):
     **kwargs
         All remaining arguments are passed to :py:class:`~gptools.kernel.core.Kernel`.
     """
-    def __init__(self, l_func, **kwargs):
+    def __init__(self, l_func, num_params=None, **kwargs):
         self.l_func = l_func
         # There are two unimportant parameters at the start of the l_func
         # fingerprint, then we have to add one for sigma_f.
-        try:
-            num_params = len(inspect.getargspec(l_func)[0]) - 2 + 1
-        except TypeError:
-            # Need to remove self from the arg list for bound method:
-            num_params = len(inspect.getargspec(l_func.__call__)[0]) - 3 + 1
+        if num_params is None:
+            try:
+                num_params = len(inspect.getargspec(l_func)[0]) - 2 + 1
+            except TypeError:
+                # Need to remove self from the arg list for bound method:
+                num_params = len(inspect.getargspec(l_func.__call__)[0]) - 3 + 1
         
         super(GibbsKernel1d, self).__init__(num_dim=1, num_params=num_params, **kwargs)
     
@@ -511,8 +512,8 @@ def double_tanh_warp(x, n, lcore, lmid, ledge, la, lb, xa, xb):
     if n == 0:
         return a * scipy.tanh((x - xa) / la) + b * scipy.tanh((x - xb) / lb) + c
     elif n == 1:
-        return (a**2 / la * (scipy.cosh((x - xa) / la))**(-2.0) +
-                b**2 / lb * (scipy.cosh((x - xb) / lb))**(-2.0))
+        return (a / la * (scipy.cosh((x - xa) / la))**(-2.0) +
+                b / lb * (scipy.cosh((x - xb) / lb))**(-2.0))
     else:
         raise NotImplementedError("Only derivatives up to order 1 are supported!")
 

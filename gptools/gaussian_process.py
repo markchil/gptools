@@ -1494,21 +1494,21 @@ class GaussianProcess(object):
         if plot_chains:
             f = plt.figure()
             for k in xrange(0, ndim):
-                a = f.add_subplot(3, ndim, k + 1)
-                a.acorr(
-                    sampler.flatchain[:, k],
-                    maxlags=100,
-                    detrend=plt.mlab.detrend_mean
-                )
-                a.set_xlabel('lag')
-                a.set_title('$%s$ autocorrelation' % (self.free_param_names[k],))
-                a = f.add_subplot(3, ndim, ndim + k + 1)
+                # a = f.add_subplot(3, ndim, k + 1)
+                # a.acorr(
+                #     sampler.flatchain[:, k],
+                #     maxlags=100,
+                #     detrend=plt.mlab.detrend_mean
+                # )
+                # a.set_xlabel('lag')
+                # a.set_title('$%s$ autocorrelation' % (self.free_param_names[k],))
+                a = f.add_subplot(2, ndim, 0 * ndim + k + 1)
                 for chain in sampler.chain[:, :, k]:
                     a.plot(chain)
                 a.set_xlabel('sample')
                 a.set_ylabel('$%s$' % (self.free_param_names[k],))
                 a.set_title('$%s$ all chains' % (self.free_param_names[k],))
-                a = f.add_subplot(3, ndim, 2 * ndim + k + 1)
+                a = f.add_subplot(2, ndim, 1 * ndim + k + 1)
                 a.plot(flat_trace[:, k])
                 a.set_xlabel('sample')
                 a.set_ylabel('$%s$' % (self.free_param_names[k],))
@@ -1604,7 +1604,7 @@ class GaussianProcess(object):
         output_transform = kwargs.pop('output_transform', None)
         if flat_trace is None:
             if sampler is None:
-                sampler = self.sample_hyperparameter_posterior(**kwargs)
+                sampler = self.sample_hyperparameter_posterior(burn=burn, **kwargs)
                 # If we create the sampler, we need to make sure we clean up its pool:
                 sampler.pool.close()
                 
