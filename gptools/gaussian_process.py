@@ -861,8 +861,9 @@ class GaussianProcess(object):
                         if len(good_samps) == 0:
                             raise ValueError("Did not get any good samples!")
                         samps = scipy.asarray(good_samps, dtype=float).T
-                    mean = scipy.mean(samps, axis=1)
-                    covariance = scipy.cov(samps, rowvar=1, ddof=ddof)
+                    if full_MC:
+                        mean = scipy.mean(samps, axis=1)
+                        covariance = scipy.cov(samps, rowvar=1, ddof=ddof)
                 std = scipy.sqrt(scipy.diagonal(covariance))
                 if full_output:
                     out = {
@@ -1494,21 +1495,21 @@ class GaussianProcess(object):
         if plot_chains:
             f = plt.figure()
             for k in xrange(0, ndim):
-                a = f.add_subplot(3, ndim, k + 1)
-                a.acorr(
-                    sampler.flatchain[:, k],
-                    maxlags=100,
-                    detrend=plt.mlab.detrend_mean
-                )
-                a.set_xlabel('lag')
-                a.set_title('$%s$ autocorrelation' % (self.free_param_names[k],))
-                a = f.add_subplot(3, ndim, ndim + k + 1)
+                # a = f.add_subplot(3, ndim, k + 1)
+                # a.acorr(
+                #     sampler.flatchain[:, k],
+                #     maxlags=100,
+                #     detrend=plt.mlab.detrend_mean
+                # )
+                # a.set_xlabel('lag')
+                # a.set_title('$%s$ autocorrelation' % (self.free_param_names[k],))
+                a = f.add_subplot(2, ndim, 0 * ndim + k + 1)
                 for chain in sampler.chain[:, :, k]:
                     a.plot(chain)
                 a.set_xlabel('sample')
                 a.set_ylabel('$%s$' % (self.free_param_names[k],))
                 a.set_title('$%s$ all chains' % (self.free_param_names[k],))
-                a = f.add_subplot(3, ndim, 2 * ndim + k + 1)
+                a = f.add_subplot(2, ndim, 1 * ndim + k + 1)
                 a.plot(flat_trace[:, k])
                 a.set_xlabel('sample')
                 a.set_ylabel('$%s$' % (self.free_param_names[k],))

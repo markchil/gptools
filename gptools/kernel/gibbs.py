@@ -240,18 +240,26 @@ class GibbsKernel1d(Kernel):
         Function that dictates the length scale warping and its derivative.
         Must have fingerprint (`x`, `n`, `p1`, `p2`, ...) where `p1` is element
         one of the kernel's parameters (i.e., element zero is skipped).
+    num_params : int, optional
+        The number of parameters of the length scale function. If not passed,
+        introspection will be used to determine this. This will fail if you have
+        used the \*args syntax in your function definition. This count should
+        include sigma_f, even though it is not passed to the length scale
+        function.
     **kwargs
         All remaining arguments are passed to :py:class:`~gptools.kernel.core.Kernel`.
     """
-    def __init__(self, l_func, **kwargs):
+    def __init__(self, l_func, num_params=None, **kwargs):
         self.l_func = l_func
-        # There are two unimportant parameters at the start of the l_func
-        # fingerprint, then we have to add one for sigma_f.
-        try:
-            num_params = len(inspect.getargspec(l_func)[0]) - 2 + 1
-        except TypeError:
-            # Need to remove self from the arg list for bound method:
-            num_params = len(inspect.getargspec(l_func.__call__)[0]) - 3 + 1
+        # TODO: Some of the logic from warping should be ported over.
+        if num_params is None:
+            # There are two unimportant parameters at the start of the l_func
+            # fingerprint, then we have to add one for sigma_f.
+            try:
+                num_params = len(inspect.getargspec(l_func)[0]) - 2 + 1
+            except TypeError:
+                # Need to remove self from the arg list for bound method:
+                num_params = len(inspect.getargspec(l_func.__call__)[0]) - 3 + 1
         
         super(GibbsKernel1d, self).__init__(num_dim=1, num_params=num_params, **kwargs)
     
