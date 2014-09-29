@@ -519,8 +519,8 @@ def double_tanh_warp(x, n, lcore, lmid, ledge, la, lb, xa, xb):
     if n == 0:
         return a * scipy.tanh((x - xa) / la) + b * scipy.tanh((x - xb) / lb) + c
     elif n == 1:
-        return (a**2 / la * (scipy.cosh((x - xa) / la))**(-2.0) +
-                b**2 / lb * (scipy.cosh((x - xb) / lb))**(-2.0))
+        return (a / la * (scipy.cosh((x - xa) / la))**(-2.0) +
+                b / lb * (scipy.cosh((x - xb) / lb))**(-2.0))
     else:
         raise NotImplementedError("Only derivatives up to order 1 are supported!")
 
