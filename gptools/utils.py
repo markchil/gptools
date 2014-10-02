@@ -569,6 +569,56 @@ class LogNormalJointPrior(JointPrior):
         """
         return [scipy.stats.lognorm.rvs(s, loc=0, scale=em, size=size) for s, em in zip(self.sigma, self.emu)]
 
+class GammaJointPrior(JointPrior):
+    """Joint prior for which each hyperparameter has a gamma prior with fixed hyper-hyperparameters.
+    
+    Parameters
+    ----------
+    a : list of float, same size as `b`
+        Shape parameters.
+    b : list of float
+        Rate parameters.
+    """
+    def __init__(self, a, b):
+        a = scipy.atleast_1d(scipy.asarray(a, dtype=float))
+        b = scipy.atleast_1d(scipy.asarray(b, dtype=float))
+        if a.shape != b.shape:
+            raise ValueError("sigma and mu must have the same shape!")
+        if a.ndim != 1:
+            raise ValueError("sigma and mu must both be one dimensional!")
+        self.a = a
+        self.b = b
+    
+    def __call__(self, theta):
+        """Evaluate the prior log-PDF at the given values of the hyperparameters, theta.
+        
+        Parameters
+        ----------
+        theta : array-like, (`num_params`,)
+            The hyperparameters to evaluate the log-PDF at.
+        """
+        ll = 0
+        for v, a, b in zip(theta, self.a, self.b):
+            ll += scipy.stats.gamma.logpdf(v, a, loc=0, scale=1.0 / b)
+        return ll
+    
+    @property
+    def bounds(self):
+        """The bounds of the random variable.
+        """
+        return [scipy.stats.gamma.interval(1, a, loc=0, scale=1.0 / b) for a, b in zip(self.a, self.b)]
+    
+    def random_draw(self, size=None):
+        """Draw random samples of the hyperparameters.
+        
+        Parameters
+        ----------
+        size : None, int or array-like, optional
+            The number/shape of samples to draw. If None, only one sample is
+            returned. Default is None.
+        """
+        return [scipy.stats.gamma.rvs(a, loc=0, scale=1.0 / b, size=size) for a, b in zip(self.a, self.b)]
+
 def wrap_fmin_slsqp(fun, guess, opt_kwargs={}):
     """Wrapper for :py:func:`fmin_slsqp` to allow it to be called with :py:func:`minimize`-like syntax.
 

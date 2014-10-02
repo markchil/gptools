@@ -1585,7 +1585,7 @@ class GaussianProcess(object):
             processors.
         **kwargs : extra optional kwargs
             All additional kwargs are passed to
-            :py:meth:`sample_hyparparameter_posterior`.
+            :py:meth:`sample_hyperparameter_posterior`.
         
         Returns
         -------
