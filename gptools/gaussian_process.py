@@ -1421,7 +1421,8 @@ class GaussianProcess(object):
     def sample_hyperparameter_posterior(self, nwalkers=200, nsamp=500, burn=0,
                                         thin=1, num_proc=None, sampler=None,
                                         plot_posterior=False,
-                                        plot_chains=False):
+                                        plot_chains=False, sampler_type='ensemble',
+                                        ntemps=20, sampler_a=2.0):
         """Produce samples from the posterior for the hyperparameters using MCMC.
         
         Returns the sampler created, because storing it stops the GP from being
@@ -1460,6 +1461,15 @@ class GaussianProcess(object):
         plot_chains : bool, optional
             If True, a plot showing the history and autocorrelation of the
             chains will be produced.
+        sampler_type : str, optional
+            The type of sampler to use. Valid options are "ensemble" (affine-
+            invariant ensemble sampler) and "pt" (parallel-tempered ensemble
+            sampler).
+        ntemps : int, optional
+            Number of temperatures to use with the parallel-tempered ensemble
+            sampler.
+        sampler_a : float, optional
+            Scale of the proposal distribution.
         """
         if num_proc is None:
             num_proc = multiprocessing.cpu_count()
@@ -1468,12 +1478,27 @@ class GaussianProcess(object):
             num_proc = 1
         ndim = len(self.free_params)
         if sampler is None:
-            sampler = emcee.EnsembleSampler(
-                nwalkers,
-                ndim,
-                _ComputeLnProbEval(self),
-                threads=num_proc
-            )
+            if sampler_type == 'ensemble':
+                sampler = emcee.EnsembleSampler(
+                    nwalkers,
+                    ndim,
+                    _ComputeLnProbEval(self),
+                    threads=num_proc,
+                    a=sampler_a
+                )
+            elif sampler_type == 'pt':
+                raise NotImplementedError("PTSampler not done yet!")
+                sampler = emcee.PTSampler(
+                    ntemps,
+                    nwalkers,
+                    ndim,
+                    logl,
+                    logp
+                )
+            else:
+                raise NotImplementedError(
+                    "Sampler type %s not supported!" % (sampler_type,)
+                )
         if sampler.chain.size == 0:
             theta0 = self.hyperprior.random_draw(size=nwalkers).T
             theta0 = theta0[:, ~self.fixed_params]
@@ -1503,17 +1528,18 @@ class GaussianProcess(object):
                 # )
                 # a.set_xlabel('lag')
                 # a.set_title('$%s$ autocorrelation' % (self.free_param_names[k],))
-                a = f.add_subplot(2, ndim, 0 * ndim + k + 1)
+                a = f.add_subplot(ndim, 1, 0 * ndim + k + 1)
                 for chain in sampler.chain[:, :, k]:
                     a.plot(chain)
                 a.set_xlabel('sample')
                 a.set_ylabel('$%s$' % (self.free_param_names[k],))
                 a.set_title('$%s$ all chains' % (self.free_param_names[k],))
-                a = f.add_subplot(2, ndim, 1 * ndim + k + 1)
-                a.plot(flat_trace[:, k])
-                a.set_xlabel('sample')
-                a.set_ylabel('$%s$' % (self.free_param_names[k],))
-                a.set_title('$%s$ flattened, burned and thinned chain' % (self.free_param_names[k],))
+                a.axvline(burn, color='r', linewidth=3, ls='--')
+                # a = f.add_subplot(2, ndim, 1 * ndim + k + 1)
+                # a.plot(flat_trace[:, k])
+                # a.set_xlabel('sample')
+                # a.set_ylabel('$%s$' % (self.free_param_names[k],))
+                # a.set_title('$%s$ flattened, burned and thinned chain' % (self.free_param_names[k],))
             
         return sampler
     
