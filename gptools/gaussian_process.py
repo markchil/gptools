@@ -22,7 +22,7 @@ from __future__ import division
 
 from .error_handling import GPArgumentError
 from .kernel import Kernel, ZeroKernel
-from .utils import wrap_fmin_slsqp, univariate_envelope_plot, CombinedBounds
+from .utils import wrap_fmin_slsqp, univariate_envelope_plot, CombinedBounds, unique_rows
 
 import scipy
 import scipy.linalg
@@ -423,6 +423,32 @@ class GaussianProcess(object):
         else:
             self.n = scipy.vstack((self.n, n))
         self.K_up_to_date = False
+    
+    def condense_duplicates(self):
+        """Condense duplicate points using a transformation matrix.
+        
+        This is useful if you have multiple non-transformed points at the same
+        location or multiple transformed points that use the same quadrature
+        points.
+        
+        Won't change the GP if all of the rows of [X, n] are unique. Will create
+        a transformation matrix T if necessary. Note that the order of the
+        points in [X, n] will be arbitrary after this operation.
+        """
+        unique, inv = unique_rows(
+            scipy.hstack((self.X, self.n)),
+            return_inverse=True
+        )
+        # Only proceed if there is anything to be gained:
+        if len(unique) != len(self.X):
+            if self.T is None:
+                self.T = scipy.eye(len(self.y))
+            new_T = scipy.zeros((len(self.y), unique.shape[0]))
+            for j in xrange(0, len(inv)):
+                new_T[:, inv[j]] += self.T[:, j]
+            self.T = new_T
+            self.n = unique[:, self.X.shape[1]:]
+            self.X = unique[:, :self.X.shape[1]]
     
     def remove_outliers(self, thresh=3, **predict_kwargs):
         """Remove outliers from the GP.
