@@ -185,13 +185,13 @@ class MaternKernel1d(Kernel):
         
         Parameters
         ----------
-        Xi : :py:class:`Matrix` or other Array-like, (`M`, `N`)
-            `M` inputs with dimension `N`.
-        Xj : :py:class:`Matrix` or other Array-like, (`M`, `N`)
-            `M` inputs with dimension `N`.
-        ni : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+        Xi : :py:class:`Matrix` or other Array-like, (`M`, `D`)
+            `M` inputs with dimension `D`.
+        Xj : :py:class:`Matrix` or other Array-like, (`M`, `D`)
+            `M` inputs with dimension `D`.
+        ni : :py:class:`Matrix` or other Array-like, (`M`, `D`)
             `M` derivative orders for set `i`.
-        nj : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+        nj : :py:class:`Matrix` or other Array-like, (`M`, `D`)
             `M` derivative orders for set `j`.
         hyper_deriv : Non-negative int or None, optional
             The index of the hyperparameter to compute the first derivative
@@ -300,8 +300,8 @@ class MaternKernel(ChainRuleKernel):
         
         Parameters
         ----------
-        tau : :py:class:`Matrix`, (`M`, `N`)
-            `M` inputs with dimension `N`.
+        tau : :py:class:`Matrix`, (`M`, `D`)
+            `M` inputs with dimension `D`.
         
         Returns
         -------
@@ -318,8 +318,8 @@ class MaternKernel(ChainRuleKernel):
         
         Parameters
         ----------
-        tau : :py:class:`Matrix`, (`M`, `N`)
-            `M` inputs with dimension `N`.
+        tau : :py:class:`Matrix`, (`M`, `D`)
+            `M` inputs with dimension `D`.
         return_r2l2 : bool, optional
             Set to True to return a tuple of (`y`, `r2l2`). Default is False
             (only return `y`).
@@ -433,8 +433,8 @@ class MaternKernel(ChainRuleKernel):
         
         Parameters
         ----------
-        tau : :py:class:`Matrix`, (`M`, `N`)
-            `M` inputs with dimension `N`.
+        tau : :py:class:`Matrix`, (`M`, `D`)
+            `M` inputs with dimension `D`.
         b : :py:class:`Array`, (`P`,)
             Block specifying derivatives to be evaluated.
         r2l2 : :py:class:`Array`, (`M`,)
@@ -472,8 +472,8 @@ class MaternKernel(ChainRuleKernel):
         
         Parameters
         ----------
-        tau : :py:class:`Matrix`, (`M`, `N`)
-            `M` inputs with dimension `N`.
+        tau : :py:class:`Matrix`, (`M`, `D`)
+            `M` inputs with dimension `D`.
         p : list of :py:class:`Array`
             Each element is a block of the partition representing the derivative
             orders to use.    
@@ -501,8 +501,8 @@ class MaternKernel(ChainRuleKernel):
         
         Parameters
         ----------
-            tau : :py:class:`Matrix`, (`M`, `N`)
-                `M` inputs with dimension `N`.
+            tau : :py:class:`Matrix`, (`M`, `D`)
+                `M` inputs with dimension `D`.
             b : :py:class:`Array`, (`P`,)
                 Block specifying derivatives to be evaluated.
         
@@ -580,13 +580,13 @@ class Matern52Kernel(Kernel):
 
         Parameters
         ----------
-        Xi : :py:class:`Matrix` or other Array-like, (`M`, `N`)
-            `M` inputs with dimension `N`.
-        Xj : :py:class:`Matrix` or other Array-like, (`M`, `N`)
-            `M` inputs with dimension `N`.
-        ni : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+        Xi : :py:class:`Matrix` or other Array-like, (`M`, `D`)
+            `M` inputs with dimension `D`.
+        Xj : :py:class:`Matrix` or other Array-like, (`M`, `D`)
+            `M` inputs with dimension `D`.
+        ni : :py:class:`Matrix` or other Array-like, (`M`, `D`)
             `M` derivative orders for set `i`.
-        nj : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+        nj : :py:class:`Matrix` or other Array-like, (`M`, `D`)
             `M` derivative orders for set `j`.
         hyper_deriv : Non-negative int or None, optional
             The index of the hyperparameter to compute the first derivative

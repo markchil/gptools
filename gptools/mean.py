@@ -21,7 +21,7 @@ To provide the necessary hooks to optimize/sample the hyperparameters, your mean
 function must be wrapped with :py:class:`MeanFunction` before being passed to
 :py:class:`GaussianProcess`. The function must have the calling fingerprint
 `fun(X, n, p1, p2, ...)`, where `X` is an array with shape `(M, N)`, `n` is a
-vector with length `N` and `p1`, `p2`, ... are the (hyper)parameters of the mean
+vector with length `D` and `p1`, `p2`, ... are the (hyper)parameters of the mean
 function, given as individual arguments.
 """
 
@@ -36,8 +36,8 @@ class MeanFunction(object):
     r"""Wrapper to turn a function into a form useable by :py:class:`GaussianProcess`.
     
     This lets you define a simple function `fun(X, n, p1, p2, ...)` that
-    operates on an (`M`, `N`) array `X`, taking the derivatives indicated by the
-    vector `n` with length `N` (one derivative order for each dimension). The
+    operates on an (`M`, `D`) array `X`, taking the derivatives indicated by the
+    vector `n` with length `D` (one derivative order for each dimension). The
     function should evaluate this derivative at all points in `X`, returning an
     array of length `M`. :py:class:`MeanFunction` takes care of looping over the
     different derivatives requested by :py:class:`GaussianProcess`.
@@ -46,8 +46,8 @@ class MeanFunction(object):
     ----------
     fun : callable
         Must have fingerprint `fun(X, n, p1, p2, ...)` where `X` is an array
-        with shape (`M`, `N`), `n` is an array of non-negative integers with
-        length `N` representing the order of derivative orders to take for each
+        with shape (`M`, `D`), `n` is an array of non-negative integers with
+        length `D` representing the order of derivative orders to take for each
         dimension and `p1`, `p2`, ... are the parameters of the mean function.
     num_params : Non-negative int, optional
         Number of parameters in the model. Default is to determine the number of
@@ -377,9 +377,9 @@ def linear(X, n, *args):
     
     Parameters
     ----------
-    X : array, (`M`, `N`)
+    X : array, (`M`, `D`)
         The points to evaluate the model at.
-    n : array of non-negative int, (`N`)
+    n : array of non-negative int, (`D`)
         The derivative order to take, specified as an integer order for each
         dimension in `X`.
     *args : num_dim+1 floats

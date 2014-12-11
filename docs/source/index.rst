@@ -56,11 +56,11 @@ Here, `err_y` is the :math:`1\sigma` uncertainty on the observations `y`. For ex
     
     gp.add_data(0, 0, n=1)
 
-This will force the slope at :math:`x=0` to be exactly zero. Quantities that represent an arbitrary linear transformation of "basic" observations can be added by specifying the `T` keyword::
+This will force the slope at :math:`x=0` to be exactly zero. Quantities that represent an arbitrary linear transformation of the "basic" observations can be added by specifying the `T` keyword::
     
     gp.add_data(x, y, T=T)
 
-This will add the value(s) :math:`M = T y(x)` to the training data. This also supports the `err_y` and `n` keywords. Note that, in this case, `err_y` is more correctly understood as `err_M` (the error on the transformed quantity :math:`M`). But, `n` applies to the latent variables :math:`y(x)`.
+This will add the value(s) :math:`y = T Y(x)` to the training data, where here :math:`Y` represents the "basic" (untransformed) observations and :math:`y` represents the transformed observations. This also supports the `err_y` and `n` keywords. Here, `err_y` is the error on the transformed quantity :math:`y`. `n` applies to the latent variables :math:`Y(x)`.
 
 Once the GP has been populated with training data, there are two approaches supported to handle the hyperparameters.
 

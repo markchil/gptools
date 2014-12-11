@@ -83,19 +83,28 @@ class GaussianProcess(object):
         The following are all passed to :py:meth:`add_data`, refer to its
         docstring.
     
-    X : array, (`M`, `N`), optional
-        `M` input values of dimension `N`. Default value is None (no data).
+    X : array, (`M`, `D`), optional
+        `M` input values of dimension `D`. Default value is None (no data).
     y : array, (`M`,), optional
         `M` data target values. Default value is None (no data).
     err_y : array, (`M`,), optional
         Error (given as standard deviation) in the `M` training target values.
         Default value is 0 (noiseless observations).
-    n : array, (`M`, `N`) or scalar float, optional
+    n : array, (`M`, `D`) or scalar float, optional
         Non-negative integer values only. Degree of derivative for each target.
         If `n` is a scalar it is taken to be the value for all points in `y`.
         Otherwise, the length of n must equal the length of `y`. Default value
         is 0 (observation of target value). If non-integer values are passed,
         they will be silently rounded.
+    T : array, (`M`, `N`), optional
+        Linear transformation to get from latent variables to data in the
+        argument `y`. When `T` is passed the argument `y` holds the transformed
+        quantities `y=TY(X)` where `y` are the observed values of the
+        transformed quantities, `T` is the transformation matrix and `Y(X)` is
+        the underlying (untransformed) values of the function to be fit that
+        enter into the transformation. When `T` is `M`-by-`N` and `y` has `M`
+        elements, `X` and `n` will both be `N`-by-`D`. Default is None (no
+        transformation).
     
     Attributes
     ----------
@@ -103,14 +112,16 @@ class GaussianProcess(object):
         The non-noise portion of the covariance kernel.
     noise_k : :py:class:`~gptools.kernel.core.Kernel` instance
         The noise portion of the covariance kernel.
-    X : array, (`M`, `N`)
-        The `M` training input values, each of which is of dimension `N`.
+    X : array, (`M`, `D`)
+        The `M` training input values, each of which is of dimension `D`.
     y : array, (`M`,)
         The `M` training target values.
     err_y : array, (`M`,)
         The error in the `M` training input values.
-    n : array, (`M`, `N`)
-        The orders of derivatives that each of the M training points represent, indicating the order of derivative with respect to each of the `N` dimensions.
+    n : array, (`M`, `D`)
+        The orders of derivatives that each of the `M` training points represent, indicating the order of derivative with respect to each of the `D` dimensions.
+    T : array, (`M`, `N`)
+        The transformation matrix applied to the data. If this is not None, `X` and `n` will be `N`-by-`D`.
     K_up_to_date : bool
         True if no data have been added since the last time the internal state was updated with a call to :py:meth:`compute_K_L_alpha_ll`.
     K : array, (`M`, `M`)
@@ -307,8 +318,8 @@ class GaussianProcess(object):
         
         Parameters
         ----------
-        X : array, (`M`, `N`)
-            `M` input values of dimension `N`.
+        X : array, (`M`, `D`)
+            `M` input values of dimension `D`.
         y : array, (`M`,)
             `M` target values.
         err_y : array, (`M`,) or scalar float, optional
@@ -317,12 +328,21 @@ class GaussianProcess(object):
             be homoscedastic (constant error). Otherwise, the length of `err_y`
             must equal the length of `y`. Default value is 0 (noiseless
             observations).
-        n : array, (`M`, `N`) or scalar float, optional
+        n : array, (`M`, `D`) or scalar float, optional
             Non-negative integer values only. Degree of derivative for each
             target. If `n` is a scalar it is taken to be the value for all
             points in `y`. Otherwise, the length of n must equal the length of
             `y`. Default value is 0 (observation of target value). If
             non-integer values are passed, they will be silently rounded.
+        T : array, (`M`, `N`), optional
+            Linear transformation to get from latent variables to data in the
+            argument `y`. When `T` is passed the argument `y` holds the
+            transformed quantities `y=TY(X)` where `y` are the observed values
+            of the transformed quantities, `T` is the transformation matrix and
+            `Y(X)` is the underlying (untransformed) values of the function to
+            be fit that enter into the transformation. When `T` is `M`-by-`N`
+            and `y` has `M` elements, `X` and `n` will both be `N`-by-`D`.
+            Default is None (no transformation).
         
         Raises
         ------
@@ -704,9 +724,9 @@ class GaussianProcess(object):
         
         Parameters
         ----------
-        Xstar : array, (`M`, `N`)
-            `M` test input values of dimension `N`.
-        n : array, (`M`, `N`) or scalar, non-negative int, optional
+        Xstar : array, (`M`, `D`)
+            `M` test input values of dimension `D`.
+        n : array, (`M`, `D`) or scalar, non-negative int, optional
             Order of derivative to predict (0 is the base quantity). If `n` is
             scalar, the value is used for all points in `Xstar`. If non-integer
             values are passed, they will be silently rounded. Default is 0
@@ -1035,9 +1055,9 @@ class GaussianProcess(object):
         
         Parameters
         ----------
-        Xstar : array, (`M`, `N`)
-            `M` test input values of dimension `N`.
-        n : array, (`M`, `N`) or scalar, non-negative int, optional
+        Xstar : array, (`M`, `D`)
+            `M` test input values of dimension `D`.
+        n : array, (`M`, `D`) or scalar, non-negative int, optional
             Derivative order to evaluate at. Default is 0 (evaluate value).
         noise : bool, optional
             Whether or not to include the noise components of the kernel in the
@@ -1304,10 +1324,10 @@ class GaussianProcess(object):
         
         Parameters
         ----------
-        Xi : array, (`M`, `N`)
-            `M` input values of dimension `N`.
-        Xj : array, (`P`, `N`)
-            `P` input values of dimension `N`.
+        Xi : array, (`M`, `D`)
+            `M` input values of dimension `D`.
+        Xj : array, (`P`, `D`)
+            `P` input values of dimension `D`.
         ni : array, (`M`,), non-negative integers
             `M` derivative orders with respect to the `Xi` coordinates.
         nj : array, (`P`,), non-negative integers

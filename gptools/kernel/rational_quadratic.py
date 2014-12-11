@@ -75,8 +75,8 @@ class RationalQuadraticKernel(ChainRuleKernel):
         
         Parameters
         ----------
-        tau : :py:class:`Matrix`, (`M`, `N`)
-            `M` inputs with dimension `N`.
+        tau : :py:class:`Matrix`, (`M`, `D`)
+            `M` inputs with dimension `D`.
         
         Returns
         -------
@@ -91,8 +91,8 @@ class RationalQuadraticKernel(ChainRuleKernel):
         
         Parameters
         ----------
-        tau : :py:class:`Matrix`, (`M`, `N`)
-            `M` inputs with dimension `N`.
+        tau : :py:class:`Matrix`, (`M`, `D`)
+            `M` inputs with dimension `D`.
         return_r2l2 : bool, optional
             Set to True to return a tuple of (`y`, `r2l2`). Default is False
             (only return `y`).
@@ -149,8 +149,8 @@ class RationalQuadraticKernel(ChainRuleKernel):
         
         Parameters
         ----------
-        tau : :py:class:`Matrix`, (`M`, `N`)
-            `M` inputs with dimension `N`.
+        tau : :py:class:`Matrix`, (`M`, `D`)
+            `M` inputs with dimension `D`.
         b : :py:class:`Array`, (`P`,)
             Block specifying derivatives to be evaluated.
         r2l2 : :py:class:`Array`, (`M`,)

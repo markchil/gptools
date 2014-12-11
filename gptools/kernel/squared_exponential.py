@@ -74,13 +74,13 @@ class SquaredExponentialKernel(Kernel):
         
         Parameters
         ----------
-        Xi : :py:class:`Matrix` or other Array-like, (`M`, `N`)
-            `M` inputs with dimension `N`.
-        Xj : :py:class:`Matrix` or other Array-like, (`M`, `N`)
-            `M` inputs with dimension `N`.
-        ni : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+        Xi : :py:class:`Matrix` or other Array-like, (`M`, `D`)
+            `M` inputs with dimension `D`.
+        Xj : :py:class:`Matrix` or other Array-like, (`M`, `D`)
+            `M` inputs with dimension `D`.
+        ni : :py:class:`Matrix` or other Array-like, (`M`, `D`)
             `M` derivative orders for set `i`.
-        nj : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+        nj : :py:class:`Matrix` or other Array-like, (`M`, `D`)
             `M` derivative orders for set `j`.
         hyper_deriv : Non-negative int or None, optional
             The index of the hyperparameter to compute the first derivative

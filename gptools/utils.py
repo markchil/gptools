@@ -971,7 +971,7 @@ def compute_stats(vals, check_nan=False, robust=False, axis=1, plot_QQ=False, bi
     
     Parameters
     ----------
-    vals : array-like, (`M`, `N`)
+    vals : array-like, (`M`, `D`)
         Values to compute the average statistics along the specified axis of.
     check_nan : bool, optional
         Whether or not to check for (and exclude) NaN's. Default is False (do

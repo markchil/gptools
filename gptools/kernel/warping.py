@@ -335,7 +335,7 @@ def beta_cdf_warp(X, d, n, *args):
         The derivative order to compute.
     *args : 2N scalars
         The remaining parameters to describe the warping, given as scalars.
-        These are given as `alpha_i`, `beta_i` for each of the `N` dimensions.
+        These are given as `alpha_i`, `beta_i` for each of the `D` dimensions.
         Note that these must ALL be provided for each call.
     
     References
@@ -381,7 +381,7 @@ def linear_warp(X, d, n, *args):
         The derivative order to compute.
     *args : 2N scalars
         The remaining parameters to describe the warping, given as scalars.
-        These are given as `a_i`, `b_i` for each of the `N` dimensions. Note
+        These are given as `a_i`, `b_i` for each of the `D` dimensions. Note
         that these must ALL be provided for each call.
     """
     X = scipy.asarray(X, dtype=float)

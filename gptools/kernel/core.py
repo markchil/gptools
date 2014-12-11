@@ -45,8 +45,8 @@ class Kernel(object):
     ----------
     num_dim : positive int
         Number of dimensions of the input data. Must be consistent with the `X`
-        and `Xstar` values passed to the :py:class:`~gptools.gaussian_process.GaussianProcess` you wish
-        to use the covariance kernel with.
+        and `Xstar` values passed to the :py:class:`~gptools.gaussian_process.GaussianProcess`
+        you wish to use the covariance kernel with. Default is 1.
     num_params : Non-negative int
         Number of parameters in the model.
     initial_params : :py:class:`Array` or other Array-like, (`num_params`,), optional
@@ -178,13 +178,13 @@ class Kernel(object):
         
         Parameters
         ----------
-        Xi : :py:class:`Matrix` or other Array-like, (`M`, `N`)
-            `M` inputs with dimension `N`.
-        Xj : :py:class:`Matrix` or other Array-like, (`M`, `N`)
-            `M` inputs with dimension `N`.
-        ni : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+        Xi : :py:class:`Matrix` or other Array-like, (`M`, `D`)
+            `M` inputs with dimension `D`.
+        Xj : :py:class:`Matrix` or other Array-like, (`M`, `D`)
+            `M` inputs with dimension `D`.
+        ni : :py:class:`Matrix` or other Array-like, (`M`, `D`)
             `M` derivative orders for set `i`.
-        nj : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+        nj : :py:class:`Matrix` or other Array-like, (`M`, `D`)
             `M` derivative orders for set `j`.
         hyper_deriv : Non-negative int or None, optional
             The index of the hyperparameter to compute the first derivative
@@ -332,8 +332,8 @@ class Kernel(object):
         
         Parameters
         ----------
-        tau : :py:class:`Array`, (`M`, `N`)
-            `M` inputs with dimension `N`.
+        tau : :py:class:`Array`, (`M`, `D`)
+            `M` inputs with dimension `D`.
         return_l : bool, optional
             Set to True to return a tuple of (`tau`, `l_mat`), where `l_mat`
             is the matrix of length scales to match the shape of `tau`. Default
@@ -343,8 +343,8 @@ class Kernel(object):
         -------
         r2l2 : :py:class:`Array`, (`M`,)
             Anisotropically scaled distances squared.
-        l_mat : :py:class:`Array`, (`M`, `N`)
-            The (`N`,) array of length scales repeated for each of the `M`
+        l_mat : :py:class:`Array`, (`M`, `D`)
+            The (`D`,) array of length scales repeated for each of the `M`
             inputs. Only returned if `return_l` is True.
         """
         l_mat = scipy.tile(self.params[-self.num_dim:], (tau.shape[0], 1))
@@ -471,13 +471,13 @@ class SumKernel(BinaryKernel):
         
         Parameters
         ----------
-        Xi : :py:class:`Matrix` or other Array-like, (`M`, `N`)
-            `M` inputs with dimension `N`.
-        Xj : :py:class:`Matrix` or other Array-like, (`M`, `N`)
-            `M` inputs with dimension `N`.
-        ni : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+        Xi : :py:class:`Matrix` or other Array-like, (`M`, `D`)
+            `M` inputs with dimension `D`.
+        Xj : :py:class:`Matrix` or other Array-like, (`M`, `D`)
+            `M` inputs with dimension `D`.
+        ni : :py:class:`Matrix` or other Array-like, (`M`, `D`)
             `M` derivative orders for set `i`.
-        nj : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+        nj : :py:class:`Matrix` or other Array-like, (`M`, `D`)
             `M` derivative orders for set `j`.
         symmetric : bool, optional
             Whether or not the input `Xi`, `Xj` are from a symmetric matrix.
@@ -506,13 +506,13 @@ class ProductKernel(BinaryKernel):
         
         Parameters
         ----------
-        Xi : :py:class:`Matrix` or other Array-like, (`M`, `N`)
-            `M` inputs with dimension `N`.
-        Xj : :py:class:`Matrix` or other Array-like, (`M`, `N`)
-            `M` inputs with dimension `N`.
-        ni : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+        Xi : :py:class:`Matrix` or other Array-like, (`M`, `D`)
+            `M` inputs with dimension `D`.
+        Xj : :py:class:`Matrix` or other Array-like, (`M`, `D`)
+            `M` inputs with dimension `D`.
+        ni : :py:class:`Matrix` or other Array-like, (`M`, `D`)
             `M` derivative orders for set `i`.
-        nj : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+        nj : :py:class:`Matrix` or other Array-like, (`M`, `D`)
             `M` derivative orders for set `j`.
         symmetric : bool, optional
             Whether or not the input `Xi`, `Xj` are from a symmetric matrix.
@@ -574,13 +574,13 @@ class ChainRuleKernel(Kernel):
         
         Parameters
         ----------
-        Xi : :py:class:`Matrix` or other Array-like, (`M`, `N`)
-            `M` inputs with dimension `N`.
-        Xj : :py:class:`Matrix` or other Array-like, (`M`, `N`)
-            `M` inputs with dimension `N`.
-        ni : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+        Xi : :py:class:`Matrix` or other Array-like, (`M`, `D`)
+            `M` inputs with dimension `D`.
+        Xj : :py:class:`Matrix` or other Array-like, (`M`, `D`)
+            `M` inputs with dimension `D`.
+        ni : :py:class:`Matrix` or other Array-like, (`M`, `D`)
             `M` derivative orders for set `i`.
-        nj : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+        nj : :py:class:`Matrix` or other Array-like, (`M`, `D`)
             `M` derivative orders for set `j`.
         hyper_deriv : Non-negative int or None, optional
             The index of the hyperparameter to compute the first derivative
@@ -630,9 +630,9 @@ class ChainRuleKernel(Kernel):
 
         Parameters
         ----------
-        tau : :py:class:`Matrix`, (`M`, `N`)
-            `M` inputs with dimension `N`.
-        n : :py:class:`Array`, (`N`,)
+        tau : :py:class:`Matrix`, (`M`, `D`)
+            `M` inputs with dimension `D`.
+        n : :py:class:`Array`, (`D`,)
             Degree of derivative with respect to each dimension.
 
         Returns
@@ -668,8 +668,8 @@ class ChainRuleKernel(Kernel):
 
         Parameters
         ----------
-        tau : :py:class:`Matrix`, (`M`, `N`)
-            `M` inputs with dimension `N`.
+        tau : :py:class:`Matrix`, (`M`, `D`)
+            `M` inputs with dimension `D`.
         p : list of :py:class:`Array`
             Each element is a block of the partition representing the
             derivative orders to use.
@@ -750,13 +750,13 @@ class ArbitraryKernel(Kernel):
         
         Parameters
         ----------
-        Xi : :py:class:`Matrix` or other Array-like, (`M`, `N`)
-            `M` inputs with dimension `N`.
-        Xj : :py:class:`Matrix` or other Array-like, (`M`, `N`)
-            `M` inputs with dimension `N`.
-        ni : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+        Xi : :py:class:`Matrix` or other Array-like, (`M`, `D`)
+            `M` inputs with dimension `D`.
+        Xj : :py:class:`Matrix` or other Array-like, (`M`, `D`)
+            `M` inputs with dimension `D`.
+        ni : :py:class:`Matrix` or other Array-like, (`M`, `D`)
             `M` derivative orders for set `i`.
-        nj : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+        nj : :py:class:`Matrix` or other Array-like, (`M`, `D`)
             `M` derivative orders for set `j`.
         hyper_deriv : Non-negative int or None, optional
             The index of the hyperparameter to compute the first derivative
@@ -929,19 +929,19 @@ class MaskedKernel(Kernel):
     def __call__(self, Xi, Xj, ni, nj, **kwargs):
         """Evaluate the covariance between points `Xi` and `Xj` with derivative order `ni`, `nj`.
         
-        Note that in the argument specifications, `N` is the `total_dim`
+        Note that in the argument specifications, `D` is the `total_dim`
         specified in the constructor (i.e., :py:attr:`num_dim` for the
         :py:class:`MaskedKernel` instance itself).
         
         Parameters
         ----------
-        Xi : :py:class:`Matrix` or other Array-like, (`M`, `N`)
-            `M` inputs with dimension `N`.
-        Xj : :py:class:`Matrix` or other Array-like, (`M`, `N`)
-            `M` inputs with dimension `N`.
-        ni : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+        Xi : :py:class:`Matrix` or other Array-like, (`M`, `D`)
+            `M` inputs with dimension `D`.
+        Xj : :py:class:`Matrix` or other Array-like, (`M`, `D`)
+            `M` inputs with dimension `D`.
+        ni : :py:class:`Matrix` or other Array-like, (`M`, `D`)
             `M` derivative orders for set `i`.
-        nj : :py:class:`Matrix` or other Array-like, (`M`, `N`)
+        nj : :py:class:`Matrix` or other Array-like, (`M`, `D`)
             `M` derivative orders for set `j`.
         hyper_deriv : Non-negative int or None, optional
             The index of the hyperparameter to compute the first derivative

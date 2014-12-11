@@ -134,11 +134,11 @@ def slice_plot(*args, **kwargs):
     
     Parameters
     ----------
-    vals : array, (`M`, `N`, `P`, ...)
+    vals : array, (`M`, `D`, `P`, ...)
         Multidimensional array to visualize.
     x_vals_1 : array, (`M`,)
         Values along the first dimension.
-    x_vals_2 : array, (`N`,)
+    x_vals_2 : array, (`D`,)
         Values along the second dimension.
     x_vals_3 : array, (`P`,)
         Values along the third dimension.
