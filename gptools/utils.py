@@ -1187,7 +1187,7 @@ def plot_sampler(sampler, labels=None, burn=0):
                 row.append(None)
             else:
                 sharey = row[-1] if i > 0 and i < j and j < k else None
-                sharex = self.axes[-1][i] if j > i and j < k else \
+                sharex = axes[-1][i] if j > i and j < k else \
                     (row[-1] if i > 0 and j == k else None)
                 gs = gs1[j, i] if j < k else gs2[:, i]
                 row.append(f.add_subplot(gs, sharey=sharey, sharex=sharex))
