@@ -1201,7 +1201,7 @@ def plot_sampler(sampler, labels=None, burn=0):
     # j is the row, i is the column.
     for i in xrange(0, k):
         axes[i, i].clear()
-        axes[i, i].hist(flat_trace[:, i], bins=50)
+        axes[i, i].hist(flat_trace[:, i], bins=50, color='black')
         if i == k - 1:
             axes[i, i].set_xlabel(labels[i])
         if i < k - 1:
@@ -1212,7 +1212,7 @@ def plot_sampler(sampler, labels=None, burn=0):
         #     axes[j, i].set_frame_on(False)
         for j in xrange(i + 1, k):
             axes[j, i].clear()
-            ct, x, y, im = axes[j, i].hist2d(flat_trace[:, i], flat_trace[:, j], bins=50, cmap='gray')
+            ct, x, y, im = axes[j, i].hist2d(flat_trace[:, i], flat_trace[:, j], bins=50, cmap='gray_r')
             # xmid = 0.5 * (x[1:] + x[:-1])
             # ymid = 0.5 * (y[1:] + y[:-1])
             # axes[j, i].contour(xmid, ymid, ct.T, colors='k')
