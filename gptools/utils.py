@@ -1160,3 +1160,74 @@ def summarize_sampler(sampler, burn=0, thin=1, ci=0.95):
     ci_l, ci_u = scipy.percentile(flat_trace, [cibdry, 100.0 - cibdry], axis=0)
     
     return (mean, ci_l, ci_u)
+
+def plot_sampler(sampler, labels=None, burn=0):
+    """Plot the results of MCMC sampler (posterior and chains).
+    """
+    
+    # Loosely based on triangle.py
+    
+    # Create axes:
+    k = sampler.flatchain.shape[1]
+    
+    if labels is None:
+        labels = [''] * k
+    
+    f = plt.figure()
+    gs1 = mplgs.GridSpec(k, k)
+    gs2 = mplgs.GridSpec(1, k)
+    gs1.update(bottom=0.275, top=0.98)
+    gs2.update(bottom=0.1, top=0.2)
+    axes = []
+    # j is the row, i is the column.
+    for j in xrange(0, k + 1):
+        row = []
+        for i in xrange(0, k):
+            if i > j:
+                row.append(None)
+            else:
+                sharey = row[-1] if i > 0 and i < j and j < k else None
+                sharex = self.axes[-1][i] if j > i and j < k else \
+                    (row[-1] if i > 0 and j == k else None)
+                gs = gs1[j, i] if j < k else gs2[:, i]
+                row.append(f.add_subplot(gs, sharey=sharey, sharex=sharex))
+        axes.append(row)
+    axes = scipy.asarray(axes)
+    
+    # Update axes with the data:
+    flat_trace = sampler.chain[:, burn:, :]
+    flat_trace = flat_trace.reshape((-1, k))
+    
+    # j is the row, i is the column.
+    for i in xrange(0, k):
+        axes[i, i].clear()
+        axes[i, i].hist(flat_trace[:, i], bins=50)
+        if i == k - 1:
+            axes[i, i].set_xlabel(labels[i])
+        if i < k - 1:
+            plt.setp(axes[i, i].get_xticklabels(), visible=False)
+        plt.setp(axes[i, i].get_yticklabels(), visible=False)
+        # for j in xrange(0, i):
+        #     axes[j, i].set_visible(False)
+        #     axes[j, i].set_frame_on(False)
+        for j in xrange(i + 1, k):
+            axes[j, i].clear()
+            ct, x, y, im = axes[j, i].hist2d(flat_trace[:, i], flat_trace[:, j], bins=50)
+            # xmid = 0.5 * (x[1:] + x[:-1])
+            # ymid = 0.5 * (y[1:] + y[:-1])
+            # axes[j, i].contour(xmid, ymid, ct.T, colors='k')
+            if j < k - 1:
+                plt.setp(axes[j, i].get_xticklabels(), visible=False)
+            if i != 0:
+                plt.setp(axes[j, i].get_yticklabels(), visible=False)
+            if i == 0:
+                axes[j, i].set_ylabel(labels[j])
+            if j == k - 1:
+                axes[j, i].set_xlabel(labels[i])
+        axes[-1, i].clear()
+        axes[-1, i].plot(sampler.chain[:, :, i].T)
+        axes[-1, i].axvline(burn, color='r', linewidth=3)
+        axes[-1, i].set_ylabel(labels[i])
+        axes[-1, i].set_xlabel('step')
+    
+    f.canvas.draw()

@@ -1556,36 +1556,43 @@ class GaussianProcess(object):
         if plot_posterior or plot_chains:
             flat_trace = sampler.chain[:, burn::thin, :]
             flat_trace = flat_trace.reshape((-1, flat_trace.shape[2]))
-            
-        if plot_posterior:
-            triangle.corner(
-                flat_trace,
-                plot_datapoints=False,
-                labels=['$%s$' % (l,) for l in self.free_param_names]
+        
+        if plot_posterior and plot_chains:
+            plot_sampler(
+                sampler,
+                labels=['$%s$' % (l,) for l in self.free_param_names],
+                burn=burn
             )
-        if plot_chains:
-            f = plt.figure()
-            for k in xrange(0, ndim):
-                # a = f.add_subplot(3, ndim, k + 1)
-                # a.acorr(
-                #     sampler.flatchain[:, k],
-                #     maxlags=100,
-                #     detrend=plt.mlab.detrend_mean
-                # )
-                # a.set_xlabel('lag')
-                # a.set_title('$%s$ autocorrelation' % (self.free_param_names[k],))
-                a = f.add_subplot(ndim, 1, 0 * ndim + k + 1)
-                for chain in sampler.chain[:, :, k]:
-                    a.plot(chain)
-                a.set_xlabel('sample')
-                a.set_ylabel('$%s$' % (self.free_param_names[k],))
-                a.set_title('$%s$ all chains' % (self.free_param_names[k],))
-                a.axvline(burn, color='r', linewidth=3, ls='--')
-                # a = f.add_subplot(2, ndim, 1 * ndim + k + 1)
-                # a.plot(flat_trace[:, k])
-                # a.set_xlabel('sample')
-                # a.set_ylabel('$%s$' % (self.free_param_names[k],))
-                # a.set_title('$%s$ flattened, burned and thinned chain' % (self.free_param_names[k],))
+        else:
+            if plot_posterior:
+                triangle.corner(
+                    flat_trace,
+                    plot_datapoints=False,
+                    labels=['$%s$' % (l,) for l in self.free_param_names]
+                )
+            if plot_chains:
+                f = plt.figure()
+                for k in xrange(0, ndim):
+                    # a = f.add_subplot(3, ndim, k + 1)
+                    # a.acorr(
+                    #     sampler.flatchain[:, k],
+                    #     maxlags=100,
+                    #     detrend=plt.mlab.detrend_mean
+                    # )
+                    # a.set_xlabel('lag')
+                    # a.set_title('$%s$ autocorrelation' % (self.free_param_names[k],))
+                    a = f.add_subplot(ndim, 1, 0 * ndim + k + 1)
+                    for chain in sampler.chain[:, :, k]:
+                        a.plot(chain)
+                    a.set_xlabel('sample')
+                    a.set_ylabel('$%s$' % (self.free_param_names[k],))
+                    a.set_title('$%s$ all chains' % (self.free_param_names[k],))
+                    a.axvline(burn, color='r', linewidth=3, ls='--')
+                    # a = f.add_subplot(2, ndim, 1 * ndim + k + 1)
+                    # a.plot(flat_trace[:, k])
+                    # a.set_xlabel('sample')
+                    # a.set_ylabel('$%s$' % (self.free_param_names[k],))
+                    # a.set_title('$%s$ flattened, burned and thinned chain' % (self.free_param_names[k],))
             
         return sampler
     
