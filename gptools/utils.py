@@ -1212,7 +1212,7 @@ def plot_sampler(sampler, labels=None, burn=0):
         #     axes[j, i].set_frame_on(False)
         for j in xrange(i + 1, k):
             axes[j, i].clear()
-            ct, x, y, im = axes[j, i].hist2d(flat_trace[:, i], flat_trace[:, j], bins=50)
+            ct, x, y, im = axes[j, i].hist2d(flat_trace[:, i], flat_trace[:, j], bins=50, cmap='bone')
             # xmid = 0.5 * (x[1:] + x[:-1])
             # ymid = 0.5 * (y[1:] + y[:-1])
             # axes[j, i].contour(xmid, ymid, ct.T, colors='k')
