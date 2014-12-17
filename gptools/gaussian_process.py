@@ -22,7 +22,7 @@ from __future__ import division
 
 from .error_handling import GPArgumentError
 from .kernel import Kernel, ZeroKernel
-from .utils import wrap_fmin_slsqp, univariate_envelope_plot, CombinedBounds, unique_rows
+from .utils import wrap_fmin_slsqp, univariate_envelope_plot, CombinedBounds, unique_rows, plot_sampler
 
 import scipy
 import scipy.linalg
