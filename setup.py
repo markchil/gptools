@@ -14,7 +14,7 @@ _matern = Extension("gptools.kernel._matern",
 
 setup(
     name='gptools',
-    version='0.1.2',
+    version='0.2',
     packages=['gptools', 'gptools.kernel'],
     install_requires=['scipy', 'numpy', 'matplotlib', 'mpmath', 'emcee', 'triangle_plot'],
     author='Mark Chilenski',
