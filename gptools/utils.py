@@ -549,14 +549,14 @@ class NormalJointPrior(JointPrior):
         """
         ll = 0
         for v, s, m in zip(theta, self.sigma, self.mu):
-            ll += scipy.stats.norm.logpdf(v, s, loc=0, scale=m)
+            ll += scipy.stats.norm.logpdf(v, loc=m, scale=s)
         return ll
     
     @property
     def bounds(self):
         """The bounds of the random variable.
         """
-        return [scipy.stats.norm.interval(1, s, loc=0, scale=m) for s, m in zip(self.sigma, self.mu)]
+        return [scipy.stats.norm.interval(1, loc=m, scale=s) for s, m in zip(self.sigma, self.mu)]
     
     def random_draw(self, size=None):
         """Draw random samples of the hyperparameters.
