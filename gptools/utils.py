@@ -517,7 +517,57 @@ class IndependentJointPrior(JointPrior):
             The number/shape of samples to draw. If None, only one sample is
             returned. Default is None.
         """
-        return [p.rvs(size=size) for p in self.univariate_priors]
+        return scipy.asarray([p.rvs(size=size) for p in self.univariate_priors])
+
+class NormalJointPrior(JointPrior):
+    """Joint prior for which each hyperparameter has a normal prior with fixed hyper-hyperparameters.
+    
+    Parameters
+    ----------
+    mu : list of float, same size as `sigma`
+        Means of the hyperparameters.
+    sigma : list of float
+        Standard deviations of the hyperparameters.
+    """
+    def __init__(self, mu, sigma):
+        sigma = scipy.atleast_1d(scipy.asarray(sigma, dtype=float))
+        mu = scipy.atleast_1d(scipy.asarray(mu, dtype=float))
+        if sigma.shape != mu.shape:
+            raise ValueError("sigma and mu must have the same shape!")
+        if sigma.ndim != 1:
+            raise ValueError("sigma and mu must both be one dimensional!")
+        self.sigma = sigma
+        self.mu = mu
+    
+    def __call__(self, theta):
+        """Evaluate the prior log-PDF at the given values of the hyperparameters, theta.
+        
+        Parameters
+        ----------
+        theta : array-like, (`num_params`,)
+            The hyperparameters to evaluate the log-PDF at.
+        """
+        ll = 0
+        for v, s, m in zip(theta, self.sigma, self.mu):
+            ll += scipy.stats.norm.logpdf(v, s, loc=0, scale=m)
+        return ll
+    
+    @property
+    def bounds(self):
+        """The bounds of the random variable.
+        """
+        return [scipy.stats.norm.interval(1, s, loc=0, scale=m) for s, m in zip(self.sigma, self.mu)]
+    
+    def random_draw(self, size=None):
+        """Draw random samples of the hyperparameters.
+        
+        Parameters
+        ----------
+        size : None, int or array-like, optional
+            The number/shape of samples to draw. If None, only one sample is
+            returned. Default is None.
+        """
+        return scipy.asarray([scipy.stats.norm.rvs(s, loc=0, scale=m, size=size) for s, m in zip(self.sigma, self.mu)])
 
 class LogNormalJointPrior(JointPrior):
     """Joint prior for which each hyperparameter has a log-normal prior with fixed hyper-hyperparameters.
@@ -567,7 +617,7 @@ class LogNormalJointPrior(JointPrior):
             The number/shape of samples to draw. If None, only one sample is
             returned. Default is None.
         """
-        return [scipy.stats.lognorm.rvs(s, loc=0, scale=em, size=size) for s, em in zip(self.sigma, self.emu)]
+        return scipy.asarray([scipy.stats.lognorm.rvs(s, loc=0, scale=em, size=size) for s, em in zip(self.sigma, self.emu)])
 
 class GammaJointPrior(JointPrior):
     """Joint prior for which each hyperparameter has a gamma prior with fixed hyper-hyperparameters.
@@ -617,7 +667,7 @@ class GammaJointPrior(JointPrior):
             The number/shape of samples to draw. If None, only one sample is
             returned. Default is None.
         """
-        return [scipy.stats.gamma.rvs(a, loc=0, scale=1.0 / b, size=size) for a, b in zip(self.a, self.b)]
+        return scipy.asarray([scipy.stats.gamma.rvs(a, loc=0, scale=1.0 / b, size=size) for a, b in zip(self.a, self.b)])
 
 def wrap_fmin_slsqp(fun, guess, opt_kwargs={}):
     """Wrapper for :py:func:`fmin_slsqp` to allow it to be called with :py:func:`minimize`-like syntax.
