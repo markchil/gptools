@@ -342,7 +342,7 @@ class UniformJointPrior(JointPrior):
             The number/shape of samples to draw. If None, only one sample is
             returned. Default is None.
         """
-        return [numpy.random.uniform(low=b[0], high=b[1], size=size) for b in self.bounds]
+        return scipy.asarray([numpy.random.uniform(low=b[0], high=b[1], size=size) for b in self.bounds])
 
 class CoreEdgeJointPrior(UniformJointPrior):
     """Prior for use with Gibbs kernel warping functions with an inequality constraint between the core and edge length scales.
