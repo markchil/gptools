@@ -1,5 +1,5 @@
 numpy
 scipy
 mpmath
-numpydoc==0.4
-python-tk
+numpydoc
+
