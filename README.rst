@@ -17,8 +17,10 @@ To install, simply execute::
 
     pip install gptools
 
+(You must already have NumPy and Cython installed for this to work.)
+
 If you find this software useful, please be sure to cite it:
 
-M.A. Chilenski (2014). gptools: Gaussian processes with arbitrary derivative constraints and predictions, GNU General Public License. github.com/markchil/gptools
+M.A. Chilenski et al. 2015 Nucl. Fusion 55 023012
 
-A formal publication on this software and its applications is in preparation. Once this is published, this readme will be updated with the relevant citation.
+http://stacks.iop.org/0029-5515/55/023012

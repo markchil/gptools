@@ -8,13 +8,15 @@ except ImportError:
 import numpy
 from Cython.Distutils import build_ext
 
-_matern = Extension("gptools.kernel._matern",
+_matern = Extension(
+    "gptools.kernel._matern",
     ["gptools/kernel/_matern.pyx", "gptools/kernel/src/matern.c"],
-    include_dirs=[numpy.get_include(), 'gptools/kernel/include'])
+    include_dirs=[numpy.get_include(), 'gptools/kernel/include']
+)
 
 setup(
     name='gptools',
-    version='0.2',
+    version='0.2.2',
     packages=['gptools', 'gptools.kernel'],
     install_requires=['scipy', 'numpy', 'matplotlib', 'mpmath', 'emcee', 'triangle_plot'],
     author='Mark Chilenski',
@@ -24,5 +26,6 @@ setup(
     long_description=open('README.rst', 'r').read(),
     cmdclass={'build_ext': build_ext},
     ext_modules = [_matern],
-    license='GPL'
+    license='GPL',
+    headers=['gptools/kernel/include/matern.h']
 )

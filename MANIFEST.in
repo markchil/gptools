@@ -1,2 +1,4 @@
 include LICENSE
 include README.rst
+include gptools/kernel/include/matern.h
+include gptools/kernel/src/matern.c
