@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -8,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>gptools.kernel.rational_quadratic &mdash; gptools 0.0 documentation</title>
+    <title>gptools.kernel.rational_quadratic &mdash; gptools 0.2 documentation</title>
     
     <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
@@ -16,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../',
-        VERSION:     '0.0',
+        VERSION:     '0.2',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -25,7 +23,7 @@
     <script type="text/javascript" src="../../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../_static/doctools.js"></script>
-    <link rel="top" title="gptools 0.0 documentation" href="../../../index.html" />
+    <link rel="top" title="gptools 0.2 documentation" href="../../../index.html" />
     <link rel="up" title="Module code" href="../../index.html" /> 
   </head>
   <body>
@@ -41,7 +39,7 @@
         <li class="right" >
           <a href="../../../np-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../index.html">gptools 0.0 documentation</a> &raquo;</li>
+        <li><a href="../../../index.html">gptools 0.2 documentation</a> &raquo;</li>
           <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
     </div>  
@@ -52,7 +50,7 @@
           <div class="body">
             
   <h1>Source code for gptools.kernel.rational_quadratic</h1><div class="highlight"><pre>
-<span class="c"># Copyright 2013 Mark Chilenski</span>
+<span class="c"># Copyright 2014 Mark Chilenski</span>
 <span class="c"># This program is distributed under the terms of the GNU General Purpose License (GPL).</span>
 <span class="c"># Refer to http://www.gnu.org/licenses/gpl.txt</span>
 <span class="c"># </span>
@@ -117,9 +115,11 @@
 <span class="sd">    GPArgumentError</span>
 <span class="sd">        If `fixed_params` is passed but `initial_params` is not.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_dim</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">RationalQuadraticKernel</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">num_dim</span><span class="p">,</span>
-                                                      <span class="n">num_dim</span> <span class="o">+</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_dim</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">param_names</span> <span class="o">=</span> <span class="p">[</span><span class="s">r&#39;\sigma_f&#39;</span><span class="p">,</span> <span class="s">r&#39;\alpha&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="s">&#39;l_</span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">num_dim</span><span class="p">)]</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">RationalQuadraticKernel</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">num_dim</span><span class="o">=</span><span class="n">num_dim</span><span class="p">,</span>
+                                                      <span class="n">num_params</span><span class="o">=</span><span class="n">num_dim</span> <span class="o">+</span> <span class="mi">2</span><span class="p">,</span>
+                                                      <span class="n">param_names</span><span class="o">=</span><span class="n">param_names</span><span class="p">,</span>
                                                       <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
     
     <span class="k">def</span> <span class="nf">_compute_k</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tau</span><span class="p">):</span>
@@ -127,8 +127,8 @@
 <span class="sd">        </span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        tau : :py:class:`Matrix`, (`M`, `N`)</span>
-<span class="sd">            `M` inputs with dimension `N`.</span>
+<span class="sd">        tau : :py:class:`Matrix`, (`M`, `D`)</span>
+<span class="sd">            `M` inputs with dimension `D`.</span>
 <span class="sd">        </span>
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -139,12 +139,12 @@
         <span class="k">return</span> <span class="n">y</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
     
     <span class="k">def</span> <span class="nf">_compute_y</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="n">return_r2l2</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
-        <span class="sd">r&quot;&quot;&quot;Covert tau to :math:`y=\sqrt{2\nu\sum_i(\tau_i^2/l_i^2)}`.</span>
+        <span class="sd">r&quot;&quot;&quot;Covert tau to :math:`y = 1 + \frac{1}{2\alpha} \sum_i \frac{\tau_i^2}{l_i^2}`.</span>
 <span class="sd">        </span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        tau : :py:class:`Matrix`, (`M`, `N`)</span>
-<span class="sd">            `M` inputs with dimension `N`.</span>
+<span class="sd">        tau : :py:class:`Matrix`, (`M`, `D`)</span>
+<span class="sd">            `M` inputs with dimension `D`.</span>
 <span class="sd">        return_r2l2 : bool, optional</span>
 <span class="sd">            Set to True to return a tuple of (`y`, `r2l2`). Default is False</span>
 <span class="sd">            (only return `y`).</span>
@@ -197,12 +197,12 @@
 <span class="sd">        </span>
 <span class="sd">        .. math::</span>
 <span class="sd">        </span>
-<span class="sd">            y = \sqrt{2 \nu \sum_i\frac{\tau_i^2}{l_i^2}}</span>
+<span class="sd">            y = 1 + \frac{1}{2\alpha}\sum_i(\tau_i^2/l_i^2)}`.</span>
 <span class="sd">        </span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        tau : :py:class:`Matrix`, (`M`, `N`)</span>
-<span class="sd">            `M` inputs with dimension `N`.</span>
+<span class="sd">        tau : :py:class:`Matrix`, (`M`, `D`)</span>
+<span class="sd">            `M` inputs with dimension `D`.</span>
 <span class="sd">        b : :py:class:`Array`, (`P`,)</span>
 <span class="sd">            Block specifying derivatives to be evaluated.</span>
 <span class="sd">        r2l2 : :py:class:`Array`, (`M`,)</span>
@@ -257,13 +257,13 @@
         <li class="right" >
           <a href="../../../np-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../index.html">gptools 0.0 documentation</a> &raquo;</li>
+        <li><a href="../../../index.html">gptools 0.2 documentation</a> &raquo;</li>
           <li><a href="../../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
-        &copy; Copyright 2013, Mark Chilenski.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+        &copy; Copyright 2014, Mark Chilenski.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
     </div>
   </body>
 </html>

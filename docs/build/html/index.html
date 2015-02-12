@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -8,15 +6,15 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>gptools: Gaussian process regression with support for arbitrary derivatives &mdash; gptools 0.0 documentation</title>
+    <title>gptools: Gaussian process regression with support for arbitrary derivatives &mdash; gptools 0.2 documentation</title>
     
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '',
-        VERSION:     '0.0',
+        URL_ROOT:    './',
+        VERSION:     '0.2',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -25,8 +23,8 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="gptools 0.0 documentation" href="#" />
-    <link rel="next" title="gptools Package" href="gptools.html" /> 
+    <link rel="top" title="gptools 0.2 documentation" href="#" />
+    <link rel="next" title="gptools package" href="gptools.html" /> 
   </head>
   <body>
     <div class="related">
@@ -42,9 +40,9 @@
           <a href="np-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="gptools.html" title="gptools Package"
+          <a href="gptools.html" title="gptools package"
              accesskey="N">next</a> |</li>
-        <li><a href="#">gptools 0.0 documentation</a> &raquo;</li> 
+        <li><a href="#">gptools 0.2 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -55,40 +53,118 @@
             
   <div class="section" id="gptools-gaussian-process-regression-with-support-for-arbitrary-derivatives">
 <h1>gptools: Gaussian process regression with support for arbitrary derivatives<a class="headerlink" href="#gptools-gaussian-process-regression-with-support-for-arbitrary-derivatives" title="Permalink to this headline">¶</a></h1>
+<p>Source home: <a class="reference external" href="https://github.com/markchil/gptools">https://github.com/markchil/gptools</a></p>
+<p>Releases: <a class="reference external" href="https://pypi.python.org/pypi/gptools/">https://pypi.python.org/pypi/gptools/</a></p>
+<p>Installation is as simple as:</p>
+<div class="highlight-python"><div class="highlight"><pre>pip install gptools
+</pre></div>
+</div>
 <div class="section" id="overview">
 <h2>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
-<p><tt class="xref py py-mod docutils literal"><span class="pre">gptools</span></tt> is a Python package that provides a convenient, powerful and extensible implementation of Gaussian process regression (GPR). Central to <tt class="xref py py-mod docutils literal"><span class="pre">gptool</span></tt>&#8216;s implementation is support for derivatives and their variances. A number of kernels are provided to allow many types of data to be fit:</p>
+<p><a class="reference internal" href="gptools.html#module-gptools" title="gptools"><tt class="xref py py-mod docutils literal"><span class="pre">gptools</span></tt></a> is a Python package that provides a convenient, powerful and extensible implementation of Gaussian process regression (GPR). Central to <tt class="xref py py-mod docutils literal"><span class="pre">gptool</span></tt>&#8216;s implementation is support for derivatives and their variances. Furthermore, the implementation supports the incorporation of arbitrary linearly transformed quantities into the GP.</p>
+<p>There are two key classes:</p>
+<ul class="simple">
+<li><a class="reference internal" href="gptools.html#gptools.gaussian_process.GaussianProcess" title="gptools.gaussian_process.GaussianProcess"><tt class="xref py py-class docutils literal"><span class="pre">GaussianProcess</span></tt></a> is the main class to represent a GP.</li>
+<li><a class="reference internal" href="gptools.kernel.html#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt></a> (and its many subclasses) represents a covariance kernel, and must be provided when constructing a <a class="reference internal" href="gptools.html#gptools.gaussian_process.GaussianProcess" title="gptools.gaussian_process.GaussianProcess"><tt class="xref py py-class docutils literal"><span class="pre">GaussianProcess</span></tt></a>. Separate kernels to describe the underlying signal and the noise are supported.</li>
+</ul>
+<p>A third class, <a class="reference internal" href="gptools.html#gptools.utils.JointPrior" title="gptools.utils.JointPrior"><tt class="xref py py-class docutils literal"><span class="pre">JointPrior</span></tt></a>, allows you to construct a hyperprior of arbitrary complexity to dictate how the hyperparameters are handled.</p>
+<p>Creating a Gaussian process is as simple as:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">gptools</span>
+<span class="n">k</span> <span class="o">=</span> <span class="n">gptools</span><span class="o">.</span><span class="n">SquaredExponentialKernel</span><span class="p">()</span>
+<span class="n">gp</span> <span class="o">=</span> <span class="n">gptools</span><span class="o">.</span><span class="n">GaussianProcess</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>But, the default bounds on the hyperparameters are very wide and can cause the optimizer/MCMC sampler to fail. So, it is usually a better idea to define the covariance kernel as:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">k</span> <span class="o">=</span> <span class="n">gptools</span><span class="o">.</span><span class="n">SquaredExponentialKernel</span><span class="p">(</span><span class="n">param_bounds</span><span class="o">=</span><span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">1e3</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">)])</span>
+</pre></div>
+</div>
+<p>You will have to pick appropriate numbers by inspecting the typical range of your data.</p>
+<p>Furthermore, you can include an explicit mean function by passing
+the appropriate <a class="reference internal" href="gptools.html#gptools.mean.MeanFunction" title="gptools.mean.MeanFunction"><tt class="xref py py-class docutils literal"><span class="pre">MeanFunction</span></tt></a> instance into the <cite>mu</cite> keyword:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">gp</span> <span class="o">=</span> <span class="n">gptools</span><span class="o">.</span><span class="n">GaussianProcess</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">gptools</span><span class="o">.</span><span class="n">LinearMeanFunction</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>This will enable you to perform inference (both empirical and full Bayes) for
+the hyperparameters of the mean function. Essentially, <a class="reference internal" href="gptools.html#module-gptools" title="gptools"><tt class="xref py py-mod docutils literal"><span class="pre">gptools</span></tt></a> can
+perform nonlinear Bayesian regression with a Gaussian process fit to the
+residuals.</p>
+<p>You then add the training data using the <a class="reference internal" href="gptools.html#gptools.gaussian_process.GaussianProcess.add_data" title="gptools.gaussian_process.GaussianProcess.add_data"><tt class="xref py py-meth docutils literal"><span class="pre">add_data()</span></tt></a> method:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">gp</span><span class="o">.</span><span class="n">add_data</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">err_y</span><span class="o">=</span><span class="n">stddev_y</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Here, <cite>err_y</cite> is the <img class="math" src="_images/math/49d4d420882348d6c5361c0cbd5bc58e816ead44.png" alt="1\sigma"/> uncertainty on the observations <cite>y</cite>. For exact values, simply omit this keyword. Adding a derivative observation is as simple as specifying the derivative order with the <cite>n</cite> keyword:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">gp</span><span class="o">.</span><span class="n">add_data</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This will force the slope at <img class="math" src="_images/math/55ba271999995cac02cf578362df5be030594ed6.png" alt="x=0"/> to be exactly zero. Quantities that represent an arbitrary linear transformation of the &#8220;basic&#8221; observations can be added by specifying the <cite>T</cite> keyword:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">gp</span><span class="o">.</span><span class="n">add_data</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">T</span><span class="o">=</span><span class="n">T</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This will add the value(s) <img class="math" src="_images/math/19bb60b3d5ba78e8580152da919334407040b217.png" alt="y = T Y(x)"/> to the training data, where here <img class="math" src="_images/math/b018f9153661cd702305aecc28713fd9705e7cb3.png" alt="Y"/> represents the &#8220;basic&#8221; (untransformed) observations and <img class="math" src="_images/math/b124ff74afb0914bb434e8fb849eb56d734412f8.png" alt="y"/> represents the transformed observations. This also supports the <cite>err_y</cite> and <cite>n</cite> keywords. Here, <cite>err_y</cite> is the error on the transformed quantity <img class="math" src="_images/math/b124ff74afb0914bb434e8fb849eb56d734412f8.png" alt="y"/>. <cite>n</cite> applies to the latent variables <img class="math" src="_images/math/2cbd3857837bd6198bfb5c3835fb4e96215254bc.png" alt="Y(x)"/>.</p>
+<p>Once the GP has been populated with training data, there are two approaches supported to handle the hyperparameters.</p>
+<p>The simplest approach is to use an empirical Bayes approach and compute the maximum a posteriori (MAP) estimate. This is accomplished using the <a class="reference internal" href="gptools.html#gptools.gaussian_process.GaussianProcess.optimize_hyperparameters" title="gptools.gaussian_process.GaussianProcess.optimize_hyperparameters"><tt class="xref py py-meth docutils literal"><span class="pre">optimize_hyperparameters()</span></tt></a> method of the <a class="reference internal" href="gptools.html#gptools.gaussian_process.GaussianProcess" title="gptools.gaussian_process.GaussianProcess"><tt class="xref py py-class docutils literal"><span class="pre">GaussianProcess</span></tt></a> instance:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">gp</span><span class="o">.</span><span class="n">optimize_hyperparameters</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>This will randomly start the optimizer at points distributed according to the hyperprior several times in order to ensure that the global maximum is obtained. If you have a machine with multiple cores, these random starts will be performed in parallel. You can set the number of starts using the <cite>random_starts</cite> keyword, and you can set the number of processes used using the <cite>num_proc</cite> keyword.</p>
+<p>For a more complete accounting of the uncertainties in the model, you can choose to use a fully Bayesian approach by using Markov chain Monte Carlo (MCMC) techniques to produce samples of the hyperposterior. The samples are produced directly with <a class="reference internal" href="gptools.html#gptools.gaussian_process.GaussianProcess.sample_hyperparameter_posterior" title="gptools.gaussian_process.GaussianProcess.sample_hyperparameter_posterior"><tt class="xref py py-meth docutils literal"><span class="pre">sample_hyperparameter_posterior()</span></tt></a>, though it will typically be more convenient to simply call <a class="reference internal" href="gptools.html#gptools.gaussian_process.GaussianProcess.predict" title="gptools.gaussian_process.GaussianProcess.predict"><tt class="xref py py-meth docutils literal"><span class="pre">predict()</span></tt></a> with the <cite>use_MCMC</cite> keyword set to True.</p>
+<p>In order to make predictions, use the <a class="reference internal" href="gptools.html#gptools.gaussian_process.GaussianProcess.predict" title="gptools.gaussian_process.GaussianProcess.predict"><tt class="xref py py-meth docutils literal"><span class="pre">predict()</span></tt></a> method:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">y_star</span><span class="p">,</span> <span class="n">err_y_star</span> <span class="o">=</span> <span class="n">gp</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">x_star</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>By default, the mean and standard deviation of the GP posterior are returned. To compute only the mean and save some time, set the <cite>return_std</cite> keyword to False. To make predictions of derivatives, set the <cite>n</cite> keyword. To make a prediction of a linearly transformed quantity, set the <cite>output_transform</cite> keyword.</p>
+<p>For a convenient wrapper for applying <a class="reference internal" href="gptools.html#module-gptools" title="gptools"><tt class="xref py py-mod docutils literal"><span class="pre">gptools</span></tt></a> to multivariate data, see <tt class="xref py py-mod docutils literal"><span class="pre">profiletools</span></tt> at <a class="reference external" href="https://github.com/markchil/profiletools">https://github.com/markchil/profiletools</a></p>
+</div>
+<div class="section" id="kernels">
+<h2>Kernels<a class="headerlink" href="#kernels" title="Permalink to this headline">¶</a></h2>
+<p>A number of kernels are provided to allow many types of data to be fit:</p>
 <ul class="simple">
 <li><a class="reference internal" href="gptools.kernel.html#gptools.kernel.noise.DiagonalNoiseKernel" title="gptools.kernel.noise.DiagonalNoiseKernel"><tt class="xref py py-class docutils literal"><span class="pre">DiagonalNoiseKernel</span></tt></a> implements homoscedastic noise. The noise is tied to a specific derivative order. This allows you to, for instance, have noise on your observations but have noiseless derivative constraints, or to have different noise levels for observations and derivatives. Note that you can also specify potentially heteroscedastic noise explicitly when adding data to the process.</li>
 <li><a class="reference internal" href="gptools.kernel.html#gptools.kernel.squared_exponential.SquaredExponentialKernel" title="gptools.kernel.squared_exponential.SquaredExponentialKernel"><tt class="xref py py-class docutils literal"><span class="pre">SquaredExponentialKernel</span></tt></a> implements the SE kernel which is infinitely differentiable.</li>
-<li><a class="reference internal" href="gptools.kernel.html#gptools.kernel.matern.MaternKernel" title="gptools.kernel.matern.MaternKernel"><tt class="xref py py-class docutils literal"><span class="pre">MaternKernel</span></tt></a> implements the entire Matern class of covariance functions, which are characterized by a hyperparameter <img class="math" src="_images/math/d6a7ccf879c4a4fe694033606332cb83806db296.png" alt="\nu"/>. A process having the Matern kernel is only mean-square differentiable for derivative order <img class="math" src="_images/math/3f243899bc87ead4773f775f234b52af69f27836.png" alt="n&lt;\nu"/>.</li>
+<li><a class="reference internal" href="gptools.kernel.html#gptools.kernel.matern.MaternKernel" title="gptools.kernel.matern.MaternKernel"><tt class="xref py py-class docutils literal"><span class="pre">MaternKernel</span></tt></a> implements the entire Matern class of covariance functions, which are characterized by a hyperparameter <img class="math" src="_images/math/d67fb61cfffca2cc069e083d76cb6220b4ca14c8.png" alt="\nu"/>. A process having the Matern kernel is only mean-square differentiable for derivative order <img class="math" src="_images/math/d36297859293010b96583c4cb5f458293e3b4d25.png" alt="n&lt;\nu"/>. Note that this class does not support arbitrary derivatives at this point. If you need this feature, try using <a class="reference internal" href="gptools.kernel.html#gptools.kernel.matern.MaternKernelArb" title="gptools.kernel.matern.MaternKernelArb"><tt class="xref py py-class docutils literal"><span class="pre">MaternKernelArb</span></tt></a>, but note that this is very slow!</li>
+<li><a class="reference internal" href="gptools.kernel.html#gptools.kernel.matern.Matern52Kernel" title="gptools.kernel.matern.Matern52Kernel"><tt class="xref py py-class docutils literal"><span class="pre">Matern52Kernel</span></tt></a> implements a specialized Matern kernel with <img class="math" src="_images/math/0c38d9a46b8c737f4c5cd54eb603fa6460c30ac1.png" alt="\nu=\frac{5}{2}"/> which efficiently supports 0th and 1st derivatives.</li>
 <li><a class="reference internal" href="gptools.kernel.html#gptools.kernel.rational_quadratic.RationalQuadraticKernel" title="gptools.kernel.rational_quadratic.RationalQuadraticKernel"><tt class="xref py py-class docutils literal"><span class="pre">RationalQuadraticKernel</span></tt></a> implements the rational quadratic kernel, which is a scale mixture over SE kernels.</li>
+<li><a class="reference internal" href="gptools.kernel.html#gptools.kernel.gibbs.GibbsKernel1d" title="gptools.kernel.gibbs.GibbsKernel1d"><tt class="xref py py-class docutils literal"><span class="pre">GibbsKernel1d</span></tt></a> and its subclasses implements the Gibbs kernel, which is a nonstationary form of the SE kernel.</li>
+<li><a class="reference internal" href="gptools.kernel.html#gptools.kernel.core.MaskedKernel" title="gptools.kernel.core.MaskedKernel"><tt class="xref py py-class docutils literal"><span class="pre">MaskedKernel</span></tt></a> creates a kernel that only operates on a subset of dimensions. Use this along with the sum and product operations to create kernels that encode different properties in different dimensions.</li>
+<li><a class="reference internal" href="gptools.kernel.html#gptools.kernel.core.ArbitraryKernel" title="gptools.kernel.core.ArbitraryKernel"><tt class="xref py py-class docutils literal"><span class="pre">ArbitraryKernel</span></tt></a> creates a kernel with an arbitrary covariance function and computes the derivatives as needed using <tt class="xref py py-mod docutils literal"><span class="pre">mpmath</span></tt> to perform numerical differentiation. Naturally, this is very slow but is useful to let you explore the properties of arbitrary kernels without having to write a complete implementation.</li>
 </ul>
-<p>In all cases, these kernels have been constructed in a way to allow inputs of arbitrary dimension. Each dimension has a length scale hyperparameter that can be separately optimized over or held fixed. Arbitrary derivatives with respect to each dimension can be taken, including computation of the covariance for those observations.</p>
+<p>In most cases, these kernels have been constructed in a way to allow inputs of arbitrary dimension. Each dimension has a length scale hyperparameter that can be separately optimized over or held fixed. Arbitrary derivatives with respect to each dimension can be taken, including computation of the covariance for those observations.</p>
 <p>Other kernels can be implemented by extending the <a class="reference internal" href="gptools.kernel.html#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt></a> class. Furthermore, kernels may be added or multiplied together to yield a new, valid kernel.</p>
+</div>
+<div class="section" id="notes">
+<h2>Notes<a class="headerlink" href="#notes" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference internal" href="gptools.html#module-gptools" title="gptools"><tt class="xref py py-mod docutils literal"><span class="pre">gptools</span></tt></a> has been developed and tested on Python 2.7 and scipy 0.14.0. It may work just as well on other versions, but has not been tested.</p>
+<p>If you find this software useful, please be sure to cite it:</p>
+<p>M.A. Chilenski (2014). gptools: Gaussian processes with arbitrary derivative constraints and predictions, GNU General Public License. github.com/markchil/gptools</p>
+<p>A formal publication on this software and its applications is in preparation. Once this is published, this readme will be updated with the relevant citation.</p>
 </div>
 <div class="section" id="contents">
 <h2>Contents<a class="headerlink" href="#contents" title="Permalink to this headline">¶</a></h2>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="gptools.html">gptools Package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="gptools.html#id1"><tt class="docutils literal"><span class="pre">gptools</span></tt> Package</a></li>
-<li class="toctree-l2"><a class="reference internal" href="gptools.html#module-gptools.error_handling"><tt class="docutils literal"><span class="pre">error_handling</span></tt> Module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="gptools.html#module-gptools.gaussian_process"><tt class="docutils literal"><span class="pre">gaussian_process</span></tt> Module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="gptools.html#module-gptools.utils"><tt class="docutils literal"><span class="pre">utils</span></tt> Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gptools.html">gptools package</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="gptools.html#subpackages">Subpackages</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="gptools.kernel.html">kernel Package</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="gptools.kernel.html#id1"><tt class="docutils literal"><span class="pre">kernel</span></tt> Package</a></li>
-<li class="toctree-l4"><a class="reference internal" href="gptools.kernel.html#module-gptools.kernel.core"><tt class="docutils literal"><span class="pre">core</span></tt> Module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="gptools.kernel.html#module-gptools.kernel.gibbs"><tt class="docutils literal"><span class="pre">gibbs</span></tt> Module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="gptools.kernel.html#module-gptools.kernel.matern"><tt class="docutils literal"><span class="pre">matern</span></tt> Module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="gptools.kernel.html#module-gptools.kernel.noise"><tt class="docutils literal"><span class="pre">noise</span></tt> Module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="gptools.kernel.html#module-gptools.kernel.rational_quadratic"><tt class="docutils literal"><span class="pre">rational_quadratic</span></tt> Module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="gptools.kernel.html#module-gptools.kernel.squared_exponential"><tt class="docutils literal"><span class="pre">squared_exponential</span></tt> Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="gptools.kernel.html">gptools.kernel package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="gptools.kernel.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="gptools.kernel.html#module-gptools.kernel.core">gptools.kernel.core module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="gptools.kernel.html#module-gptools.kernel.gibbs">gptools.kernel.gibbs module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="gptools.kernel.html#module-gptools.kernel.matern">gptools.kernel.matern module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="gptools.kernel.html#module-gptools.kernel.noise">gptools.kernel.noise module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="gptools.kernel.html#module-gptools.kernel.rational_quadratic">gptools.kernel.rational_quadratic module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="gptools.kernel.html#module-gptools.kernel.squared_exponential">gptools.kernel.squared_exponential module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="gptools.kernel.html#module-gptools.kernel.warping">gptools.kernel.warping module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="gptools.kernel.html#module-gptools.kernel">Module contents</a></li>
 </ul>
 </li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="gptools.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gptools.html#module-gptools.error_handling">gptools.error_handling module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gptools.html#module-gptools.gaussian_process">gptools.gaussian_process module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gptools.html#module-gptools.gp_utils">gptools.gp_utils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gptools.html#module-gptools.mean">gptools.mean module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gptools.html#module-gptools.utils">gptools.utils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gptools.html#module-gptools">Module contents</a></li>
 </ul>
 </li>
 </ul>
@@ -114,9 +190,9 @@
   <ul>
 <li><a class="reference internal" href="#">gptools: Gaussian process regression with support for arbitrary derivatives</a><ul>
 <li><a class="reference internal" href="#overview">Overview</a></li>
-<li><a class="reference internal" href="#contents">Contents</a><ul>
-</ul>
-</li>
+<li><a class="reference internal" href="#kernels">Kernels</a></li>
+<li><a class="reference internal" href="#notes">Notes</a></li>
+<li><a class="reference internal" href="#contents">Contents</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
@@ -124,7 +200,7 @@
 
   <h4>Next topic</h4>
   <p class="topless"><a href="gptools.html"
-                        title="next chapter">gptools Package</a></p>
+                        title="next chapter">gptools package</a></p>
   <h3>This Page</h3>
   <ul class="this-page-menu">
     <li><a href="_sources/index.txt"
@@ -160,14 +236,14 @@
           <a href="np-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="gptools.html" title="gptools Package"
+          <a href="gptools.html" title="gptools package"
              >next</a> |</li>
-        <li><a href="#">gptools 0.0 documentation</a> &raquo;</li> 
+        <li><a href="#">gptools 0.2 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
-        &copy; Copyright 2013, Mark Chilenski.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+        &copy; Copyright 2014, Mark Chilenski.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
     </div>
   </body>
 </html>

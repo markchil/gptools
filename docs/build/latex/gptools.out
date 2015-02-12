@@ -1,25 +1,19 @@
 \BOOKMARK [0][-]{chapter.1}{Overview}{}% 1
-\BOOKMARK [0][-]{chapter.2}{Contents}{}% 2
-\BOOKMARK [1][-]{section.2.1}{gptools Package}{chapter.2}% 3
-\BOOKMARK [2][-]{subsection.2.1.1}{gptools Package}{section.2.1}% 4
-\BOOKMARK [2][-]{subsection.2.1.2}{error\137handling Module}{section.2.1}% 5
-\BOOKMARK [2][-]{subsection.2.1.3}{gaussian\137process Module}{section.2.1}% 6
-\BOOKMARK [3][-]{paragraph*.6}{Attributes}{subsection.2.1.3}% 7
-\BOOKMARK [2][-]{subsection.2.1.4}{utils Module}{section.2.1}% 8
-\BOOKMARK [2][-]{subsection.2.1.5}{Subpackages}{section.2.1}% 9
-\BOOKMARK [3][-]{subsubsection*.25}{kernel Package}{subsection.2.1.5}% 10
-\BOOKMARK [4][-]{paragraph*.26}{kernel Package}{subsubsection*.25}% 11
-\BOOKMARK [4][-]{paragraph*.28}{core Module}{subsubsection*.25}% 12
-\BOOKMARK [4][-]{paragraph*.30}{Attributes}{subsubsection*.25}% 13
-\BOOKMARK [4][-]{paragraph*.32}{Notes}{subsubsection*.25}% 14
-\BOOKMARK [4][-]{paragraph*.39}{Notes}{subsubsection*.25}% 15
-\BOOKMARK [4][-]{paragraph*.48}{Attributes}{subsubsection*.25}% 16
-\BOOKMARK [4][-]{paragraph*.50}{gibbs Module}{subsubsection*.25}% 17
-\BOOKMARK [4][-]{paragraph*.59}{matern Module}{subsubsection*.25}% 18
-\BOOKMARK [4][-]{paragraph*.62}{noise Module}{subsubsection*.25}% 19
-\BOOKMARK [4][-]{paragraph*.67}{rational\137quadratic Module}{subsubsection*.25}% 20
-\BOOKMARK [4][-]{paragraph*.69}{squared\137exponential Module}{subsubsection*.25}% 21
-\BOOKMARK [0][-]{chapter.3}{Indices and tables}{}% 22
-\BOOKMARK [0][-]{section*.72}{Python Module Index}{}% 23
-\BOOKMARK [0][-]{section*.73}{Python Module Index}{}% 24
-\BOOKMARK [0][-]{section*.74}{Index}{}% 25
+\BOOKMARK [0][-]{chapter.2}{Kernels}{}% 2
+\BOOKMARK [0][-]{chapter.3}{Notes}{}% 3
+\BOOKMARK [0][-]{chapter.4}{Contents}{}% 4
+\BOOKMARK [1][-]{section.4.1}{gptools package}{chapter.4}% 5
+\BOOKMARK [2][-]{subsection.4.1.1}{Subpackages}{section.4.1}% 6
+\BOOKMARK [3][-]{subsubsection*.3}{gptools.kernel package}{subsection.4.1.1}% 7
+\BOOKMARK [2][-]{subsection.4.1.2}{Submodules}{section.4.1}% 8
+\BOOKMARK [2][-]{subsection.4.1.3}{gptools.error\137handling module}{section.4.1}% 9
+\BOOKMARK [2][-]{subsection.4.1.4}{gptools.gaussian\137process module}{section.4.1}% 10
+\BOOKMARK [2][-]{subsection.4.1.5}{gptools.gp\137utils module}{section.4.1}% 11
+\BOOKMARK [2][-]{subsection.4.1.6}{gptools.mean module}{section.4.1}% 12
+\BOOKMARK [2][-]{subsection.4.1.7}{gptools.utils module}{section.4.1}% 13
+\BOOKMARK [2][-]{subsection.4.1.8}{Module contents}{section.4.1}% 14
+\BOOKMARK [0][-]{chapter.5}{Indices and tables}{}% 15
+\BOOKMARK [0][-]{chapter*.216}{Bibliography}{}% 16
+\BOOKMARK [0][-]{section*.219}{Python Module Index}{}% 17
+\BOOKMARK [0][-]{section*.220}{Python Module Index}{}% 18
+\BOOKMARK [0][-]{section*.221}{Index}{}% 19

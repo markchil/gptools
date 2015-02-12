@@ -2,124 +2,288 @@
 \def\bigletter#1{{\Large\sffamily#1}\nopagebreak\vspace{1mm}}
 
   \bigletter {Symbols}
-  \item \_\_add\_\_() (gptools.kernel.core.Kernel method), \hyperpage{15}
-  \item \_\_call\_\_() (gptools.gaussian\_process.Constraint method), \hyperpage{10}
-  \item \_\_call\_\_() (gptools.kernel.core.ArbitraryKernel method), \hyperpage{18}
-  \item \_\_call\_\_() (gptools.kernel.core.ChainRuleKernel method), \hyperpage{17}
-  \item \_\_call\_\_() (gptools.kernel.core.Kernel method), \hyperpage{14}
-  \item \_\_call\_\_() (gptools.kernel.core.ProductKernel method), \hyperpage{16}
-  \item \_\_call\_\_() (gptools.kernel.core.SumKernel method), \hyperpage{15}
-  \item \_\_call\_\_() (gptools.kernel.gibbs.GibbsFunction1d method), \hyperpage{20}
-  \item \_\_call\_\_() (gptools.kernel.noise.DiagonalNoiseKernel method), \hyperpage{23}
-  \item \_\_call\_\_() (gptools.kernel.noise.ZeroKernel method), \hyperpage{23}
+  \item \_\_add\_\_() (gptools.kernel.core.Kernel method), \hyperpage{11}
+  \item \_\_call\_\_() (gptools.gaussian\_process.Constraint method), \hyperpage{50}
+  \item \_\_call\_\_() (gptools.kernel.core.ArbitraryKernel method), \hyperpage{15}
+  \item \_\_call\_\_() (gptools.kernel.core.ChainRuleKernel method), \hyperpage{13}
+  \item \_\_call\_\_() (gptools.kernel.core.Kernel method), \hyperpage{10}
+  \item \_\_call\_\_() (gptools.kernel.core.MaskedKernel method), \hyperpage{16}
+  \item \_\_call\_\_() (gptools.kernel.core.ProductKernel method), \hyperpage{13}
+  \item \_\_call\_\_() (gptools.kernel.core.SumKernel method), \hyperpage{12}
+  \item \_\_call\_\_() (gptools.kernel.gibbs.GibbsFunction1dArb method), \hyperpage{17}
+  \item \_\_call\_\_() (gptools.kernel.gibbs.GibbsKernel1d method), \hyperpage{19}
+  \item \_\_call\_\_() (gptools.kernel.matern.Matern52Kernel method), \hyperpage{27}
+  \item \_\_call\_\_() (gptools.kernel.matern.MaternKernel1d method), \hyperpage{25}
+  \item \_\_call\_\_() (gptools.kernel.noise.DiagonalNoiseKernel method), \hyperpage{28}
+  \item \_\_call\_\_() (gptools.kernel.noise.ZeroKernel method), \hyperpage{29}
   \item \_\_call\_\_() (gptools.kernel.squared\_exponential.SquaredExponentialKernel method), 
-		\hyperpage{25}
-  \item \_\_mul\_\_() (gptools.kernel.core.Kernel method), \hyperpage{15}
+		\hyperpage{31}
+  \item \_\_call\_\_() (gptools.kernel.warping.WarpedKernel method), \hyperpage{34}
+  \item \_\_call\_\_() (gptools.kernel.warping.WarpingFunction method), \hyperpage{33}
+  \item \_\_call\_\_() (gptools.mean.MeanFunction method), \hyperpage{53}
+  \item \_\_call\_\_() (gptools.utils.CoreEdgeJointPrior method), \hyperpage{58}
+  \item \_\_call\_\_() (gptools.utils.CoreMidEdgeJointPrior method), \hyperpage{59}
+  \item \_\_call\_\_() (gptools.utils.GammaJointPrior method), \hyperpage{60}
+  \item \_\_call\_\_() (gptools.utils.IndependentJointPrior method), \hyperpage{59}
+  \item \_\_call\_\_() (gptools.utils.JeffreysPrior method), \hyperpage{56}
+  \item \_\_call\_\_() (gptools.utils.JointPrior method), \hyperpage{57}
+  \item \_\_call\_\_() (gptools.utils.LessThanUniformPotential method), \hyperpage{55}
+  \item \_\_call\_\_() (gptools.utils.LinearPrior method), \hyperpage{56}
+  \item \_\_call\_\_() (gptools.utils.LogNormalJointPrior method), \hyperpage{60}
+  \item \_\_call\_\_() (gptools.utils.NormalJointPrior method), \hyperpage{59}
+  \item \_\_call\_\_() (gptools.utils.ProductJointPrior method), \hyperpage{57}
+  \item \_\_call\_\_() (gptools.utils.UniformJointPrior method), \hyperpage{58}
+  \item \_\_call\_\_() (gptools.utils.UniformPrior method), \hyperpage{56}
+  \item \_\_getattribute\_\_() (gptools.kernel.core.MaskedKernel method), \hyperpage{16}
+  \item \_\_getitem\_\_() (gptools.utils.CombinedBounds method), \hyperpage{57}
+  \item \_\_getitem\_\_() (gptools.utils.MaskedBounds method), \hyperpage{57}
+  \item \_\_invert\_\_() (gptools.utils.CombinedBounds method), \hyperpage{57}
+  \item \_\_len\_\_() (gptools.utils.CombinedBounds method), \hyperpage{57}
+  \item \_\_len\_\_() (gptools.utils.MaskedBounds method), \hyperpage{57}
+  \item \_\_mul\_\_() (gptools.kernel.core.Kernel method), \hyperpage{11}
+  \item \_\_mul\_\_() (gptools.utils.JointPrior method), \hyperpage{57}
+  \item \_\_setattr\_\_() (gptools.kernel.core.MaskedKernel method), \hyperpage{16}
+  \item \_\_setitem\_\_() (gptools.utils.CombinedBounds method), \hyperpage{57}
+  \item \_\_setitem\_\_() (gptools.utils.MaskedBounds method), \hyperpage{57}
 
   \indexspace
   \bigletter A
-  \item add\_data() (gptools.gaussian\_process.GaussianProcess method), \hyperpage{5}
-  \item ArbitraryKernel (class in gptools.kernel.core), \hyperpage{17}
-  \item arrow\_respond() (in module gptools.utils), \hyperpage{11}
+  \item add\_data() (gptools.gaussian\_process.GaussianProcess method), \hyperpage{38}
+  \item ArbitraryKernel (class in gptools.kernel.core), \hyperpage{14}
+  \item arrow\_respond() (in module gptools.gp\_utils), \hyperpage{52}
 
   \indexspace
   \bigletter B
-  \item BinaryKernel (class in gptools.kernel.core), \hyperpage{15}
+  \item beta\_cdf\_warp() (in module gptools.kernel.warping), \hyperpage{33}
+  \item BetaWarpedKernel (class in gptools.kernel.warping), \hyperpage{35}
+  \item BinaryKernel (class in gptools.kernel.core), \hyperpage{12}
+  \item bounds (gptools.utils.GammaJointPrior attribute), \hyperpage{60}
+  \item bounds (gptools.utils.IndependentJointPrior attribute), \hyperpage{59}
+  \item bounds (gptools.utils.LogNormalJointPrior attribute), \hyperpage{60}
+  \item bounds (gptools.utils.NormalJointPrior attribute), \hyperpage{59}
+  \item bounds (gptools.utils.ProductJointPrior attribute), \hyperpage{57}
 
   \indexspace
   \bigletter C
-  \item ChainRuleKernel (class in gptools.kernel.core), \hyperpage{16}
+  \item ChainRuleKernel (class in gptools.kernel.core), \hyperpage{13}
+  \item CombinedBounds (class in gptools.utils), \hyperpage{57}
+  \item compute\_from\_MCMC() (gptools.gaussian\_process.GaussianProcess method), \hyperpage{47}
   \item compute\_K\_L\_alpha\_ll() (gptools.gaussian\_process.GaussianProcess method), 
-		\hyperpage{6}
-  \item compute\_Kij() (gptools.gaussian\_process.GaussianProcess method), \hyperpage{6}
-  \item compute\_ll\_matrix() (gptools.gaussian\_process.GaussianProcess method), \hyperpage{8}
-  \item Constraint (class in gptools.gaussian\_process), \hyperpage{9}
+		\hyperpage{45}
+  \item compute\_Kij() (gptools.gaussian\_process.GaussianProcess method), \hyperpage{45}
+  \item compute\_ll\_matrix() (gptools.gaussian\_process.GaussianProcess method), \hyperpage{46}
+  \item compute\_stats() (in module gptools.utils), \hyperpage{63}
+  \item condense\_duplicates() (gptools.gaussian\_process.GaussianProcess method), \hyperpage{39}
+  \item constant() (in module gptools.mean), \hyperpage{54}
+  \item ConstantMeanFunction (class in gptools.mean), \hyperpage{54}
+  \item Constraint (class in gptools.gaussian\_process), \hyperpage{49}
+  \item CoreEdgeJointPrior (class in gptools.utils), \hyperpage{58}
+  \item CoreMidEdgeJointPrior (class in gptools.utils), \hyperpage{58}
+  \item cubic\_bucket\_warp() (in module gptools.kernel.gibbs), \hyperpage{22}
 
   \indexspace
   \bigletter D
-  \item DiagonalNoiseKernel (class in gptools.kernel.noise), \hyperpage{22}
-  \item draw\_sample() (gptools.gaussian\_process.GaussianProcess method), \hyperpage{8}
+  \item DiagonalNoiseKernel (class in gptools.kernel.noise), \hyperpage{28}
+  \item double\_tanh\_warp() (in module gptools.kernel.gibbs), \hyperpage{21}
+  \item draw\_sample() (gptools.gaussian\_process.GaussianProcess method), \hyperpage{43}
+
+  \indexspace
+  \bigletter E
+  \item enforce\_bounds (gptools.kernel.core.BinaryKernel attribute), \hyperpage{12}
+  \item enforce\_bounds (gptools.kernel.warping.WarpedKernel attribute), \hyperpage{34}
 
   \indexspace
   \bigletter F
-  \item free\_param\_bounds (gptools.kernel.core.Kernel attribute), \hyperpage{15}
-  \item free\_params (gptools.kernel.core.Kernel attribute), \hyperpage{15}
+  \item fixed\_params (gptools.gaussian\_process.GaussianProcess attribute), \hyperpage{38}
+  \item fixed\_params (gptools.kernel.core.BinaryKernel attribute), \hyperpage{12}
+  \item fixed\_params (gptools.kernel.warping.WarpedKernel attribute), \hyperpage{34}
+  \item free\_param\_bounds (gptools.gaussian\_process.GaussianProcess attribute), \hyperpage{38}
+  \item free\_param\_bounds (gptools.kernel.core.BinaryKernel attribute), \hyperpage{12}
+  \item free\_param\_bounds (gptools.kernel.core.Kernel attribute), \hyperpage{11}
+  \item free\_param\_bounds (gptools.kernel.warping.WarpedKernel attribute), \hyperpage{35}
+  \item free\_param\_bounds (gptools.kernel.warping.WarpingFunction attribute), \hyperpage{33}
+  \item free\_param\_bounds (gptools.mean.MeanFunction attribute), \hyperpage{53}
+  \item free\_param\_idxs (gptools.kernel.core.Kernel attribute), \hyperpage{11}
+  \item free\_param\_idxs (gptools.kernel.warping.WarpingFunction attribute), \hyperpage{33}
+  \item free\_param\_idxs (gptools.mean.MeanFunction attribute), \hyperpage{53}
+  \item free\_param\_names (gptools.gaussian\_process.GaussianProcess attribute), \hyperpage{38}
+  \item free\_param\_names (gptools.kernel.core.BinaryKernel attribute), \hyperpage{12}
+  \item free\_param\_names (gptools.kernel.core.Kernel attribute), \hyperpage{11}
+  \item free\_param\_names (gptools.kernel.warping.WarpedKernel attribute), \hyperpage{35}
+  \item free\_param\_names (gptools.kernel.warping.WarpingFunction attribute), \hyperpage{33}
+  \item free\_param\_names (gptools.mean.MeanFunction attribute), \hyperpage{53}
+  \item free\_params (gptools.gaussian\_process.GaussianProcess attribute), \hyperpage{38}
+  \item free\_params (gptools.kernel.core.Kernel attribute), \hyperpage{11}
+  \item free\_params (gptools.kernel.warping.WarpedKernel attribute), \hyperpage{35}
+  \item free\_params (gptools.kernel.warping.WarpingFunction attribute), \hyperpage{33}
+  \item free\_params (gptools.mean.MeanFunction attribute), \hyperpage{53}
 
   \indexspace
   \bigletter G
-  \item gauss\_warp() (in module gptools.kernel.gibbs), \hyperpage{19}
-  \item GaussianProcess (class in gptools.gaussian\_process), \hyperpage{3}
-  \item generate\_set\_partition\_strings() (in module gptools.utils), \hyperpage{12}
-  \item generate\_set\_partitions() (in module gptools.utils), \hyperpage{12}
-  \item GibbsFunction1d (class in gptools.kernel.gibbs), \hyperpage{20}
-  \item GibbsKernel1dGauss (class in gptools.kernel.gibbs), \hyperpage{21}
-  \item GibbsKernel1dSpline (class in gptools.kernel.gibbs), \hyperpage{21}
-  \item GibbsKernel1dtanh (class in gptools.kernel.gibbs), \hyperpage{20}
-  \item GPArgumentError, \hyperpage{3}
-  \item gptools.\_\_init\_\_ (module), \hyperpage{3}
-  \item gptools.error\_handling (module), \hyperpage{3}
-  \item gptools.gaussian\_process (module), \hyperpage{3}
-  \item gptools.kernel (module), \hyperpage{13}
-  \item gptools.kernel.core (module), \hyperpage{13}
-  \item gptools.kernel.gibbs (module), \hyperpage{18}
-  \item gptools.kernel.matern (module), \hyperpage{22}
-  \item gptools.kernel.noise (module), \hyperpage{22}
-  \item gptools.kernel.rational\_quadratic (module), \hyperpage{24}
-  \item gptools.kernel.squared\_exponential (module), \hyperpage{25}
-  \item gptools.utils (module), \hyperpage{10}
+  \item GammaJointPrior (class in gptools.utils), \hyperpage{60}
+  \item gauss\_warp\_arb() (in module gptools.kernel.gibbs), \hyperpage{17}
+  \item GaussianProcess (class in gptools.gaussian\_process), \hyperpage{36}
+  \item generate\_set\_partition\_strings() (in module gptools.utils), \hyperpage{62}
+  \item generate\_set\_partitions() (in module gptools.utils), \hyperpage{62}
+  \item GibbsFunction1dArb (class in gptools.kernel.gibbs), \hyperpage{17}
+  \item GibbsKernel1d (class in gptools.kernel.gibbs), \hyperpage{19}
+  \item GibbsKernel1dCubicBucket (class in gptools.kernel.gibbs), \hyperpage{22}
+  \item GibbsKernel1dDoubleTanh (class in gptools.kernel.gibbs), \hyperpage{21}
+  \item GibbsKernel1dGaussArb (class in gptools.kernel.gibbs), \hyperpage{18}
+  \item GibbsKernel1dQuinticBucket (class in gptools.kernel.gibbs), \hyperpage{24}
+  \item GibbsKernel1dTanh (class in gptools.kernel.gibbs), \hyperpage{20}
+  \item GibbsKernel1dTanhArb (class in gptools.kernel.gibbs), \hyperpage{18}
+  \item GPArgumentError, \hyperpage{36}
+  \item gptools (module), \hyperpage{64}
+  \item gptools.error\_handling (module), \hyperpage{36}
+  \item gptools.gaussian\_process (module), \hyperpage{36}
+  \item gptools.gp\_utils (module), \hyperpage{51}
+  \item gptools.kernel (module), \hyperpage{36}
+  \item gptools.kernel.core (module), \hyperpage{9}
+  \item gptools.kernel.gibbs (module), \hyperpage{16}
+  \item gptools.kernel.matern (module), \hyperpage{24}
+  \item gptools.kernel.noise (module), \hyperpage{28}
+  \item gptools.kernel.rational\_quadratic (module), \hyperpage{29}
+  \item gptools.kernel.squared\_exponential (module), \hyperpage{30}
+  \item gptools.kernel.warping (module), \hyperpage{31}
+  \item gptools.mean (module), \hyperpage{52}
+  \item gptools.utils (module), \hyperpage{55}
+
+  \indexspace
+  \bigletter H
+  \item hyperprior (gptools.gaussian\_process.GaussianProcess attribute), \hyperpage{38}
 
   \indexspace
   \bigletter I
-  \item incomplete\_bell\_poly() (in module gptools.utils), \hyperpage{11}
+  \item incomplete\_bell\_poly() (in module gptools.utils), \hyperpage{61}
+  \item IndependentJointPrior (class in gptools.utils), \hyperpage{59}
+  \item interval() (gptools.utils.JeffreysPrior method), \hyperpage{56}
+  \item interval() (gptools.utils.LinearPrior method), \hyperpage{56}
+  \item interval() (gptools.utils.UniformPrior method), \hyperpage{57}
+
+  \indexspace
+  \bigletter J
+  \item JeffreysPrior (class in gptools.utils), \hyperpage{56}
+  \item JointPrior (class in gptools.utils), \hyperpage{57}
 
   \indexspace
   \bigletter K
-  \item Kernel (class in gptools.kernel.core), \hyperpage{13}
+  \item Kernel (class in gptools.kernel.core), \hyperpage{9}
+
+  \indexspace
+  \bigletter L
+  \item LessThanUniformPotential (class in gptools.utils), \hyperpage{55}
+  \item linear() (in module gptools.mean), \hyperpage{55}
+  \item linear\_warp() (in module gptools.kernel.warping), \hyperpage{34}
+  \item LinearMeanFunction (class in gptools.mean), \hyperpage{55}
+  \item LinearPrior (class in gptools.utils), \hyperpage{56}
+  \item LinearWarpedKernel (class in gptools.kernel.warping), \hyperpage{35}
+  \item LogNormalJointPrior (class in gptools.utils), \hyperpage{60}
 
   \indexspace
   \bigletter M
-  \item MaternKernel (class in gptools.kernel.matern), \hyperpage{22}
+  \item MaskedBounds (class in gptools.utils), \hyperpage{57}
+  \item MaskedKernel (class in gptools.kernel.core), \hyperpage{15}
+  \item Matern52Kernel (class in gptools.kernel.matern), \hyperpage{26}
+  \item matern\_function() (in module gptools.kernel.matern), \hyperpage{24}
+  \item MaternKernel (class in gptools.kernel.matern), \hyperpage{26}
+  \item MaternKernel1d (class in gptools.kernel.matern), \hyperpage{25}
+  \item MaternKernelArb (class in gptools.kernel.matern), \hyperpage{24}
+  \item MeanFunction (class in gptools.mean), \hyperpage{52}
+  \item mtanh() (in module gptools.mean), \hyperpage{54}
+  \item mtanh\_profile() (in module gptools.mean), \hyperpage{54}
+  \item MtanhMeanFunction1d (class in gptools.mean), \hyperpage{54}
 
   \indexspace
   \bigletter N
-  \item nu (gptools.kernel.matern.MaternKernel attribute), \hyperpage{22}
-  \item num\_dim (gptools.gaussian\_process.GaussianProcess attribute), \hyperpage{5}
+  \item NormalJointPrior (class in gptools.utils), \hyperpage{59}
+  \item nu (gptools.kernel.matern.MaternKernel attribute), \hyperpage{26}
+  \item nu (gptools.kernel.matern.MaternKernelArb attribute), \hyperpage{25}
+  \item num\_dim (gptools.gaussian\_process.GaussianProcess attribute), \hyperpage{45}
+  \item num\_free\_params (gptools.kernel.core.Kernel attribute), \hyperpage{11}
+  \item num\_free\_params (gptools.kernel.warping.WarpingFunction attribute), \hyperpage{33}
+  \item num\_free\_params (gptools.mean.MeanFunction attribute), \hyperpage{53}
 
   \indexspace
   \bigletter O
   \item optimize\_hyperparameters() (gptools.gaussian\_process.GaussianProcess method), 
-		\hyperpage{7}
+		\hyperpage{40}
 
   \indexspace
   \bigletter P
-  \item parallel\_compute\_ll\_matrix() (in module gptools.utils), \hyperpage{10}
-  \item predict() (gptools.gaussian\_process.GaussianProcess method), \hyperpage{7}
-  \item ProductKernel (class in gptools.kernel.core), \hyperpage{16}
+  \item parallel\_compute\_ll\_matrix() (in module gptools.gp\_utils), \hyperpage{51}
+  \item param\_bounds (gptools.gaussian\_process.GaussianProcess attribute), \hyperpage{38}
+  \item param\_bounds (gptools.kernel.core.Kernel attribute), \hyperpage{10}
+  \item param\_bounds (gptools.kernel.warping.WarpingFunction attribute), \hyperpage{33}
+  \item param\_bounds (gptools.mean.MeanFunction attribute), \hyperpage{53}
+  \item param\_names (gptools.gaussian\_process.GaussianProcess attribute), \hyperpage{38}
+  \item param\_names (gptools.kernel.warping.WarpedKernel attribute), \hyperpage{34}
+  \item params (gptools.gaussian\_process.GaussianProcess attribute), \hyperpage{38}
+  \item params (gptools.kernel.core.BinaryKernel attribute), \hyperpage{12}
+  \item params (gptools.kernel.warping.WarpedKernel attribute), \hyperpage{34}
+  \item plot() (gptools.gaussian\_process.GaussianProcess method), \hyperpage{42}
+  \item plot\_sampler() (in module gptools.utils), \hyperpage{64}
+  \item powerset() (in module gptools.utils), \hyperpage{62}
+  \item predict() (gptools.gaussian\_process.GaussianProcess method), \hyperpage{40}
+  \item predict\_MCMC() (gptools.gaussian\_process.GaussianProcess method), \hyperpage{49}
+  \item ProductJointPrior (class in gptools.utils), \hyperpage{57}
+  \item ProductKernel (class in gptools.kernel.core), \hyperpage{13}
+
+  \indexspace
+  \bigletter Q
+  \item quintic\_bucket\_warp() (in module gptools.kernel.gibbs), \hyperpage{23}
 
   \indexspace
   \bigletter R
-  \item RationalQuadraticKernel (class in gptools.kernel.rational\_quadratic), \hyperpage{24}
+  \item random\_draw() (gptools.utils.CoreEdgeJointPrior method), \hyperpage{58}
+  \item random\_draw() (gptools.utils.CoreMidEdgeJointPrior method), \hyperpage{59}
+  \item random\_draw() (gptools.utils.GammaJointPrior method), \hyperpage{60}
+  \item random\_draw() (gptools.utils.IndependentJointPrior method), \hyperpage{59}
+  \item random\_draw() (gptools.utils.JointPrior method), \hyperpage{57}
+  \item random\_draw() (gptools.utils.LogNormalJointPrior method), \hyperpage{60}
+  \item random\_draw() (gptools.utils.NormalJointPrior method), \hyperpage{60}
+  \item random\_draw() (gptools.utils.ProductJointPrior method), \hyperpage{58}
+  \item random\_draw() (gptools.utils.UniformJointPrior method), \hyperpage{58}
+  \item RationalQuadraticKernel (class in gptools.kernel.rational\_quadratic), \hyperpage{29}
+  \item remove\_outliers() (gptools.gaussian\_process.GaussianProcess method), \hyperpage{39}
+  \item rvs() (gptools.utils.UniformPrior method), \hyperpage{57}
 
   \indexspace
   \bigletter S
-  \item set\_hyperparams() (gptools.kernel.core.BinaryKernel method), \hyperpage{15}
-  \item set\_hyperparams() (gptools.kernel.core.Kernel method), \hyperpage{14}
-  \item slice\_plot() (in module gptools.utils), \hyperpage{11}
-  \item spline\_warp() (in module gptools.kernel.gibbs), \hyperpage{19}
-  \item SquaredExponentialKernel (class in gptools.kernel.squared\_exponential), \hyperpage{25}
-  \item SumKernel (class in gptools.kernel.core), \hyperpage{15}
+  \item sample\_hyperparameter\_posterior() (gptools.gaussian\_process.GaussianProcess method), 
+		\hyperpage{46}
+  \item set\_hyperparams() (gptools.kernel.core.BinaryKernel method), \hyperpage{12}
+  \item set\_hyperparams() (gptools.kernel.core.Kernel method), \hyperpage{11}
+  \item set\_hyperparams() (gptools.kernel.warping.WarpedKernel method), \hyperpage{35}
+  \item set\_hyperparams() (gptools.kernel.warping.WarpingFunction method), \hyperpage{33}
+  \item set\_hyperparams() (gptools.mean.MeanFunction method), \hyperpage{53}
+  \item slice\_plot() (in module gptools.gp\_utils), \hyperpage{51}
+  \item SquaredExponentialKernel (class in gptools.kernel.squared\_exponential), \hyperpage{30}
+  \item SumKernel (class in gptools.kernel.core), \hyperpage{12}
+  \item summarize\_sampler() (in module gptools.utils), \hyperpage{64}
 
   \indexspace
   \bigletter T
-  \item tanh\_warp() (in module gptools.kernel.gibbs), \hyperpage{18}
+  \item tanh\_warp() (in module gptools.kernel.gibbs), \hyperpage{20}
+  \item tanh\_warp\_arb() (in module gptools.kernel.gibbs), \hyperpage{16}
 
   \indexspace
   \bigletter U
-  \item unique\_rows() (in module gptools.utils), \hyperpage{13}
-  \item update\_hyperparameters() (gptools.gaussian\_process.GaussianProcess method), \hyperpage{6}
+  \item UniformJointPrior (class in gptools.utils), \hyperpage{58}
+  \item UniformPrior (class in gptools.utils), \hyperpage{56}
+  \item unique\_rows() (in module gptools.utils), \hyperpage{62}
+  \item univariate\_envelope\_plot() (in module gptools.utils), \hyperpage{63}
+  \item update\_hyperparameters() (gptools.gaussian\_process.GaussianProcess method), 
+		\hyperpage{44}
+
+  \indexspace
+  \bigletter W
+  \item WarpedKernel (class in gptools.kernel.warping), \hyperpage{34}
+  \item WarpingFunction (class in gptools.kernel.warping), \hyperpage{32}
+  \item wrap\_fmin\_slsqp() (in module gptools.utils), \hyperpage{61}
 
   \indexspace
   \bigletter Z
-  \item ZeroKernel (class in gptools.kernel.noise), \hyperpage{23}
+  \item ZeroKernel (class in gptools.kernel.noise), \hyperpage{29}
 
 \end{theindex}

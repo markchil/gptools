@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -8,15 +6,15 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>kernel Package &mdash; gptools 0.0 documentation</title>
+    <title>gptools.kernel package &mdash; gptools 0.2 documentation</title>
     
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '',
-        VERSION:     '0.0',
+        URL_ROOT:    './',
+        VERSION:     '0.2',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -25,9 +23,9 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="gptools 0.0 documentation" href="index.html" />
-    <link rel="up" title="gptools Package" href="gptools.html" />
-    <link rel="prev" title="gptools Package" href="gptools.html" /> 
+    <link rel="top" title="gptools 0.2 documentation" href="index.html" />
+    <link rel="up" title="gptools package" href="gptools.html" />
+    <link rel="prev" title="gptools package" href="gptools.html" /> 
   </head>
   <body>
     <div class="related">
@@ -43,10 +41,10 @@
           <a href="np-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="gptools.html" title="gptools Package"
+          <a href="gptools.html" title="gptools package"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">gptools 0.0 documentation</a> &raquo;</li>
-          <li><a href="gptools.html" accesskey="U">gptools Package</a> &raquo;</li> 
+        <li><a href="index.html">gptools 0.2 documentation</a> &raquo;</li>
+          <li><a href="gptools.html" accesskey="U">gptools package</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -55,18 +53,17 @@
         <div class="bodywrapper">
           <div class="body">
             
-  <div class="section" id="kernel-package">
-<h1>kernel Package<a class="headerlink" href="#kernel-package" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="id1">
-<h2><tt class="xref py py-mod docutils literal"><span class="pre">kernel</span></tt> Package<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
-<span class="target" id="module-gptools.kernel"></span><p>Subpackage containing a variety of covariance kernels and associated helpers.</p>
+  <div class="section" id="gptools-kernel-package">
+<h1>gptools.kernel package<a class="headerlink" href="#gptools-kernel-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
 </div>
 <div class="section" id="module-gptools.kernel.core">
-<span id="core-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">core</span></tt> Module<a class="headerlink" href="#module-gptools.kernel.core" title="Permalink to this headline">¶</a></h2>
+<span id="gptools-kernel-core-module"></span><h2>gptools.kernel.core module<a class="headerlink" href="#module-gptools.kernel.core" title="Permalink to this headline">¶</a></h2>
 <p>Core kernel classes: contains the base <a class="reference internal" href="#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt></a> class and helper subclasses.</p>
 <dl class="class">
 <dt id="gptools.kernel.core.Kernel">
-<em class="property">class </em><tt class="descclassname">gptools.kernel.core.</tt><tt class="descname">Kernel</tt><big>(</big><em>num_dim</em>, <em>num_params</em>, <em>initial_params=None</em>, <em>fixed_params=None</em>, <em>param_bounds=None</em>, <em>enforce_bounds=False</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/core.html#Kernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.core.Kernel" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">gptools.kernel.core.</tt><tt class="descname">Kernel</tt><big>(</big><em>num_dim=1</em>, <em>num_params=0</em>, <em>initial_params=None</em>, <em>fixed_params=None</em>, <em>param_bounds=None</em>, <em>param_names=None</em>, <em>enforce_bounds=False</em>, <em>hyperprior=None</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/core.html#Kernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.core.Kernel" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
 <p>Covariance kernel base class. Not meant to be explicitly instantiated!</p>
 <p>Initialize the kernel with the given number of input dimensions.</p>
@@ -74,11 +71,11 @@
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>num_dim</strong> : positive int</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>num_dim</strong> : positive int</p>
 <blockquote>
 <div><p>Number of dimensions of the input data. Must be consistent with the <cite>X</cite>
-and <cite>Xstar</cite> values passed to the <a class="reference internal" href="gptools.html#gptools.gaussian_process.GaussianProcess" title="gptools.gaussian_process.GaussianProcess"><tt class="xref py py-class docutils literal"><span class="pre">GaussianProcess</span></tt></a> you wish
-to use the covariance kernel with.</p>
+and <cite>Xstar</cite> values passed to the <a class="reference internal" href="gptools.html#gptools.gaussian_process.GaussianProcess" title="gptools.gaussian_process.GaussianProcess"><tt class="xref py py-class docutils literal"><span class="pre">GaussianProcess</span></tt></a>
+you wish to use the covariance kernel with. Default is 1.</p>
 </div></blockquote>
 <p><strong>num_params</strong> : Non-negative int</p>
 <blockquote>
@@ -91,27 +88,42 @@ which case 1 is used for the initial values.</p>
 </div></blockquote>
 <p><strong>fixed_params</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt> or other Array-like of bool, (<cite>num_params</cite>,), optional</p>
 <blockquote>
-<div><p>Sets which parameters are considered fixed when optimizing the log
+<div><p>Sets which hyperparameters are considered fixed when optimizing the log
 likelihood. A True entry corresponds to that element being
 fixed (where the element ordering is as defined in the class).
-Default value is None (no parameters are fixed).</p>
+Default value is None (no hyperparameters are fixed).</p>
 </div></blockquote>
 <p><strong>param_bounds</strong> : list of 2-tuples (<cite>num_params</cite>,), optional</p>
 <blockquote>
-<div><p>List of bounds for each of the parameters. Each 2-tuple is of the form
-(<cite>lower</cite>, <cite>upper</cite>). If there is no bound in a given direction, set it
-to None. Default is (0.0, None) for each parameter.</p>
+<div><p>List of bounds for each of the hyperparameters. Each 2-tuple is of the
+form (lower`, <cite>upper</cite>). If there is no bound in a given direction, it
+works best to set it to something big like 1e16. Default is (0.0, 1e16)
+for each hyperparameter. Note that this is overridden by the <cite>hyperprior</cite>
+keyword, if present.</p>
+</div></blockquote>
+<p><strong>param_names</strong> : list of str (<cite>num_params</cite>,), optional</p>
+<blockquote>
+<div><p>List of labels for the hyperparameters. Default is all empty strings.</p>
 </div></blockquote>
 <p><strong>enforce_bounds</strong> : bool, optional</p>
 <blockquote>
-<div><p>If True, an attempt to set a parameter outside of its bounds will
-result in the parameter being set right at its bound. If False, bounds
-are not enforced inside the kernel. Default is False (do not enforce
-bounds).</p>
+<div><p>If True, an attempt to set a hyperparameter outside of its bounds will
+result in the hyperparameter being set right at its bound. If False,
+bounds are not enforced inside the kernel. Default is False (do not
+enforce bounds).</p>
+</div></blockquote>
+<p><strong>hyperprior</strong> : <tt class="xref py py-class docutils literal"><span class="pre">JointPrior</span></tt> instance or list, optional</p>
+<blockquote>
+<div><p>Joint prior distribution for all hyperparameters. Can either be given
+as a <tt class="xref py py-class docutils literal"><span class="pre">JointPrior</span></tt> instance or a list of <cite>num_params</cite>
+callables or py:class:<cite>rv_frozen</cite> instances from <tt class="xref py py-mod docutils literal"><span class="pre">scipy.stats</span></tt>,
+in which case a <tt class="xref py py-class docutils literal"><span class="pre">IndependentJointPrior</span></tt> is constructed with
+these as the independent priors on each hyperparameter. Default is a
+uniform PDF on all hyperparameters.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Raises :</th><td class="field-body"><p class="first"><strong>ValueError</strong> :</p>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>ValueError</strong> :</p>
 <blockquote>
 <div><p>If <cite>num_dim</cite> is not a positive integer or the lengths of the input
 vectors are inconsistent.</p>
@@ -148,33 +160,44 @@ vectors are inconsistent.</p>
 <td><tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt> of bool, (<cite>num_params</cite>,)</td>
 <td>Array of booleans indicated which parameters in params are fixed.</td>
 </tr>
-<tr class="row-odd"><td>param_bounds</td>
-<td>list of 2-tuples, (<cite>num_params</cite>,)</td>
-<td>List of bounds for the parameters in params.</td>
+<tr class="row-odd"><td>param_names</td>
+<td>list of str, (<cite>num_params</cite>,)</td>
+<td>List of the labels for the hyperparameters.</td>
+</tr>
+<tr class="row-even"><td>hyperprior</td>
+<td><tt class="xref py py-class docutils literal"><span class="pre">JointPrior</span></tt> instance</td>
+<td>Joint prior distribution for the hyperparameters.</td>
 </tr>
 </tbody>
 </table>
+<dl class="attribute">
+<dt id="gptools.kernel.core.Kernel.param_bounds">
+<tt class="descname">param_bounds</tt><a class="reference internal" href="_modules/gptools/kernel/core.html#Kernel.param_bounds"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.core.Kernel.param_bounds" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="method">
 <dt id="gptools.kernel.core.Kernel.__call__">
 <tt class="descname">__call__</tt><big>(</big><em>Xi</em>, <em>Xj</em>, <em>ni</em>, <em>nj</em>, <em>hyper_deriv=None</em>, <em>symmetric=False</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/core.html#Kernel.__call__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.core.Kernel.__call__" title="Permalink to this definition">¶</a></dt>
 <dd><p>Evaluate the covariance between points <cite>Xi</cite> and <cite>Xj</cite> with derivative order <cite>ni</cite>, <cite>nj</cite>.</p>
+<p>Note that this method only returns the covariance &#8211; the hyperpriors
+and potentials stored in this kernel must be applied separately.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>Xi</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>Xi</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
-<div><p><cite>M</cite> inputs with dimension <cite>N</cite>.</p>
+<div><p><cite>M</cite> inputs with dimension <cite>D</cite>.</p>
 </div></blockquote>
-<p><strong>Xj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<p><strong>Xj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
-<div><p><cite>M</cite> inputs with dimension <cite>N</cite>.</p>
+<div><p><cite>M</cite> inputs with dimension <cite>D</cite>.</p>
 </div></blockquote>
-<p><strong>ni</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<p><strong>ni</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
 <div><p><cite>M</cite> derivative orders for set <cite>i</cite>.</p>
 </div></blockquote>
-<p><strong>nj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<p><strong>nj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
 <div><p><cite>M</cite> derivative orders for set <cite>j</cite>.</p>
 </div></blockquote>
@@ -191,7 +214,7 @@ Default is False.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>Kij</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,)</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>Kij</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,)</p>
 <blockquote class="last">
 <div><p>Covariances for each of the <cite>M</cite> <cite>Xi</cite>, <cite>Xj</cite> pairs.</p>
 </div></blockquote>
@@ -211,7 +234,7 @@ Default is False.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>new_params</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt> or other Array-like, (len(<tt class="xref py py-attr docutils literal"><span class="pre">self.params</span></tt>),)</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>new_params</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt> or other Array-like, (len(<tt class="xref py py-attr docutils literal"><span class="pre">self.params</span></tt>),)</p>
 <blockquote class="last">
 <div><p>New parameter values, ordered as dictated by the docstring for the
 class.</p>
@@ -223,6 +246,18 @@ class.</p>
 </dd></dl>
 
 <dl class="attribute">
+<dt id="gptools.kernel.core.Kernel.num_free_params">
+<tt class="descname">num_free_params</tt><a class="reference internal" href="_modules/gptools/kernel/core.html#Kernel.num_free_params"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.core.Kernel.num_free_params" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the number of free parameters.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="gptools.kernel.core.Kernel.free_param_idxs">
+<tt class="descname">free_param_idxs</tt><a class="reference internal" href="_modules/gptools/kernel/core.html#Kernel.free_param_idxs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.core.Kernel.free_param_idxs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the indices of the free parameters in the main arrays of parameters, etc.</p>
+</dd></dl>
+
+<dl class="attribute">
 <dt id="gptools.kernel.core.Kernel.free_params">
 <tt class="descname">free_params</tt><a class="reference internal" href="_modules/gptools/kernel/core.html#Kernel.free_params"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.core.Kernel.free_params" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the values of the free hyperparameters.</p>
@@ -230,7 +265,7 @@ class.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>free_params</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt></p>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>free_params</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt></p>
 <blockquote class="last">
 <div><p>Array of the free parameters, in order.</p>
 </div></blockquote>
@@ -248,9 +283,27 @@ class.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>free_param_bounds</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt></p>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>free_param_bounds</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt></p>
 <blockquote class="last">
 <div><p>Array of the bounds of the free parameters, in order.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="gptools.kernel.core.Kernel.free_param_names">
+<tt class="descname">free_param_names</tt><a class="reference internal" href="_modules/gptools/kernel/core.html#Kernel.free_param_names"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.core.Kernel.free_param_names" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the names of the free hyperparameters.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>free_param_names</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt></p>
+<blockquote class="last">
+<div><p>Array of the names of the free parameters, in order.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -266,13 +319,13 @@ class.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>other</strong> : <a class="reference internal" href="#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt></a></p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>other</strong> : <a class="reference internal" href="#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt></a></p>
 <blockquote>
 <div><p>Kernel to be added to this one.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>sum</strong> : <a class="reference internal" href="#gptools.kernel.core.SumKernel" title="gptools.kernel.core.SumKernel"><tt class="xref py py-class docutils literal"><span class="pre">SumKernel</span></tt></a></p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>sum</strong> : <a class="reference internal" href="#gptools.kernel.core.SumKernel" title="gptools.kernel.core.SumKernel"><tt class="xref py py-class docutils literal"><span class="pre">SumKernel</span></tt></a></p>
 <blockquote class="last">
 <div><p>Instance representing the sum of the two kernels.</p>
 </div></blockquote>
@@ -290,13 +343,13 @@ class.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>other</strong> : <a class="reference internal" href="#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt></a></p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>other</strong> : <a class="reference internal" href="#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt></a></p>
 <blockquote>
 <div><p>Kernel to be multiplied by this one.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>prod</strong> : <a class="reference internal" href="#gptools.kernel.core.ProductKernel" title="gptools.kernel.core.ProductKernel"><tt class="xref py py-class docutils literal"><span class="pre">ProductKernel</span></tt></a></p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>prod</strong> : <a class="reference internal" href="#gptools.kernel.core.ProductKernel" title="gptools.kernel.core.ProductKernel"><tt class="xref py py-class docutils literal"><span class="pre">ProductKernel</span></tt></a></p>
 <blockquote class="last">
 <div><p>Instance representing the product of the two kernels.</p>
 </div></blockquote>
@@ -317,12 +370,64 @@ class.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><strong>k1, k2</strong> : <a class="reference internal" href="#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt></a> instances to be combined</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>k1, k2</strong> : <a class="reference internal" href="#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt></a> instances to be combined</td>
 </tr>
 </tbody>
 </table>
 <p class="rubric">Notes</p>
 <p><cite>k1</cite> and <cite>k2</cite> must have the same number of dimensions.</p>
+<dl class="attribute">
+<dt id="gptools.kernel.core.BinaryKernel.enforce_bounds">
+<tt class="descname">enforce_bounds</tt><a class="reference internal" href="_modules/gptools/kernel/core.html#BinaryKernel.enforce_bounds"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.core.BinaryKernel.enforce_bounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Boolean indicating whether or not the kernel will explicitly enforce the bounds defined by the hyperprior.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="gptools.kernel.core.BinaryKernel.fixed_params">
+<tt class="descname">fixed_params</tt><a class="reference internal" href="_modules/gptools/kernel/core.html#BinaryKernel.fixed_params"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.core.BinaryKernel.fixed_params" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="gptools.kernel.core.BinaryKernel.free_param_bounds">
+<tt class="descname">free_param_bounds</tt><a class="reference internal" href="_modules/gptools/kernel/core.html#BinaryKernel.free_param_bounds"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.core.BinaryKernel.free_param_bounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the bounds of the free hyperparameters.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>free_param_bounds</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt></p>
+<blockquote class="last">
+<div><p>Array of the bounds of the free parameters, in order.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="gptools.kernel.core.BinaryKernel.free_param_names">
+<tt class="descname">free_param_names</tt><a class="reference internal" href="_modules/gptools/kernel/core.html#BinaryKernel.free_param_names"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.core.BinaryKernel.free_param_names" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the names of the free hyperparameters.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>free_param_names</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt></p>
+<blockquote class="last">
+<div><p>Array of the names of the free parameters, in order.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="gptools.kernel.core.BinaryKernel.params">
+<tt class="descname">params</tt><a class="reference internal" href="_modules/gptools/kernel/core.html#BinaryKernel.params"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.core.BinaryKernel.params" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="method">
 <dt id="gptools.kernel.core.BinaryKernel.set_hyperparams">
 <tt class="descname">set_hyperparams</tt><big>(</big><em>new_params</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/core.html#BinaryKernel.set_hyperparams"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.core.BinaryKernel.set_hyperparams" title="Permalink to this definition">¶</a></dt>
@@ -331,13 +436,13 @@ class.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>new_params</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt> or other Array-like</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>new_params</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt> or other Array-like</p>
 <blockquote>
 <div><p>New values of the free parameters.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Raises :</th><td class="field-body"><p class="first"><strong>ValueError</strong> :</p>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>ValueError</strong> :</p>
 <blockquote class="last">
 <div><p>If the length of <cite>new_params</cite> is not consistent with <tt class="xref py py-attr docutils literal"><span class="pre">self.params</span></tt>.</p>
 </div></blockquote>
@@ -362,19 +467,19 @@ class.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>Xi</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>Xi</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
-<div><p><cite>M</cite> inputs with dimension <cite>N</cite>.</p>
+<div><p><cite>M</cite> inputs with dimension <cite>D</cite>.</p>
 </div></blockquote>
-<p><strong>Xj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<p><strong>Xj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
-<div><p><cite>M</cite> inputs with dimension <cite>N</cite>.</p>
+<div><p><cite>M</cite> inputs with dimension <cite>D</cite>.</p>
 </div></blockquote>
-<p><strong>ni</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<p><strong>ni</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
 <div><p><cite>M</cite> derivative orders for set <cite>i</cite>.</p>
 </div></blockquote>
-<p><strong>nj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<p><strong>nj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
 <div><p><cite>M</cite> derivative orders for set <cite>j</cite>.</p>
 </div></blockquote>
@@ -385,13 +490,13 @@ Default is False.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>Kij</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,)</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>Kij</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,)</p>
 <blockquote>
 <div><p>Covariances for each of the <cite>M</cite> <cite>Xi</cite>, <cite>Xj</cite> pairs.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Raises :</th><td class="field-body"><p class="first"><strong>NotImplementedError</strong> :</p>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>NotImplementedError</strong> :</p>
 <blockquote class="last">
 <div><p>If the <cite>hyper_deriv</cite> keyword is given and is not None.</p>
 </div></blockquote>
@@ -410,25 +515,25 @@ Default is False.</p>
 <p>The product of two kernels.</p>
 <dl class="method">
 <dt id="gptools.kernel.core.ProductKernel.__call__">
-<tt class="descname">__call__</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/core.html#ProductKernel.__call__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.core.ProductKernel.__call__" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">__call__</tt><big>(</big><em>Xi</em>, <em>Xj</em>, <em>ni</em>, <em>nj</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/core.html#ProductKernel.__call__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.core.ProductKernel.__call__" title="Permalink to this definition">¶</a></dt>
 <dd><p>Evaluate the covariance between points <cite>Xi</cite> and <cite>Xj</cite> with derivative order <cite>ni</cite>, <cite>nj</cite>.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>Xi</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>Xi</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
-<div><p><cite>M</cite> inputs with dimension <cite>N</cite>.</p>
+<div><p><cite>M</cite> inputs with dimension <cite>D</cite>.</p>
 </div></blockquote>
-<p><strong>Xj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<p><strong>Xj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
-<div><p><cite>M</cite> inputs with dimension <cite>N</cite>.</p>
+<div><p><cite>M</cite> inputs with dimension <cite>D</cite>.</p>
 </div></blockquote>
-<p><strong>ni</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<p><strong>ni</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
 <div><p><cite>M</cite> derivative orders for set <cite>i</cite>.</p>
 </div></blockquote>
-<p><strong>nj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<p><strong>nj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
 <div><p><cite>M</cite> derivative orders for set <cite>j</cite>.</p>
 </div></blockquote>
@@ -439,13 +544,13 @@ Default is False.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>Kij</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,)</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>Kij</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,)</p>
 <blockquote>
 <div><p>Covariances for each of the <cite>M</cite> <cite>Xi</cite>, <cite>Xj</cite> pairs.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Raises :</th><td class="field-body"><p class="first"><strong>NotImplementedError</strong> :</p>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>NotImplementedError</strong> :</p>
 <blockquote class="last">
 <div><p>If the <cite>hyper_deriv</cite> keyword is given and is not None.</p>
 </div></blockquote>
@@ -459,7 +564,7 @@ Default is False.</p>
 
 <dl class="class">
 <dt id="gptools.kernel.core.ChainRuleKernel">
-<em class="property">class </em><tt class="descclassname">gptools.kernel.core.</tt><tt class="descname">ChainRuleKernel</tt><big>(</big><em>num_dim</em>, <em>num_params</em>, <em>initial_params=None</em>, <em>fixed_params=None</em>, <em>param_bounds=None</em>, <em>enforce_bounds=False</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/core.html#ChainRuleKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.core.ChainRuleKernel" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">gptools.kernel.core.</tt><tt class="descname">ChainRuleKernel</tt><big>(</big><em>num_dim=1</em>, <em>num_params=0</em>, <em>initial_params=None</em>, <em>fixed_params=None</em>, <em>param_bounds=None</em>, <em>param_names=None</em>, <em>enforce_bounds=False</em>, <em>hyperprior=None</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/core.html#ChainRuleKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.core.ChainRuleKernel" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">gptools.kernel.core.Kernel</span></tt></a></p>
 <p>Abstract class for the common methods in creating kernels that require application of Faa di Bruno&#8217;s formula.</p>
 <dl class="method">
@@ -470,19 +575,19 @@ Default is False.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>Xi</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>Xi</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
-<div><p><cite>M</cite> inputs with dimension <cite>N</cite>.</p>
+<div><p><cite>M</cite> inputs with dimension <cite>D</cite>.</p>
 </div></blockquote>
-<p><strong>Xj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<p><strong>Xj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
-<div><p><cite>M</cite> inputs with dimension <cite>N</cite>.</p>
+<div><p><cite>M</cite> inputs with dimension <cite>D</cite>.</p>
 </div></blockquote>
-<p><strong>ni</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<p><strong>ni</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
 <div><p><cite>M</cite> derivative orders for set <cite>i</cite>.</p>
 </div></blockquote>
-<p><strong>nj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<p><strong>nj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
 <div><p><cite>M</cite> derivative orders for set <cite>j</cite>.</p>
 </div></blockquote>
@@ -499,13 +604,13 @@ Default is False.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>Kij</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,)</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>Kij</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,)</p>
 <blockquote>
 <div><p>Covariances for each of the <cite>M</cite> <cite>Xi</cite>, <cite>Xj</cite> pairs.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Raises :</th><td class="field-body"><p class="first"><strong>NotImplementedError</strong> :</p>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>NotImplementedError</strong> :</p>
 <blockquote class="last">
 <div><p>If the <cite>hyper_deriv</cite> keyword is not None.</p>
 </div></blockquote>
@@ -519,7 +624,7 @@ Default is False.</p>
 
 <dl class="class">
 <dt id="gptools.kernel.core.ArbitraryKernel">
-<em class="property">class </em><tt class="descclassname">gptools.kernel.core.</tt><tt class="descname">ArbitraryKernel</tt><big>(</big><em>num_dim</em>, <em>cov_func</em>, <em>num_proc=0</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/core.html#ArbitraryKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.core.ArbitraryKernel" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">gptools.kernel.core.</tt><tt class="descname">ArbitraryKernel</tt><big>(</big><em>cov_func</em>, <em>num_dim=1</em>, <em>num_proc=0</em>, <em>num_params=None</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/core.html#ArbitraryKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.core.ArbitraryKernel" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">gptools.kernel.core.Kernel</span></tt></a></p>
 <p>Covariance kernel from an arbitrary covariance function.</p>
 <p>Computes derivatives using <tt class="xref py py-func docutils literal"><span class="pre">mpmath.diff()</span></tt> and is hence in general
@@ -528,7 +633,7 @@ much slower than a hard-coded implementation of a given kernel.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>num_dim</strong> : positive int</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>num_dim</strong> : positive int</p>
 <blockquote>
 <div><p>Number of dimensions of the input data. Must be consistent with the <cite>X</cite>
 and <cite>Xstar</cite> values passed to the
@@ -540,13 +645,20 @@ the covariance kernel with.</p>
 <div><p>Covariance function. Must take arrays of <cite>Xi</cite> and <cite>Xj</cite> as the
 first two arguments. The subsequent (scalar) arguments are the
 hyperparameters. The number of parameters is found by inspection of
-<cite>cov_func</cite> itself.</p>
+<cite>cov_func</cite> itself, or with the num_params keyword.</p>
 </div></blockquote>
 <p><strong>num_proc</strong> : int or None, optional</p>
 <blockquote>
 <div><p>Number of procs to use in evaluating covariance derivatives. 0 means
 to do it in serial, None means to use all available cores. Default is
 0 (serial evaluation).</p>
+</div></blockquote>
+<p><strong>num_params</strong> : int or None, optional</p>
+<blockquote>
+<div><p>Number of hyperparameters. If None, inspection will be used to infer
+the number of hyperparameters (but will fail if you used clever business
+with <a href="#id1"><span class="problematic" id="id2">*</span></a>args, etc.). Default is None (use inspection to find argument
+count).</p>
 </div></blockquote>
 <p><strong>**kwargs</strong> :</p>
 <blockquote class="last">
@@ -582,19 +694,19 @@ to do it in serial, None means to use all available cores. Default is
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>Xi</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>Xi</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
-<div><p><cite>M</cite> inputs with dimension <cite>N</cite>.</p>
+<div><p><cite>M</cite> inputs with dimension <cite>D</cite>.</p>
 </div></blockquote>
-<p><strong>Xj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<p><strong>Xj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
-<div><p><cite>M</cite> inputs with dimension <cite>N</cite>.</p>
+<div><p><cite>M</cite> inputs with dimension <cite>D</cite>.</p>
 </div></blockquote>
-<p><strong>ni</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<p><strong>ni</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
 <div><p><cite>M</cite> derivative orders for set <cite>i</cite>.</p>
 </div></blockquote>
-<p><strong>nj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<p><strong>nj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
 <div><p><cite>M</cite> derivative orders for set <cite>j</cite>.</p>
 </div></blockquote>
@@ -611,13 +723,13 @@ Default is False.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>Kij</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,)</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>Kij</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,)</p>
 <blockquote>
 <div><p>Covariances for each of the <cite>M</cite> <cite>Xi</cite>, <cite>Xj</cite> pairs.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Raises :</th><td class="field-body"><p class="first"><strong>NotImplementedError</strong> :</p>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>NotImplementedError</strong> :</p>
 <blockquote class="last">
 <div><p>If the <cite>hyper_deriv</cite> keyword is not None.</p>
 </div></blockquote>
@@ -629,21 +741,128 @@ Default is False.</p>
 
 </dd></dl>
 
+<dl class="class">
+<dt id="gptools.kernel.core.MaskedKernel">
+<em class="property">class </em><tt class="descclassname">gptools.kernel.core.</tt><tt class="descname">MaskedKernel</tt><big>(</big><em>base, total_dim=2, mask=[0], scale=None</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/core.html#MaskedKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.core.MaskedKernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">gptools.kernel.core.Kernel</span></tt></a></p>
+<p>Creates a kernel that is only masked to operate on certain dimensions, or has scaling/shifting.</p>
+<p>This can be used, for instance, to put a squared exponential kernel in one
+direction and a Matern kernel in the other.</p>
+<p>Overrides <a class="reference internal" href="#gptools.kernel.core.MaskedKernel.__getattribute__" title="gptools.kernel.core.MaskedKernel.__getattribute__"><tt class="xref py py-meth docutils literal"><span class="pre">__getattribute__()</span></tt></a> and <a class="reference internal" href="#gptools.kernel.core.MaskedKernel.__setattr__" title="gptools.kernel.core.MaskedKernel.__setattr__"><tt class="xref py py-meth docutils literal"><span class="pre">__setattr__()</span></tt></a> to make all
+setting/accessing go to the <cite>base</cite> kernel.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>base</strong> : <a class="reference internal" href="#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt></a> instance</p>
+<blockquote>
+<div><p>The <a class="reference internal" href="#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt></a> to apply in the dimensions specified in <cite>mask</cite>.</p>
+</div></blockquote>
+<p><strong>total_dim</strong> : int, optional</p>
+<blockquote>
+<div><p>The total number of dimensions the masked kernel should have. Default
+is 2.</p>
+</div></blockquote>
+<p><strong>mask</strong> : list or other array-like, optional</p>
+<blockquote>
+<div><p>1d list of indices of dimensions <cite>X</cite> to include when passing to the
+<cite>base</cite> kernel. Length must be <cite>base.num_dim</cite>. Default is [0] (i.e.,
+just pass the first column of <cite>X</cite> to a univariate <cite>base</cite> kernel).</p>
+</div></blockquote>
+<p><strong>scale</strong> : list or other array-like, optional</p>
+<blockquote class="last">
+<div><p>1d list of scale factors to apply to the elements in <cite>Xi</cite>, <cite>Xj</cite>. Default
+is ones. Length must be equal to 2`base.num_dim`.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="gptools.kernel.core.MaskedKernel.__getattribute__">
+<tt class="descname">__getattribute__</tt><big>(</big><em>name</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/core.html#MaskedKernel.__getattribute__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.core.MaskedKernel.__getattribute__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets all attributes from the base kernel.</p>
+<p>The exceptions are &#8216;base&#8217;, &#8216;mask&#8217;, &#8216;maskC&#8217;, &#8216;num_dim&#8217;, &#8216;scale&#8217; and any
+special method (i.e., a method/attribute having leading and trailing
+double underscores), which are taken from <a class="reference internal" href="#gptools.kernel.core.MaskedKernel" title="gptools.kernel.core.MaskedKernel"><tt class="xref py py-class docutils literal"><span class="pre">MaskedKernel</span></tt></a>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gptools.kernel.core.MaskedKernel.__setattr__">
+<tt class="descname">__setattr__</tt><big>(</big><em>name</em>, <em>value</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/core.html#MaskedKernel.__setattr__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.core.MaskedKernel.__setattr__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets all attributes in the base kernel.</p>
+<p>The exceptions are &#8216;base&#8217;, &#8216;mask&#8217;, &#8216;maskC&#8217;, &#8216;num_dim&#8217;, &#8216;scale&#8217; and any
+special method (i.e., a method/attribute having leading and trailing
+double underscores), which are set in <a class="reference internal" href="#gptools.kernel.core.MaskedKernel" title="gptools.kernel.core.MaskedKernel"><tt class="xref py py-class docutils literal"><span class="pre">MaskedKernel</span></tt></a>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="gptools.kernel.core.MaskedKernel.__call__">
+<tt class="descname">__call__</tt><big>(</big><em>Xi</em>, <em>Xj</em>, <em>ni</em>, <em>nj</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/core.html#MaskedKernel.__call__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.core.MaskedKernel.__call__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Evaluate the covariance between points <cite>Xi</cite> and <cite>Xj</cite> with derivative order <cite>ni</cite>, <cite>nj</cite>.</p>
+<p>Note that in the argument specifications, <cite>D</cite> is the <cite>total_dim</cite>
+specified in the constructor (i.e., <tt class="xref py py-attr docutils literal"><span class="pre">num_dim</span></tt> for the
+<a class="reference internal" href="#gptools.kernel.core.MaskedKernel" title="gptools.kernel.core.MaskedKernel"><tt class="xref py py-class docutils literal"><span class="pre">MaskedKernel</span></tt></a> instance itself).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>Xi</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
+<blockquote>
+<div><p><cite>M</cite> inputs with dimension <cite>D</cite>.</p>
+</div></blockquote>
+<p><strong>Xj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
+<blockquote>
+<div><p><cite>M</cite> inputs with dimension <cite>D</cite>.</p>
+</div></blockquote>
+<p><strong>ni</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
+<blockquote>
+<div><p><cite>M</cite> derivative orders for set <cite>i</cite>.</p>
+</div></blockquote>
+<p><strong>nj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
+<blockquote>
+<div><p><cite>M</cite> derivative orders for set <cite>j</cite>.</p>
+</div></blockquote>
+<p><strong>hyper_deriv</strong> : Non-negative int or None, optional</p>
+<blockquote>
+<div><p>The index of the hyperparameter to compute the first derivative
+with respect to. If None, no derivatives are taken. Default is None
+(no hyperparameter derivatives).</p>
+</div></blockquote>
+<p><strong>symmetric</strong> : bool, optional</p>
+<blockquote>
+<div><p>Whether or not the input <cite>Xi</cite>, <cite>Xj</cite> are from a symmetric matrix.
+Default is False.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>Kij</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,)</p>
+<blockquote class="last">
+<div><p>Covariances for each of the <cite>M</cite> <cite>Xi</cite>, <cite>Xj</cite> pairs.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
 </div>
 <div class="section" id="module-gptools.kernel.gibbs">
-<span id="gibbs-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">gibbs</span></tt> Module<a class="headerlink" href="#module-gptools.kernel.gibbs" title="Permalink to this headline">¶</a></h2>
+<span id="gptools-kernel-gibbs-module"></span><h2>gptools.kernel.gibbs module<a class="headerlink" href="#module-gptools.kernel.gibbs" title="Permalink to this headline">¶</a></h2>
 <p>Provides classes and functions for creating SE kernels with warped length scales.</p>
 <dl class="function">
-<dt id="gptools.kernel.gibbs.tanh_warp">
-<tt class="descclassname">gptools.kernel.gibbs.</tt><tt class="descname">tanh_warp</tt><big>(</big><em>X</em>, <em>l1</em>, <em>l2</em>, <em>lw</em>, <em>x0</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/gibbs.html#tanh_warp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.gibbs.tanh_warp" title="Permalink to this definition">¶</a></dt>
+<dt id="gptools.kernel.gibbs.tanh_warp_arb">
+<tt class="descclassname">gptools.kernel.gibbs.</tt><tt class="descname">tanh_warp_arb</tt><big>(</big><em>X</em>, <em>l1</em>, <em>l2</em>, <em>lw</em>, <em>x0</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/gibbs.html#tanh_warp_arb"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.gibbs.tanh_warp_arb" title="Permalink to this definition">¶</a></dt>
 <dd><p>Warps the <cite>X</cite> coordinate with the tanh model</p>
 <div class="math">
-<p><img src="_images/math/ce3fbc71c8696e043988d37d4140479fa0b6940b.png" alt="l = \frac{l_1 + l_2}{2} - \frac{l_1 - l_2}{2}\tanh\frac{x-x_0}{l_w}"/></p>
+<p><img src="_images/math/018424e97ccd1bb9ad55238b8fd25f520c4ca46e.png" alt="l = \frac{l_1 + l_2}{2} - \frac{l_1 - l_2}{2}\tanh\frac{x-x_0}{l_w}"/></p>
 </div><table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>X</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,) or scalar float</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>X</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,) or scalar float</p>
 <blockquote>
 <div><p><cite>M</cite> locations to evaluate length scale at.</p>
 </div></blockquote>
@@ -665,7 +884,7 @@ Default is False.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>l</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,) or scalar float</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>l</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,) or scalar float</p>
 <blockquote class="last">
 <div><p>The value of the length scale at the specified point.</p>
 </div></blockquote>
@@ -676,60 +895,16 @@ Default is False.</p>
 </dd></dl>
 
 <dl class="function">
-<dt id="gptools.kernel.gibbs.spline_warp">
-<tt class="descclassname">gptools.kernel.gibbs.</tt><tt class="descname">spline_warp</tt><big>(</big><em>X</em>, <em>l1</em>, <em>l2</em>, <em>lw</em>, <em>x0</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/gibbs.html#spline_warp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.gibbs.spline_warp" title="Permalink to this definition">¶</a></dt>
-<dd><p>Warps the <cite>X</cite> coordinate with a &#8220;divot&#8221; spline shape.</p>
-<div class="admonition warning">
-<p class="first admonition-title">Warning</p>
-<p class="last">Broken! Do not use!</p>
-</div>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>X</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,) or scalar float</p>
-<blockquote>
-<div><p><cite>M</cite> locations to evaluate length scale at.</p>
-</div></blockquote>
-<p><strong>l1</strong> : positive float</p>
-<blockquote>
-<div><p>Global value of the length scale.</p>
-</div></blockquote>
-<p><strong>l2</strong> : positive float</p>
-<blockquote>
-<div><p>Pedestal value of the length scale.</p>
-</div></blockquote>
-<p><strong>lw</strong> : positive float</p>
-<blockquote>
-<div><p>Width of the dip.</p>
-</div></blockquote>
-<p><strong>x0</strong> : float</p>
-<blockquote>
-<div><p>Location of the center of the dip in length scale.</p>
-</div></blockquote>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>l</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,) or scalar float</p>
-<blockquote class="last">
-<div><p>The value of the length scale at the specified point.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="gptools.kernel.gibbs.gauss_warp">
-<tt class="descclassname">gptools.kernel.gibbs.</tt><tt class="descname">gauss_warp</tt><big>(</big><em>X</em>, <em>l1</em>, <em>l2</em>, <em>lw</em>, <em>x0</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/gibbs.html#gauss_warp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.gibbs.gauss_warp" title="Permalink to this definition">¶</a></dt>
+<dt id="gptools.kernel.gibbs.gauss_warp_arb">
+<tt class="descclassname">gptools.kernel.gibbs.</tt><tt class="descname">gauss_warp_arb</tt><big>(</big><em>X</em>, <em>l1</em>, <em>l2</em>, <em>lw</em>, <em>x0</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/gibbs.html#gauss_warp_arb"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.gibbs.gauss_warp_arb" title="Permalink to this definition">¶</a></dt>
 <dd><p>Warps the <cite>X</cite> coordinate with a Gaussian-shaped divot.</p>
 <div class="math">
-<p><img src="_images/math/afed7b6656e31605fbc89857f1260a9e62dda899.png" alt="l = l_1 - (l_1 - l_2) \exp\left ( -4\ln 2\frac{(X-x_0)^2}{l_{w}^{2}} \right )"/></p>
+<p><img src="_images/math/238d00cf8501bc108c4ba0f32bf31bb2f20546cb.png" alt="l = l_1 - (l_1 - l_2) \exp\left ( -4\ln 2\frac{(X-x_0)^2}{l_{w}^{2}} \right )"/></p>
 </div><table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>X</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,) or scalar float</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>X</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,) or scalar float</p>
 <blockquote>
 <div><p><cite>M</cite> locations to evaluate length scale at.</p>
 </div></blockquote>
@@ -751,7 +926,7 @@ Default is False.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>l</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,) or scalar float</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>l</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,) or scalar float</p>
 <blockquote class="last">
 <div><p>The value of the length scale at the specified point.</p>
 </div></blockquote>
@@ -762,18 +937,18 @@ Default is False.</p>
 </dd></dl>
 
 <dl class="class">
-<dt id="gptools.kernel.gibbs.GibbsFunction1d">
-<em class="property">class </em><tt class="descclassname">gptools.kernel.gibbs.</tt><tt class="descname">GibbsFunction1d</tt><big>(</big><em>warp_function</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/gibbs.html#GibbsFunction1d"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.gibbs.GibbsFunction1d" title="Permalink to this definition">¶</a></dt>
+<dt id="gptools.kernel.gibbs.GibbsFunction1dArb">
+<em class="property">class </em><tt class="descclassname">gptools.kernel.gibbs.</tt><tt class="descname">GibbsFunction1dArb</tt><big>(</big><em>warp_function</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/gibbs.html#GibbsFunction1dArb"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.gibbs.GibbsFunction1dArb" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
 <p>Wrapper class for the Gibbs covariance function, permits the use of arbitrary warping.</p>
 <p>The covariance function is given by</p>
 <div class="math">
-<p><img src="_images/math/5e1668792d162faf7f4c6f233fcf3fda1b4f8592.png" alt="k = \left ( \frac{2l(x)l(x')}{l^2(x)+l^2(x')} \right )^{1/2}\exp\left ( -\frac{(x-x')^2}{l^2(x)+l^2(x')} \right )"/></p>
+<p><img src="_images/math/ac4f8f336662a0b5d1fec49a55e14ae6b4fcb678.png" alt="k = \left ( \frac{2l(x)l(x')}{l^2(x)+l^2(x')} \right )^{1/2}\exp\left ( -\frac{(x-x')^2}{l^2(x)+l^2(x')} \right )"/></p>
 </div><table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>warp_function</strong> : callable</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>warp_function</strong> : callable</p>
 <blockquote class="last">
 <div><p>The function that warps the length scale as a function of X. Must have
 the fingerprint (<cite>Xi</cite>, <cite>l1</cite>, <cite>l2</cite>, <cite>lw</cite>, <cite>x0</cite>).</p>
@@ -783,14 +958,14 @@ the fingerprint (<cite>Xi</cite>, <cite>l1</cite>, <cite>l2</cite>, <cite>lw</ci
 </tbody>
 </table>
 <dl class="method">
-<dt id="gptools.kernel.gibbs.GibbsFunction1d.__call__">
-<tt class="descname">__call__</tt><big>(</big><em>Xi</em>, <em>Xj</em>, <em>sigmaf</em>, <em>l1</em>, <em>l2</em>, <em>lw</em>, <em>x0</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/gibbs.html#GibbsFunction1d.__call__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.gibbs.GibbsFunction1d.__call__" title="Permalink to this definition">¶</a></dt>
+<dt id="gptools.kernel.gibbs.GibbsFunction1dArb.__call__">
+<tt class="descname">__call__</tt><big>(</big><em>Xi</em>, <em>Xj</em>, <em>sigmaf</em>, <em>l1</em>, <em>l2</em>, <em>lw</em>, <em>x0</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/gibbs.html#GibbsFunction1dArb.__call__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.gibbs.GibbsFunction1dArb.__call__" title="Permalink to this definition">¶</a></dt>
 <dd><p>Evaluate the covariance function between points <cite>Xi</cite> and <cite>Xj</cite>.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>Xi, Xj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, <tt class="xref py py-class docutils literal"><span class="pre">mpf</span></tt> or scalar float</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>Xi, Xj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, <tt class="xref py py-class docutils literal"><span class="pre">mpf</span></tt> or scalar float</p>
 <blockquote>
 <div><p>Points to evaluate covariance between. If they are <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>,
 <tt class="xref py py-mod docutils literal"><span class="pre">scipy</span></tt> functions are used, otherwise <tt class="xref py py-mod docutils literal"><span class="pre">mpmath</span></tt>
@@ -807,7 +982,7 @@ functions are used.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>k</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt> or <tt class="xref py py-class docutils literal"><span class="pre">mpf</span></tt></p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>k</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt> or <tt class="xref py py-class docutils literal"><span class="pre">mpf</span></tt></p>
 <blockquote class="last">
 <div><p>Covariance between the given points.</p>
 </div></blockquote>
@@ -820,18 +995,18 @@ functions are used.</p>
 </dd></dl>
 
 <dl class="class">
-<dt id="gptools.kernel.gibbs.GibbsKernel1dtanh">
-<em class="property">class </em><tt class="descclassname">gptools.kernel.gibbs.</tt><tt class="descname">GibbsKernel1dtanh</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/gibbs.html#GibbsKernel1dtanh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.gibbs.GibbsKernel1dtanh" title="Permalink to this definition">¶</a></dt>
+<dt id="gptools.kernel.gibbs.GibbsKernel1dTanhArb">
+<em class="property">class </em><tt class="descclassname">gptools.kernel.gibbs.</tt><tt class="descname">GibbsKernel1dTanhArb</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/gibbs.html#GibbsKernel1dTanhArb"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.gibbs.GibbsKernel1dTanhArb" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#gptools.kernel.core.ArbitraryKernel" title="gptools.kernel.core.ArbitraryKernel"><tt class="xref py py-class docutils literal"><span class="pre">gptools.kernel.core.ArbitraryKernel</span></tt></a></p>
 <p>Gibbs warped squared exponential covariance function in 1d.</p>
 <p>Computes derivatives using <tt class="xref py py-func docutils literal"><span class="pre">mpmath.diff()</span></tt> and is hence in general
 much slower than a hard-coded implementation of a given kernel.</p>
 <p>The covariance function is given by</p>
 <div class="math">
-<p><img src="_images/math/5e1668792d162faf7f4c6f233fcf3fda1b4f8592.png" alt="k = \left ( \frac{2l(x)l(x')}{l^2(x)+l^2(x')} \right )^{1/2}\exp\left ( -\frac{(x-x')^2}{l^2(x)+l^2(x')} \right )"/></p>
+<p><img src="_images/math/ac4f8f336662a0b5d1fec49a55e14ae6b4fcb678.png" alt="k = \left ( \frac{2l(x)l(x')}{l^2(x)+l^2(x')} \right )^{1/2}\exp\left ( -\frac{(x-x')^2}{l^2(x)+l^2(x')} \right )"/></p>
 </div><p>Warps the length scale using a hyperbolic tangent:</p>
 <div class="math">
-<p><img src="_images/math/ce3fbc71c8696e043988d37d4140479fa0b6940b.png" alt="l = \frac{l_1 + l_2}{2} - \frac{l_1 - l_2}{2}\tanh\frac{x-x_0}{l_w}"/></p>
+<p><img src="_images/math/018424e97ccd1bb9ad55238b8fd25f520c4ca46e.png" alt="l = \frac{l_1 + l_2}{2} - \frac{l_1 - l_2}{2}\tanh\frac{x-x_0}{l_w}"/></p>
 </div><p>The order of the hyperparameters is:</p>
 <table border="1" class="docutils">
 <colgroup>
@@ -866,7 +1041,7 @@ much slower than a hard-coded implementation of a given kernel.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>**kwargs</strong> :</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>**kwargs</strong> :</p>
 <blockquote class="last">
 <div><p>All parameters are passed to <a class="reference internal" href="#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt></a>.</p>
 </div></blockquote>
@@ -877,77 +1052,18 @@ much slower than a hard-coded implementation of a given kernel.</p>
 </dd></dl>
 
 <dl class="class">
-<dt id="gptools.kernel.gibbs.GibbsKernel1dSpline">
-<em class="property">class </em><tt class="descclassname">gptools.kernel.gibbs.</tt><tt class="descname">GibbsKernel1dSpline</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/gibbs.html#GibbsKernel1dSpline"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.gibbs.GibbsKernel1dSpline" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#gptools.kernel.core.ArbitraryKernel" title="gptools.kernel.core.ArbitraryKernel"><tt class="xref py py-class docutils literal"><span class="pre">gptools.kernel.core.ArbitraryKernel</span></tt></a></p>
-<p>Gibbs warped squared exponential covariance function in 1d.</p>
-<div class="admonition warning">
-<p class="first admonition-title">Warning</p>
-<p class="last">Broken! Do not use!</p>
-</div>
-<p>Computes derivatives using <tt class="xref py py-func docutils literal"><span class="pre">mpmath.diff()</span></tt> and is hence in general
-much slower than a hard-coded implementation of a given kernel.</p>
-<p>The covariance function is given by</p>
-<div class="math">
-<p><img src="_images/math/5e1668792d162faf7f4c6f233fcf3fda1b4f8592.png" alt="k = \left ( \frac{2l(x)l(x')}{l^2(x)+l^2(x')} \right )^{1/2}\exp\left ( -\frac{(x-x')^2}{l^2(x)+l^2(x')} \right )"/></p>
-</div><p>Warps the length scale using a spline.</p>
-<p>The order of the hyperparameters is:</p>
-<table border="1" class="docutils">
-<colgroup>
-<col width="2%" />
-<col width="11%" />
-<col width="88%" />
-</colgroup>
-<tbody valign="top">
-<tr class="row-odd"><td>0</td>
-<td>sigmaf</td>
-<td>Amplitude of the covariance function</td>
-</tr>
-<tr class="row-even"><td>1</td>
-<td>l1</td>
-<td>Global value of the length scale.</td>
-</tr>
-<tr class="row-odd"><td>2</td>
-<td>l2</td>
-<td>Pedestal value of the length scale.</td>
-</tr>
-<tr class="row-even"><td>3</td>
-<td>lw</td>
-<td>Width of the dip.</td>
-</tr>
-<tr class="row-odd"><td>4</td>
-<td>x0</td>
-<td>Location of the center of the dip in length scale.</td>
-</tr>
-</tbody>
-</table>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>**kwargs</strong> :</p>
-<blockquote class="last">
-<div><p>All parameters are passed to <a class="reference internal" href="#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt></a>.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="class">
-<dt id="gptools.kernel.gibbs.GibbsKernel1dGauss">
-<em class="property">class </em><tt class="descclassname">gptools.kernel.gibbs.</tt><tt class="descname">GibbsKernel1dGauss</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/gibbs.html#GibbsKernel1dGauss"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.gibbs.GibbsKernel1dGauss" title="Permalink to this definition">¶</a></dt>
+<dt id="gptools.kernel.gibbs.GibbsKernel1dGaussArb">
+<em class="property">class </em><tt class="descclassname">gptools.kernel.gibbs.</tt><tt class="descname">GibbsKernel1dGaussArb</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/gibbs.html#GibbsKernel1dGaussArb"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.gibbs.GibbsKernel1dGaussArb" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#gptools.kernel.core.ArbitraryKernel" title="gptools.kernel.core.ArbitraryKernel"><tt class="xref py py-class docutils literal"><span class="pre">gptools.kernel.core.ArbitraryKernel</span></tt></a></p>
 <p>Gibbs warped squared exponential covariance function in 1d.</p>
 <p>Computes derivatives using <tt class="xref py py-func docutils literal"><span class="pre">mpmath.diff()</span></tt> and is hence in general
 much slower than a hard-coded implementation of a given kernel.</p>
 <p>The covariance function is given by</p>
 <div class="math">
-<p><img src="_images/math/5e1668792d162faf7f4c6f233fcf3fda1b4f8592.png" alt="k = \left ( \frac{2l(x)l(x')}{l^2(x)+l^2(x')} \right )^{1/2}\exp\left ( -\frac{(x-x')^2}{l^2(x)+l^2(x')} \right )"/></p>
+<p><img src="_images/math/ac4f8f336662a0b5d1fec49a55e14ae6b4fcb678.png" alt="k = \left ( \frac{2l(x)l(x')}{l^2(x)+l^2(x')} \right )^{1/2}\exp\left ( -\frac{(x-x')^2}{l^2(x)+l^2(x')} \right )"/></p>
 </div><p>Warps the length scale using a gaussian:</p>
 <div class="math">
-<p><img src="_images/math/afed7b6656e31605fbc89857f1260a9e62dda899.png" alt="l = l_1 - (l_1 - l_2) \exp\left ( -4\ln 2\frac{(X-x_0)^2}{l_{w}^{2}} \right )"/></p>
+<p><img src="_images/math/238d00cf8501bc108c4ba0f32bf31bb2f20546cb.png" alt="l = l_1 - (l_1 - l_2) \exp\left ( -4\ln 2\frac{(X-x_0)^2}{l_{w}^{2}} \right )"/></p>
 </div><p>The order of the hyperparameters is:</p>
 <table border="1" class="docutils">
 <colgroup>
@@ -982,7 +1098,569 @@ much slower than a hard-coded implementation of a given kernel.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>**kwargs</strong> :</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>**kwargs</strong> :</p>
+<blockquote class="last">
+<div><p>All parameters are passed to <a class="reference internal" href="#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt></a>.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="gptools.kernel.gibbs.GibbsKernel1d">
+<em class="property">class </em><tt class="descclassname">gptools.kernel.gibbs.</tt><tt class="descname">GibbsKernel1d</tt><big>(</big><em>l_func</em>, <em>num_params=None</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/gibbs.html#GibbsKernel1d"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.gibbs.GibbsKernel1d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">gptools.kernel.core.Kernel</span></tt></a></p>
+<p>Univariate Gibbs kernel with arbitrary length scale warping for low derivatives.</p>
+<p>The covariance function is given by</p>
+<div class="math">
+<p><img src="_images/math/ac4f8f336662a0b5d1fec49a55e14ae6b4fcb678.png" alt="k = \left ( \frac{2l(x)l(x')}{l^2(x)+l^2(x')} \right )^{1/2}\exp\left ( -\frac{(x-x')^2}{l^2(x)+l^2(x')} \right )"/></p>
+</div><p>The derivatives are hard-coded using expressions obtained from Mathematica.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>l_func</strong> : callable</p>
+<blockquote>
+<div><p>Function that dictates the length scale warping and its derivative.
+Must have fingerprint (<cite>x</cite>, <cite>n</cite>, <cite>p1</cite>, <cite>p2</cite>, ...) where <cite>p1</cite> is element
+one of the kernel&#8217;s parameters (i.e., element zero is skipped).</p>
+</div></blockquote>
+<p><strong>num_params</strong> : int, optional</p>
+<blockquote>
+<div><p>The number of parameters of the length scale function. If not passed,
+introspection will be used to determine this. This will fail if you have
+used the *args syntax in your function definition. This count should
+include sigma_f, even though it is not passed to the length scale
+function.</p>
+</div></blockquote>
+<p><strong>**kwargs</strong> :</p>
+<blockquote class="last">
+<div><p>All remaining arguments are passed to <a class="reference internal" href="#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt></a>.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="gptools.kernel.gibbs.GibbsKernel1d.__call__">
+<tt class="descname">__call__</tt><big>(</big><em>Xi</em>, <em>Xj</em>, <em>ni</em>, <em>nj</em>, <em>hyper_deriv=None</em>, <em>symmetric=False</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/gibbs.html#GibbsKernel1d.__call__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.gibbs.GibbsKernel1d.__call__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Evaluate the covariance between points <cite>Xi</cite> and <cite>Xj</cite> with derivative order <cite>ni</cite>, <cite>nj</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>Xi</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
+<blockquote>
+<div><p><cite>M</cite> inputs with dimension <cite>D</cite>.</p>
+</div></blockquote>
+<p><strong>Xj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
+<blockquote>
+<div><p><cite>M</cite> inputs with dimension <cite>D</cite>.</p>
+</div></blockquote>
+<p><strong>ni</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
+<blockquote>
+<div><p><cite>M</cite> derivative orders for set <cite>i</cite>.</p>
+</div></blockquote>
+<p><strong>nj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
+<blockquote>
+<div><p><cite>M</cite> derivative orders for set <cite>j</cite>.</p>
+</div></blockquote>
+<p><strong>hyper_deriv</strong> : Non-negative int or None, optional</p>
+<blockquote>
+<div><p>The index of the hyperparameter to compute the first derivative
+with respect to. If None, no derivatives are taken. Hyperparameter
+derivatives are not supported at this point. Default is None.</p>
+</div></blockquote>
+<p><strong>symmetric</strong> : bool, optional</p>
+<blockquote>
+<div><p>Whether or not the input <cite>Xi</cite>, <cite>Xj</cite> are from a symmetric matrix.
+Default is False.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>Kij</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,)</p>
+<blockquote>
+<div><p>Covariances for each of the <cite>M</cite> <cite>Xi</cite>, <cite>Xj</cite> pairs.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>NotImplementedError</strong> :</p>
+<blockquote class="last">
+<div><p>If the <cite>hyper_deriv</cite> keyword is not None.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="gptools.kernel.gibbs.tanh_warp">
+<tt class="descclassname">gptools.kernel.gibbs.</tt><tt class="descname">tanh_warp</tt><big>(</big><em>x</em>, <em>n</em>, <em>l1</em>, <em>l2</em>, <em>lw</em>, <em>x0</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/gibbs.html#tanh_warp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.gibbs.tanh_warp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implements a tanh warping function and its derivative.</p>
+<div class="math">
+<p><img src="_images/math/018424e97ccd1bb9ad55238b8fd25f520c4ca46e.png" alt="l = \frac{l_1 + l_2}{2} - \frac{l_1 - l_2}{2}\tanh\frac{x-x_0}{l_w}"/></p>
+</div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>x</strong> : float or array of float</p>
+<blockquote>
+<div><p>Locations to evaluate the function at.</p>
+</div></blockquote>
+<p><strong>n</strong> : int</p>
+<blockquote>
+<div><p>Derivative order to take. Used for ALL of the points.</p>
+</div></blockquote>
+<p><strong>l1</strong> : positive float</p>
+<blockquote>
+<div><p>Left saturation value.</p>
+</div></blockquote>
+<p><strong>l2</strong> : positive float</p>
+<blockquote>
+<div><p>Right saturation value.</p>
+</div></blockquote>
+<p><strong>lw</strong> : positive float</p>
+<blockquote>
+<div><p>Transition width.</p>
+</div></blockquote>
+<p><strong>x0</strong> : float</p>
+<blockquote>
+<div><p>Transition location.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>l</strong> : float or array</p>
+<blockquote>
+<div><p>Warped length scale at the given locations.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>NotImplementedError</strong> :</p>
+<blockquote class="last">
+<div><p>If <cite>n</cite> &gt; 1.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="gptools.kernel.gibbs.GibbsKernel1dTanh">
+<em class="property">class </em><tt class="descclassname">gptools.kernel.gibbs.</tt><tt class="descname">GibbsKernel1dTanh</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/gibbs.html#GibbsKernel1dTanh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.gibbs.GibbsKernel1dTanh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gptools.kernel.gibbs.GibbsKernel1d" title="gptools.kernel.gibbs.GibbsKernel1d"><tt class="xref py py-class docutils literal"><span class="pre">gptools.kernel.gibbs.GibbsKernel1d</span></tt></a></p>
+<p>Gibbs warped squared exponential covariance function in 1d.</p>
+<p>Uses hard-coded implementation up to first derivatives.</p>
+<p>The covariance function is given by</p>
+<div class="math">
+<p><img src="_images/math/ac4f8f336662a0b5d1fec49a55e14ae6b4fcb678.png" alt="k = \left ( \frac{2l(x)l(x')}{l^2(x)+l^2(x')} \right )^{1/2}\exp\left ( -\frac{(x-x')^2}{l^2(x)+l^2(x')} \right )"/></p>
+</div><p>Warps the length scale using a hyperbolic tangent:</p>
+<div class="math">
+<p><img src="_images/math/018424e97ccd1bb9ad55238b8fd25f520c4ca46e.png" alt="l = \frac{l_1 + l_2}{2} - \frac{l_1 - l_2}{2}\tanh\frac{x-x_0}{l_w}"/></p>
+</div><p>The order of the hyperparameters is:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="1%" />
+<col width="8%" />
+<col width="91%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>0</td>
+<td>sigmaf</td>
+<td>Amplitude of the covariance function</td>
+</tr>
+<tr class="row-even"><td>1</td>
+<td>l1</td>
+<td>Small-X saturation value of the length scale.</td>
+</tr>
+<tr class="row-odd"><td>2</td>
+<td>l2</td>
+<td>Large-X saturation value of the length scale.</td>
+</tr>
+<tr class="row-even"><td>3</td>
+<td>lw</td>
+<td>Length scale of the transition between the two length scales.</td>
+</tr>
+<tr class="row-odd"><td>4</td>
+<td>x0</td>
+<td>Location of the center of the transition between the two length scales.</td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>**kwargs</strong> :</p>
+<blockquote class="last">
+<div><p>All parameters are passed to <a class="reference internal" href="#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt></a>.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="gptools.kernel.gibbs.double_tanh_warp">
+<tt class="descclassname">gptools.kernel.gibbs.</tt><tt class="descname">double_tanh_warp</tt><big>(</big><em>x</em>, <em>n</em>, <em>lcore</em>, <em>lmid</em>, <em>ledge</em>, <em>la</em>, <em>lb</em>, <em>xa</em>, <em>xb</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/gibbs.html#double_tanh_warp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.gibbs.double_tanh_warp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implements a sum-of-tanh warping function and its derivative.</p>
+<div class="math">
+<p><img src="_images/math/edb9f45310c37fdc494816c061da0df7aad25452.png" alt="l = a\tanh\frac{x-x_a}{l_a} + b\tanh\frac{x-x_b}{l_b}"/></p>
+</div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>x</strong> : float or array of float</p>
+<blockquote>
+<div><p>Locations to evaluate the function at.</p>
+</div></blockquote>
+<p><strong>n</strong> : int</p>
+<blockquote>
+<div><p>Derivative order to take. Used for ALL of the points.</p>
+</div></blockquote>
+<p><strong>lcore</strong> : float</p>
+<blockquote>
+<div><p>Core length scale.</p>
+</div></blockquote>
+<p><strong>lmid</strong> : float</p>
+<blockquote>
+<div><p>Intermediate length scale.</p>
+</div></blockquote>
+<p><strong>ledge</strong> : float</p>
+<blockquote>
+<div><p>Edge length scale.</p>
+</div></blockquote>
+<p><strong>la</strong> : positive float</p>
+<blockquote>
+<div><p>Transition of first tanh.</p>
+</div></blockquote>
+<p><strong>lb</strong> : positive float</p>
+<blockquote>
+<div><p>Transition of second tanh.</p>
+</div></blockquote>
+<p><strong>xa</strong> : float</p>
+<blockquote>
+<div><p>Transition of first tanh.</p>
+</div></blockquote>
+<p><strong>xb</strong> : float</p>
+<blockquote>
+<div><p>Transition of second tanh.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>l</strong> : float or array</p>
+<blockquote>
+<div><p>Warped length scale at the given locations.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>NotImplementedError</strong> :</p>
+<blockquote class="last">
+<div><p>If <cite>n</cite> &gt; 1.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="gptools.kernel.gibbs.GibbsKernel1dDoubleTanh">
+<em class="property">class </em><tt class="descclassname">gptools.kernel.gibbs.</tt><tt class="descname">GibbsKernel1dDoubleTanh</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/gibbs.html#GibbsKernel1dDoubleTanh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.gibbs.GibbsKernel1dDoubleTanh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gptools.kernel.gibbs.GibbsKernel1d" title="gptools.kernel.gibbs.GibbsKernel1d"><tt class="xref py py-class docutils literal"><span class="pre">gptools.kernel.gibbs.GibbsKernel1d</span></tt></a></p>
+<p>Gibbs warped squared exponential covariance function in 1d.</p>
+<p>Uses hard-coded implementation up to first derivatives.</p>
+<p>The covariance function is given by</p>
+<div class="math">
+<p><img src="_images/math/ac4f8f336662a0b5d1fec49a55e14ae6b4fcb678.png" alt="k = \left ( \frac{2l(x)l(x')}{l^2(x)+l^2(x')} \right )^{1/2}\exp\left ( -\frac{(x-x')^2}{l^2(x)+l^2(x')} \right )"/></p>
+</div><p>Warps the length scale using two hyperbolic tangents:</p>
+<div class="math">
+<p><img src="_images/math/edb9f45310c37fdc494816c061da0df7aad25452.png" alt="l = a\tanh\frac{x-x_a}{l_a} + b\tanh\frac{x-x_b}{l_b}"/></p>
+</div><p>The order of the hyperparameters is:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="2%" />
+<col width="14%" />
+<col width="84%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>0</td>
+<td>sigmaf</td>
+<td>Amplitude of the covariance function</td>
+</tr>
+<tr class="row-even"><td>1</td>
+<td>lcore</td>
+<td>Core length scale</td>
+</tr>
+<tr class="row-odd"><td>2</td>
+<td>lmid</td>
+<td>Intermediate length scale</td>
+</tr>
+<tr class="row-even"><td>3</td>
+<td>ledge</td>
+<td>Edge length scale</td>
+</tr>
+<tr class="row-odd"><td>4</td>
+<td>la</td>
+<td>Width of first tanh</td>
+</tr>
+<tr class="row-even"><td>5</td>
+<td>lb</td>
+<td>Width of second tanh</td>
+</tr>
+<tr class="row-odd"><td>6</td>
+<td>xa</td>
+<td>Center of first tanh</td>
+</tr>
+<tr class="row-even"><td>7</td>
+<td>xb</td>
+<td>Center of second tanh</td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>**kwargs</strong> :</p>
+<blockquote class="last">
+<div><p>All parameters are passed to <a class="reference internal" href="#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt></a>.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="gptools.kernel.gibbs.cubic_bucket_warp">
+<tt class="descclassname">gptools.kernel.gibbs.</tt><tt class="descname">cubic_bucket_warp</tt><big>(</big><em>x</em>, <em>n</em>, <em>l1</em>, <em>l2</em>, <em>l3</em>, <em>x0</em>, <em>w1</em>, <em>w2</em>, <em>w3</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/gibbs.html#cubic_bucket_warp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.gibbs.cubic_bucket_warp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Warps the length scale with a piecewise cubic &#8220;bucket&#8221; shape.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>x</strong> : float or array-like of float</p>
+<blockquote>
+<div><p>Locations to evaluate length scale at.</p>
+</div></blockquote>
+<p><strong>n</strong> : non-negative int</p>
+<blockquote>
+<div><p>Derivative order to evaluate. Only first derivatives are supported.</p>
+</div></blockquote>
+<p><strong>l1</strong> : positive float</p>
+<blockquote>
+<div><p>Length scale to the left of the bucket.</p>
+</div></blockquote>
+<p><strong>l2</strong> : positive float</p>
+<blockquote>
+<div><p>Length scale in the bucket.</p>
+</div></blockquote>
+<p><strong>l3</strong> : positive float</p>
+<blockquote>
+<div><p>Length scale to the right of the bucket.</p>
+</div></blockquote>
+<p><strong>x0</strong> : float</p>
+<blockquote>
+<div><p>Location of the center of the bucket.</p>
+</div></blockquote>
+<p><strong>w1</strong> : positive float</p>
+<blockquote>
+<div><p>Width of the left side cubic section.</p>
+</div></blockquote>
+<p><strong>w2</strong> : positive float</p>
+<blockquote>
+<div><p>Width of the bucket.</p>
+</div></blockquote>
+<p><strong>w3</strong> : positive float</p>
+<blockquote class="last">
+<div><p>Width of the right side cubic section.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="gptools.kernel.gibbs.GibbsKernel1dCubicBucket">
+<em class="property">class </em><tt class="descclassname">gptools.kernel.gibbs.</tt><tt class="descname">GibbsKernel1dCubicBucket</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/gibbs.html#GibbsKernel1dCubicBucket"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.gibbs.GibbsKernel1dCubicBucket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gptools.kernel.gibbs.GibbsKernel1d" title="gptools.kernel.gibbs.GibbsKernel1d"><tt class="xref py py-class docutils literal"><span class="pre">gptools.kernel.gibbs.GibbsKernel1d</span></tt></a></p>
+<p>Gibbs warped squared exponential covariance function in 1d.</p>
+<p>Uses hard-coded implementation up to first derivatives.</p>
+<p>The covariance function is given by</p>
+<div class="math">
+<p><img src="_images/math/ac4f8f336662a0b5d1fec49a55e14ae6b4fcb678.png" alt="k = \left ( \frac{2l(x)l(x')}{l^2(x)+l^2(x')} \right )^{1/2}\exp\left ( -\frac{(x-x')^2}{l^2(x)+l^2(x')} \right )"/></p>
+</div><p>Warps the length scale using a &#8220;bucket&#8221; function with cubic joins.</p>
+<p>The order of the hyperparameters is:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="2%" />
+<col width="13%" />
+<col width="85%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>0</td>
+<td>sigmaf</td>
+<td>Amplitude of the covariance function</td>
+</tr>
+<tr class="row-even"><td>1</td>
+<td>l1</td>
+<td>Length scale to the left of the bucket.</td>
+</tr>
+<tr class="row-odd"><td>2</td>
+<td>l2</td>
+<td>Length scale in the bucket.</td>
+</tr>
+<tr class="row-even"><td>3</td>
+<td>l3</td>
+<td>Length scale to the right of the bucket.</td>
+</tr>
+<tr class="row-odd"><td>4</td>
+<td>x0</td>
+<td>Location of the center of the bucket.</td>
+</tr>
+<tr class="row-even"><td>5</td>
+<td>w1</td>
+<td>Width of the left side cubic section.</td>
+</tr>
+<tr class="row-odd"><td>6</td>
+<td>w2</td>
+<td>Width of the bucket.</td>
+</tr>
+<tr class="row-even"><td>7</td>
+<td>w3</td>
+<td>Width of the right side cubic section.</td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>**kwargs</strong> :</p>
+<blockquote class="last">
+<div><p>All parameters are passed to <a class="reference internal" href="#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt></a>.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="gptools.kernel.gibbs.quintic_bucket_warp">
+<tt class="descclassname">gptools.kernel.gibbs.</tt><tt class="descname">quintic_bucket_warp</tt><big>(</big><em>x</em>, <em>n</em>, <em>l1</em>, <em>l2</em>, <em>l3</em>, <em>x0</em>, <em>w1</em>, <em>w2</em>, <em>w3</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/gibbs.html#quintic_bucket_warp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.gibbs.quintic_bucket_warp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Warps the length scale with a piecewise quintic &#8220;bucket&#8221; shape.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>x</strong> : float or array-like of float</p>
+<blockquote>
+<div><p>Locations to evaluate length scale at.</p>
+</div></blockquote>
+<p><strong>n</strong> : non-negative int</p>
+<blockquote>
+<div><p>Derivative order to evaluate. Only first derivatives are supported.</p>
+</div></blockquote>
+<p><strong>l1</strong> : positive float</p>
+<blockquote>
+<div><p>Length scale to the left of the bucket.</p>
+</div></blockquote>
+<p><strong>l2</strong> : positive float</p>
+<blockquote>
+<div><p>Length scale in the bucket.</p>
+</div></blockquote>
+<p><strong>l3</strong> : positive float</p>
+<blockquote>
+<div><p>Length scale to the right of the bucket.</p>
+</div></blockquote>
+<p><strong>x0</strong> : float</p>
+<blockquote>
+<div><p>Location of the center of the bucket.</p>
+</div></blockquote>
+<p><strong>w1</strong> : positive float</p>
+<blockquote>
+<div><p>Width of the left side quintic section.</p>
+</div></blockquote>
+<p><strong>w2</strong> : positive float</p>
+<blockquote>
+<div><p>Width of the bucket.</p>
+</div></blockquote>
+<p><strong>w3</strong> : positive float</p>
+<blockquote class="last">
+<div><p>Width of the right side quintic section.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="gptools.kernel.gibbs.GibbsKernel1dQuinticBucket">
+<em class="property">class </em><tt class="descclassname">gptools.kernel.gibbs.</tt><tt class="descname">GibbsKernel1dQuinticBucket</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/gibbs.html#GibbsKernel1dQuinticBucket"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.gibbs.GibbsKernel1dQuinticBucket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gptools.kernel.gibbs.GibbsKernel1d" title="gptools.kernel.gibbs.GibbsKernel1d"><tt class="xref py py-class docutils literal"><span class="pre">gptools.kernel.gibbs.GibbsKernel1d</span></tt></a></p>
+<p>Gibbs warped squared exponential covariance function in 1d.</p>
+<p>Uses hard-coded implementation up to first derivatives.</p>
+<p>The covariance function is given by</p>
+<div class="math">
+<p><img src="_images/math/ac4f8f336662a0b5d1fec49a55e14ae6b4fcb678.png" alt="k = \left ( \frac{2l(x)l(x')}{l^2(x)+l^2(x')} \right )^{1/2}\exp\left ( -\frac{(x-x')^2}{l^2(x)+l^2(x')} \right )"/></p>
+</div><p>Warps the length scale using a &#8220;bucket&#8221; function with quintic joins.</p>
+<p>The order of the hyperparameters is:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="2%" />
+<col width="13%" />
+<col width="85%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>0</td>
+<td>sigmaf</td>
+<td>Amplitude of the covariance function</td>
+</tr>
+<tr class="row-even"><td>1</td>
+<td>l1</td>
+<td>Length scale to the left of the bucket.</td>
+</tr>
+<tr class="row-odd"><td>2</td>
+<td>l2</td>
+<td>Length scale in the bucket.</td>
+</tr>
+<tr class="row-even"><td>3</td>
+<td>l3</td>
+<td>Length scale to the right of the bucket.</td>
+</tr>
+<tr class="row-odd"><td>4</td>
+<td>x0</td>
+<td>Location of the center of the bucket.</td>
+</tr>
+<tr class="row-even"><td>5</td>
+<td>w1</td>
+<td>Width of the left side quintic section.</td>
+</tr>
+<tr class="row-odd"><td>6</td>
+<td>w2</td>
+<td>Width of the bucket.</td>
+</tr>
+<tr class="row-even"><td>7</td>
+<td>w3</td>
+<td>Width of the right side quintic section.</td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>**kwargs</strong> :</p>
 <blockquote class="last">
 <div><p>All parameters are passed to <a class="reference internal" href="#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt></a>.</p>
 </div></blockquote>
@@ -994,13 +1672,12 @@ much slower than a hard-coded implementation of a given kernel.</p>
 
 </div>
 <div class="section" id="module-gptools.kernel.matern">
-<span id="matern-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">matern</span></tt> Module<a class="headerlink" href="#module-gptools.kernel.matern" title="Permalink to this headline">¶</a></h2>
+<span id="gptools-kernel-matern-module"></span><h2>gptools.kernel.matern module<a class="headerlink" href="#module-gptools.kernel.matern" title="Permalink to this headline">¶</a></h2>
 <p>Provides the <a class="reference internal" href="#gptools.kernel.matern.MaternKernel" title="gptools.kernel.matern.MaternKernel"><tt class="xref py py-class docutils literal"><span class="pre">MaternKernel</span></tt></a> class which implements the anisotropic Matern kernel.</p>
-<dl class="class">
-<dt id="gptools.kernel.matern.MaternKernel">
-<em class="property">class </em><tt class="descclassname">gptools.kernel.matern.</tt><tt class="descname">MaternKernel</tt><big>(</big><em>num_dim</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/matern.html#MaternKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.matern.MaternKernel" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#gptools.kernel.core.ChainRuleKernel" title="gptools.kernel.core.ChainRuleKernel"><tt class="xref py py-class docutils literal"><span class="pre">gptools.kernel.core.ChainRuleKernel</span></tt></a></p>
-<p>Matern covariance kernel. Supports arbitrary derivatives. Treats order as a hyperparameter.</p>
+<dl class="function">
+<dt id="gptools.kernel.matern.matern_function">
+<tt class="descclassname">gptools.kernel.matern.</tt><tt class="descname">matern_function</tt><big>(</big><em>Xi</em>, <em>Xj</em>, <em>*args</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/matern.html#matern_function"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.matern.matern_function" title="Permalink to this definition">¶</a></dt>
+<dd><p>Matern covariance function of arbitrary dimension, for use with <tt class="xref py py-class docutils literal"><span class="pre">ArbitraryKernel</span></tt>.</p>
 <p>The Matern kernel has the following hyperparameters, always referenced in
 the order listed:</p>
 <table border="1" class="docutils">
@@ -1030,14 +1707,234 @@ the order listed:</p>
 </table>
 <p>The kernel is defined as:</p>
 <div class="math">
-<p><img src="_images/math/9c8517c8f741ce57640333495649385dd9f0c8cc.png" alt="k_M = \sigma^2 \frac{2^{1-\nu}}{\Gamma(\nu)}
-\left (\sqrt{2\nu} \sum_i\left (\frac{\tau_i^2}{l_i^2}\right )\right )^\nu
-K_\nu\left(\sqrt{2\nu} \sum_i\left(\frac{\tau_i^2}{l_i^2}\right)\right)"/></p>
+<p><img src="_images/math/f0f8bd5e5f0df9df927e17240450fbb47a7bb8c7.png" alt="k_M = \sigma^2 \frac{2^{1-\nu}}{\Gamma(\nu)}
+\left (\sqrt{2\nu \sum_i\left (\frac{\tau_i^2}{l_i^2}\right )}\right )^\nu
+K_\nu\left(\sqrt{2\nu \sum_i\left(\frac{\tau_i^2}{l_i^2}\right)}\right)"/></p>
 </div><table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>num_dim</strong> : int</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>Xi, Xj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, <tt class="xref py py-class docutils literal"><span class="pre">mpf</span></tt>, tuple or scalar float</p>
+<blockquote>
+<div><p>Points to evaluate the covariance between. If they are <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>,
+<tt class="xref py py-mod docutils literal"><span class="pre">scipy</span></tt> functions are used, otherwise <tt class="xref py py-mod docutils literal"><span class="pre">mpmath</span></tt>
+functions are used.</p>
+</div></blockquote>
+<p><strong>*args</strong> :</p>
+<blockquote class="last">
+<div><p>Remaining arguments are the 2+num_dim hyperparameters as defined above.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="gptools.kernel.matern.MaternKernelArb">
+<em class="property">class </em><tt class="descclassname">gptools.kernel.matern.</tt><tt class="descname">MaternKernelArb</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/matern.html#MaternKernelArb"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.matern.MaternKernelArb" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gptools.kernel.core.ArbitraryKernel" title="gptools.kernel.core.ArbitraryKernel"><tt class="xref py py-class docutils literal"><span class="pre">gptools.kernel.core.ArbitraryKernel</span></tt></a></p>
+<p>Matern covariance kernel. Supports arbitrary derivatives. Treats order as a hyperparameter.</p>
+<p>This version of the Matern kernel is painfully slow, but uses <tt class="xref py py-mod docutils literal"><span class="pre">mpmath</span></tt>
+to ensure the derivatives are computed properly, since there may be issues
+with the regular <a class="reference internal" href="#gptools.kernel.matern.MaternKernel" title="gptools.kernel.matern.MaternKernel"><tt class="xref py py-class docutils literal"><span class="pre">MaternKernel</span></tt></a>.</p>
+<p>The Matern kernel has the following hyperparameters, always referenced in
+the order listed:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="2%" />
+<col width="12%" />
+<col width="86%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>0</td>
+<td>sigma</td>
+<td>prefactor</td>
+</tr>
+<tr class="row-even"><td>1</td>
+<td>nu</td>
+<td>order of kernel</td>
+</tr>
+<tr class="row-odd"><td>2</td>
+<td>l1</td>
+<td>length scale for the first dimension</td>
+</tr>
+<tr class="row-even"><td>3</td>
+<td>l2</td>
+<td>...and so on for all dimensions</td>
+</tr>
+</tbody>
+</table>
+<p>The kernel is defined as:</p>
+<div class="math">
+<p><img src="_images/math/f0f8bd5e5f0df9df927e17240450fbb47a7bb8c7.png" alt="k_M = \sigma^2 \frac{2^{1-\nu}}{\Gamma(\nu)}
+\left (\sqrt{2\nu \sum_i\left (\frac{\tau_i^2}{l_i^2}\right )}\right )^\nu
+K_\nu\left(\sqrt{2\nu \sum_i\left(\frac{\tau_i^2}{l_i^2}\right)}\right)"/></p>
+</div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>**kwargs</strong> :</p>
+<blockquote class="last">
+<div><p>All keyword parameters are passed to <a class="reference internal" href="#gptools.kernel.core.ArbitraryKernel" title="gptools.kernel.core.ArbitraryKernel"><tt class="xref py py-class docutils literal"><span class="pre">ArbitraryKernel</span></tt></a>.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="gptools.kernel.matern.MaternKernelArb.nu">
+<tt class="descname">nu</tt><a class="reference internal" href="_modules/gptools/kernel/matern.html#MaternKernelArb.nu"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.matern.MaternKernelArb.nu" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the value of the order <img class="math" src="_images/math/d67fb61cfffca2cc069e083d76cb6220b4ca14c8.png" alt="\nu"/>.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gptools.kernel.matern.MaternKernel1d">
+<em class="property">class </em><tt class="descclassname">gptools.kernel.matern.</tt><tt class="descname">MaternKernel1d</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/matern.html#MaternKernel1d"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.matern.MaternKernel1d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">gptools.kernel.core.Kernel</span></tt></a></p>
+<p>Matern covariance kernel. Only for univariate data. Only supports up to first derivatives. Treats order as a hyperparameter.</p>
+<p>The Matern kernel has the following hyperparameters, always referenced in
+the order listed:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="5%" />
+<col width="24%" />
+<col width="71%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>0</td>
+<td>sigma</td>
+<td>prefactor</td>
+</tr>
+<tr class="row-even"><td>1</td>
+<td>nu</td>
+<td>order of kernel</td>
+</tr>
+<tr class="row-odd"><td>2</td>
+<td>l1</td>
+<td>length scale</td>
+</tr>
+</tbody>
+</table>
+<p>The kernel is defined as:</p>
+<div class="math">
+<p><img src="_images/math/7ad5db4274874f1dc4571adec4964f2fe5ccd7e0.png" alt="k_M = \sigma^2 \frac{2^{1-\nu}}{\Gamma(\nu)}
+\left (\sqrt{2\nu \left (\frac{\tau^2}{l_1^2}\right )}\right )^\nu
+K_\nu\left(\sqrt{2\nu \left(\frac{\tau^2}{l_1^2}\right)}\right)"/></p>
+</div><p>where <img class="math" src="_images/math/f7721e1c81a99b3ca702eced767428fd321ca618.png" alt="\tau=X_i-X_j"/>.</p>
+<p>Note that the expressions for the derivatives break down for <img class="math" src="_images/math/39d407281b8591103c78d7a71187b97e0f1c6baa.png" alt="\nu &lt; 1"/>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>**kwargs</strong> :</p>
+<blockquote class="last">
+<div><p>All keyword parameters are passed to <a class="reference internal" href="#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt></a>.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="gptools.kernel.matern.MaternKernel1d.__call__">
+<tt class="descname">__call__</tt><big>(</big><em>Xi</em>, <em>Xj</em>, <em>ni</em>, <em>nj</em>, <em>hyper_deriv=None</em>, <em>symmetric=False</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/matern.html#MaternKernel1d.__call__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.matern.MaternKernel1d.__call__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Evaluate the covariance between points <cite>Xi</cite> and <cite>Xj</cite> with derivative order <cite>ni</cite>, <cite>nj</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>Xi</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
+<blockquote>
+<div><p><cite>M</cite> inputs with dimension <cite>D</cite>.</p>
+</div></blockquote>
+<p><strong>Xj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
+<blockquote>
+<div><p><cite>M</cite> inputs with dimension <cite>D</cite>.</p>
+</div></blockquote>
+<p><strong>ni</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
+<blockquote>
+<div><p><cite>M</cite> derivative orders for set <cite>i</cite>.</p>
+</div></blockquote>
+<p><strong>nj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
+<blockquote>
+<div><p><cite>M</cite> derivative orders for set <cite>j</cite>.</p>
+</div></blockquote>
+<p><strong>hyper_deriv</strong> : Non-negative int or None, optional</p>
+<blockquote>
+<div><p>The index of the hyperparameter to compute the first derivative
+with respect to. If None, no derivatives are taken. Hyperparameter
+derivatives are not supported at this point. Default is None.</p>
+</div></blockquote>
+<p><strong>symmetric</strong> : bool, optional</p>
+<blockquote>
+<div><p>Whether or not the input <cite>Xi</cite>, <cite>Xj</cite> are from a symmetric matrix.
+Default is False.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>Kij</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,)</p>
+<blockquote>
+<div><p>Covariances for each of the <cite>M</cite> <cite>Xi</cite>, <cite>Xj</cite> pairs.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>NotImplementedError</strong> :</p>
+<blockquote class="last">
+<div><p>If the <cite>hyper_deriv</cite> keyword is not None.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gptools.kernel.matern.MaternKernel">
+<em class="property">class </em><tt class="descclassname">gptools.kernel.matern.</tt><tt class="descname">MaternKernel</tt><big>(</big><em>num_dim=1</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/matern.html#MaternKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.matern.MaternKernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gptools.kernel.core.ChainRuleKernel" title="gptools.kernel.core.ChainRuleKernel"><tt class="xref py py-class docutils literal"><span class="pre">gptools.kernel.core.ChainRuleKernel</span></tt></a></p>
+<p>Matern covariance kernel. Supports arbitrary derivatives. Treats order as a hyperparameter.</p>
+<p>EXPERIMENTAL IMPLEMENTATION! DO NOT TRUST FOR HIGHER DERIVATIVES!</p>
+<p>The Matern kernel has the following hyperparameters, always referenced in
+the order listed:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="2%" />
+<col width="12%" />
+<col width="86%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>0</td>
+<td>sigma</td>
+<td>prefactor</td>
+</tr>
+<tr class="row-even"><td>1</td>
+<td>nu</td>
+<td>order of kernel</td>
+</tr>
+<tr class="row-odd"><td>2</td>
+<td>l1</td>
+<td>length scale for the first dimension</td>
+</tr>
+<tr class="row-even"><td>3</td>
+<td>l2</td>
+<td>...and so on for all dimensions</td>
+</tr>
+</tbody>
+</table>
+<p>The kernel is defined as:</p>
+<div class="math">
+<p><img src="_images/math/f0f8bd5e5f0df9df927e17240450fbb47a7bb8c7.png" alt="k_M = \sigma^2 \frac{2^{1-\nu}}{\Gamma(\nu)}
+\left (\sqrt{2\nu \sum_i\left (\frac{\tau_i^2}{l_i^2}\right )}\right )^\nu
+K_\nu\left(\sqrt{2\nu \sum_i\left(\frac{\tau_i^2}{l_i^2}\right)}\right)"/></p>
+</div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>num_dim</strong> : int</p>
 <blockquote>
 <div><p>Number of dimensions of the input data. Must be consistent with the <cite>X</cite>
 and <cite>Xstar</cite> values passed to the <a class="reference internal" href="gptools.html#gptools.gaussian_process.GaussianProcess" title="gptools.gaussian_process.GaussianProcess"><tt class="xref py py-class docutils literal"><span class="pre">GaussianProcess</span></tt></a>
@@ -1049,7 +1946,7 @@ you wish to use the covariance kernel with.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Raises :</th><td class="field-body"><p class="first"><strong>ValueError</strong> :</p>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>ValueError</strong> :</p>
 <blockquote>
 <div><p>If <cite>num_dim</cite> is not a positive integer or the lengths of the input
 vectors are inconsistent.</p>
@@ -1065,49 +1962,175 @@ vectors are inconsistent.</p>
 <dl class="attribute">
 <dt id="gptools.kernel.matern.MaternKernel.nu">
 <tt class="descname">nu</tt><a class="reference internal" href="_modules/gptools/kernel/matern.html#MaternKernel.nu"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.matern.MaternKernel.nu" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns the value of the order <img class="math" src="_images/math/d6a7ccf879c4a4fe694033606332cb83806db296.png" alt="\nu"/>.</p>
+<dd><p>Returns the value of the order <img class="math" src="_images/math/d67fb61cfffca2cc069e083d76cb6220b4ca14c8.png" alt="\nu"/>.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gptools.kernel.matern.Matern52Kernel">
+<em class="property">class </em><tt class="descclassname">gptools.kernel.matern.</tt><tt class="descname">Matern52Kernel</tt><big>(</big><em>num_dim=1</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/matern.html#Matern52Kernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.matern.Matern52Kernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">gptools.kernel.core.Kernel</span></tt></a></p>
+<p>Matern 5/2 covariance kernel. Supports only 0th and 1st derivatives
+and is fixed at nu=5/2. Because of these limitations, it is quite a bit
+faster than the more general Matern kernels.</p>
+<p>The Matern52 kernel has the following hyperparameters, always referenced in
+the order listed:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="2%" />
+<col width="12%" />
+<col width="86%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>0</td>
+<td>sigma</td>
+<td>prefactor</td>
+</tr>
+<tr class="row-even"><td>1</td>
+<td>l1</td>
+<td>length scale for the first dimension</td>
+</tr>
+<tr class="row-odd"><td>2</td>
+<td>l2</td>
+<td>...and so on for all dimensions</td>
+</tr>
+</tbody>
+</table>
+<p>The kernel is defined as:</p>
+<div class="math">
+<p><img src="_images/math/6e1eacfa8baf1a9d9e47625859b4f809b4ac73fb.png" alt="k_M(x, x') = \sigma^2 \left(1 + \sqrt{5r^2} + \frac{5}{3}r^2\right) \exp(-\sqrt{5r^2}) \\
+r^2 = \sum_{d=1}^D \frac{(x_d - x'_d)^2}{l_d^2}"/></p>
+</div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>num_dim</strong> : int</p>
+<blockquote>
+<div><p>Number of dimensions of the input data. Must be consistent with the <cite>X</cite>
+and <cite>Xstar</cite> values passed to the <a class="reference internal" href="gptools.html#gptools.gaussian_process.GaussianProcess" title="gptools.gaussian_process.GaussianProcess"><tt class="xref py py-class docutils literal"><span class="pre">GaussianProcess</span></tt></a>
+you wish to use the covariance kernel with.</p>
+</div></blockquote>
+<p><strong>**kwargs</strong> :</p>
+<blockquote>
+<div><p>All keyword parameters are passed to <a class="reference internal" href="#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt></a>.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>ValueError</strong> :</p>
+<blockquote>
+<div><p>If <cite>num_dim</cite> is not a positive integer or the lengths of the input
+vectors are inconsistent.</p>
+</div></blockquote>
+<p><strong>GPArgumentError</strong> :</p>
+<blockquote class="last">
+<div><p>If <cite>fixed_params</cite> is passed but <cite>initial_params</cite> is not.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="gptools.kernel.matern.Matern52Kernel.__call__">
+<tt class="descname">__call__</tt><big>(</big><em>Xi</em>, <em>Xj</em>, <em>ni</em>, <em>nj</em>, <em>hyper_deriv=None</em>, <em>symmetric=False</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/matern.html#Matern52Kernel.__call__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.matern.Matern52Kernel.__call__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Evaluate the covariance between points <cite>Xi</cite> and <cite>Xj</cite> with derivative order <cite>ni</cite>, <cite>nj</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>Xi</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
+<blockquote>
+<div><p><cite>M</cite> inputs with dimension <cite>D</cite>.</p>
+</div></blockquote>
+<p><strong>Xj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
+<blockquote>
+<div><p><cite>M</cite> inputs with dimension <cite>D</cite>.</p>
+</div></blockquote>
+<p><strong>ni</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
+<blockquote>
+<div><p><cite>M</cite> derivative orders for set <cite>i</cite>.</p>
+</div></blockquote>
+<p><strong>nj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
+<blockquote>
+<div><p><cite>M</cite> derivative orders for set <cite>j</cite>.</p>
+</div></blockquote>
+<p><strong>hyper_deriv</strong> : Non-negative int or None, optional</p>
+<blockquote>
+<div><p>The index of the hyperparameter to compute the first derivative
+with respect to. If None, no derivatives are taken. Hyperparameter
+derivatives are not supported at this point. Default is None.</p>
+</div></blockquote>
+<p><strong>symmetric</strong> : bool</p>
+<blockquote>
+<div><p>Whether or not the input <cite>Xi</cite>, <cite>Xj</cite> are from a symmetric matrix.
+Default is False.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>Kij</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,)</p>
+<blockquote>
+<div><p>Covariances for each of the <cite>M</cite> <cite>Xi</cite>, <cite>Xj</cite> pairs.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>NotImplementedError</strong> :</p>
+<blockquote class="last">
+<div><p>If the <cite>hyper_deriv</cite> keyword is not None.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 </dd></dl>
 
 </div>
 <div class="section" id="module-gptools.kernel.noise">
-<span id="noise-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">noise</span></tt> Module<a class="headerlink" href="#module-gptools.kernel.noise" title="Permalink to this headline">¶</a></h2>
+<span id="gptools-kernel-noise-module"></span><h2>gptools.kernel.noise module<a class="headerlink" href="#module-gptools.kernel.noise" title="Permalink to this headline">¶</a></h2>
 <p>Provides classes for implementing uncorrelated noise.</p>
 <dl class="class">
 <dt id="gptools.kernel.noise.DiagonalNoiseKernel">
-<em class="property">class </em><tt class="descclassname">gptools.kernel.noise.</tt><tt class="descname">DiagonalNoiseKernel</tt><big>(</big><em>num_dim</em>, <em>initial_noise=None</em>, <em>fixed_noise=None</em>, <em>noise_bound=None</em>, <em>n=0</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/noise.html#DiagonalNoiseKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.noise.DiagonalNoiseKernel" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">gptools.kernel.noise.</tt><tt class="descname">DiagonalNoiseKernel</tt><big>(</big><em>num_dim=1</em>, <em>initial_noise=None</em>, <em>fixed_noise=False</em>, <em>noise_bound=None</em>, <em>n=0</em>, <em>hyperprior=None</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/noise.html#DiagonalNoiseKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.noise.DiagonalNoiseKernel" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">gptools.kernel.core.Kernel</span></tt></a></p>
 <p>Kernel that has constant, independent noise (i.e., a diagonal kernel).</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>num_dim</strong> : positive int</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>num_dim</strong> : positive int</p>
 <blockquote>
 <div><p>Number of dimensions of the input data.</p>
 </div></blockquote>
-<p><strong>initial_noise</strong> : float</p>
+<p><strong>initial_noise</strong> : float, optional</p>
 <blockquote>
 <div><p>Initial value for the noise standard deviation. Default value is None
 (noise gets set to 1).</p>
 </div></blockquote>
-<p><strong>fixed_noise</strong> : bool</p>
+<p><strong>fixed_noise</strong> : bool, optional</p>
 <blockquote>
 <div><p>Whether or not the noise is taken to be fixed when optimizing the log
-likelihood.</p>
+likelihood. Default is False (noise is not fixed).</p>
 </div></blockquote>
-<p><strong>noise_bound</strong> : 2-tuple</p>
+<p><strong>noise_bound</strong> : 2-tuple, optional</p>
 <blockquote>
 <div><p>The bounds for the noise when optimizing the log likelihood with
 <tt class="xref py py-func docutils literal"><span class="pre">scipy.optimize.minimize()</span></tt>. Must be of the form
 (<cite>lower</cite>, <cite>upper</cite>). Set a given entry to None to put no bound on
 that side. Default is None, which gets set to (0, None).</p>
 </div></blockquote>
-<p><strong>n</strong> : non-negative int or tuple of non-negative ints with length equal to <cite>num_dim</cite></p>
-<blockquote class="last">
+<p><strong>n</strong> : non-negative int or tuple of non-negative ints with length equal to <cite>num_dim</cite>, optional</p>
+<blockquote>
 <div><p>Indicates which derivative this noise is with respect to. Default is 0
 (noise applies to value).</p>
+</div></blockquote>
+<p><strong>hyperprior</strong> : callable, optional</p>
+<blockquote class="last">
+<div><p>Function that returns the prior log-density for a possible value of
+noise when called. Must also have an attribute called <tt class="xref py py-attr docutils literal"><span class="pre">bounds</span></tt>
+that is the bounds on the noise and a method called
+<tt class="xref py py-meth docutils literal"><span class="pre">random_draw()</span></tt> that yields a random draw. Default behavior is
+to assign a uniform prior.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -1121,19 +2144,19 @@ that side. Default is None, which gets set to (0, None).</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>Xi</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>Xi</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
-<div><p><cite>M</cite> inputs with dimension <cite>N</cite>.</p>
+<div><p><cite>M</cite> inputs with dimension <cite>D</cite>.</p>
 </div></blockquote>
-<p><strong>Xj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<p><strong>Xj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
-<div><p><cite>M</cite> inputs with dimension <cite>N</cite>.</p>
+<div><p><cite>M</cite> inputs with dimension <cite>D</cite>.</p>
 </div></blockquote>
-<p><strong>ni</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<p><strong>ni</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
 <div><p><cite>M</cite> derivative orders for set <cite>i</cite>.</p>
 </div></blockquote>
-<p><strong>nj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<p><strong>nj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
 <div><p><cite>M</cite> derivative orders for set <cite>j</cite>.</p>
 </div></blockquote>
@@ -1151,7 +2174,7 @@ Default is False.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>Kij</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,)</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>Kij</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,)</p>
 <blockquote class="last">
 <div><p>Covariances for each of the <cite>M</cite> <cite>Xi</cite>, <cite>Xj</cite> pairs.</p>
 </div></blockquote>
@@ -1165,14 +2188,14 @@ Default is False.</p>
 
 <dl class="class">
 <dt id="gptools.kernel.noise.ZeroKernel">
-<em class="property">class </em><tt class="descclassname">gptools.kernel.noise.</tt><tt class="descname">ZeroKernel</tt><big>(</big><em>num_dim</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/noise.html#ZeroKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.noise.ZeroKernel" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">gptools.kernel.noise.</tt><tt class="descname">ZeroKernel</tt><big>(</big><em>num_dim=1</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/noise.html#ZeroKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.noise.ZeroKernel" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#gptools.kernel.noise.DiagonalNoiseKernel" title="gptools.kernel.noise.DiagonalNoiseKernel"><tt class="xref py py-class docutils literal"><span class="pre">gptools.kernel.noise.DiagonalNoiseKernel</span></tt></a></p>
 <p>Kernel that always evaluates to zero, used as the default noise kernel.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>num_dim</strong> : positive int</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>num_dim</strong> : positive int</p>
 <blockquote class="last">
 <div><p>The number of dimensions of the inputs.</p>
 </div></blockquote>
@@ -1189,19 +2212,19 @@ Default is False.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>Xi</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>Xi</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
-<div><p><cite>M</cite> inputs with dimension <cite>N</cite>.</p>
+<div><p><cite>M</cite> inputs with dimension <cite>D</cite>.</p>
 </div></blockquote>
-<p><strong>Xj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<p><strong>Xj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
-<div><p><cite>M</cite> inputs with dimension <cite>N</cite>.</p>
+<div><p><cite>M</cite> inputs with dimension <cite>D</cite>.</p>
 </div></blockquote>
-<p><strong>ni</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<p><strong>ni</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
 <div><p><cite>M</cite> derivative orders for set <cite>i</cite>.</p>
 </div></blockquote>
-<p><strong>nj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<p><strong>nj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
 <div><p><cite>M</cite> derivative orders for set <cite>j</cite>.</p>
 </div></blockquote>
@@ -1219,7 +2242,7 @@ Default is False.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>Kij</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,)</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>Kij</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,)</p>
 <blockquote class="last">
 <div><p>Covariances for each of the <cite>M</cite> <cite>Xi</cite>, <cite>Xj</cite> pairs.</p>
 </div></blockquote>
@@ -1233,11 +2256,11 @@ Default is False.</p>
 
 </div>
 <div class="section" id="module-gptools.kernel.rational_quadratic">
-<span id="rational-quadratic-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">rational_quadratic</span></tt> Module<a class="headerlink" href="#module-gptools.kernel.rational_quadratic" title="Permalink to this headline">¶</a></h2>
+<span id="gptools-kernel-rational-quadratic-module"></span><h2>gptools.kernel.rational_quadratic module<a class="headerlink" href="#module-gptools.kernel.rational_quadratic" title="Permalink to this headline">¶</a></h2>
 <p>Provides the <a class="reference internal" href="#gptools.kernel.rational_quadratic.RationalQuadraticKernel" title="gptools.kernel.rational_quadratic.RationalQuadraticKernel"><tt class="xref py py-class docutils literal"><span class="pre">RationalQuadraticKernel</span></tt></a> class which implements the anisotropic rational quadratic (RQ) kernel.</p>
 <dl class="class">
 <dt id="gptools.kernel.rational_quadratic.RationalQuadraticKernel">
-<em class="property">class </em><tt class="descclassname">gptools.kernel.rational_quadratic.</tt><tt class="descname">RationalQuadraticKernel</tt><big>(</big><em>num_dim</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/rational_quadratic.html#RationalQuadraticKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.rational_quadratic.RationalQuadraticKernel" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">gptools.kernel.rational_quadratic.</tt><tt class="descname">RationalQuadraticKernel</tt><big>(</big><em>num_dim=1</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/rational_quadratic.html#RationalQuadraticKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.rational_quadratic.RationalQuadraticKernel" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#gptools.kernel.core.ChainRuleKernel" title="gptools.kernel.core.ChainRuleKernel"><tt class="xref py py-class docutils literal"><span class="pre">gptools.kernel.core.ChainRuleKernel</span></tt></a></p>
 <p>Rational quadratic (RQ) covariance kernel. Supports arbitrary derivatives.</p>
 <p>The RQ kernel has the following hyperparameters, always referenced
@@ -1269,12 +2292,12 @@ in the order listed:</p>
 </table>
 <p>The kernel is defined as:</p>
 <div class="math">
-<p><img src="_images/math/fb8eb09dd92824edc267624b0de1ed9eb5431d77.png" alt="k_{RQ} = \sigma^2 \left(1 + \frac{1}{2\alpha} \sum_i\frac{\tau_i^2}{l_i^2}\right)^{-\alpha}"/></p>
+<p><img src="_images/math/5bc0c9b16eaa97f7cb1a849caf9198488b77ebb5.png" alt="k_{RQ} = \sigma^2 \left(1 + \frac{1}{2\alpha} \sum_i\frac{\tau_i^2}{l_i^2}\right)^{-\alpha}"/></p>
 </div><table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>num_dim</strong> : int</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>num_dim</strong> : int</p>
 <blockquote>
 <div><p>Number of dimensions of the input data. Must be consistent
 with the <cite>X</cite> and <cite>Xstar</cite> values passed to the
@@ -1287,7 +2310,7 @@ wish to use the covariance kernel with.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Raises :</th><td class="field-body"><p class="first"><strong>ValueError</strong> :</p>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>ValueError</strong> :</p>
 <blockquote>
 <div><p>If <cite>num_dim</cite> is not a positive integer or the lengths of
 the input vectors are inconsistent.</p>
@@ -1304,11 +2327,11 @@ the input vectors are inconsistent.</p>
 
 </div>
 <div class="section" id="module-gptools.kernel.squared_exponential">
-<span id="squared-exponential-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">squared_exponential</span></tt> Module<a class="headerlink" href="#module-gptools.kernel.squared_exponential" title="Permalink to this headline">¶</a></h2>
+<span id="gptools-kernel-squared-exponential-module"></span><h2>gptools.kernel.squared_exponential module<a class="headerlink" href="#module-gptools.kernel.squared_exponential" title="Permalink to this headline">¶</a></h2>
 <p>Provides the <a class="reference internal" href="#gptools.kernel.squared_exponential.SquaredExponentialKernel" title="gptools.kernel.squared_exponential.SquaredExponentialKernel"><tt class="xref py py-class docutils literal"><span class="pre">SquaredExponentialKernel</span></tt></a> class that implements the anisotropic SE kernel.</p>
 <dl class="class">
 <dt id="gptools.kernel.squared_exponential.SquaredExponentialKernel">
-<em class="property">class </em><tt class="descclassname">gptools.kernel.squared_exponential.</tt><tt class="descname">SquaredExponentialKernel</tt><big>(</big><em>num_dim</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/squared_exponential.html#SquaredExponentialKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.squared_exponential.SquaredExponentialKernel" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">gptools.kernel.squared_exponential.</tt><tt class="descname">SquaredExponentialKernel</tt><big>(</big><em>num_dim=1</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/squared_exponential.html#SquaredExponentialKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.squared_exponential.SquaredExponentialKernel" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">gptools.kernel.core.Kernel</span></tt></a></p>
 <p>Squared exponential covariance kernel. Supports arbitrary derivatives.</p>
 <p>The squared exponential has the following hyperparameters, always
@@ -1336,12 +2359,12 @@ referenced in the order listed:</p>
 </table>
 <p>The kernel is defined as:</p>
 <div class="math">
-<p><img src="_images/math/6555583597f0140ab50c633f415f7b24ae12ce8d.png" alt="k_{SE} = \sigma^2 \exp\left(-\sum_i\frac{\tau_i^2}{l_i^2}\right)"/></p>
+<p><img src="_images/math/863b9a1281795a28b594b5f121a9d941f4a01a97.png" alt="k_{SE} = \sigma^2 \exp\left(-\frac{1}{2}\sum_i\frac{\tau_i^2}{l_i^2}\right)"/></p>
 </div><table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>num_dim</strong> : int</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>num_dim</strong> : int</p>
 <blockquote>
 <div><p>Number of dimensions of the input data. Must be consistent
 with the <cite>X</cite> and <cite>Xstar</cite> values passed to the
@@ -1354,7 +2377,7 @@ wish to use the covariance kernel with.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Raises :</th><td class="field-body"><p class="first"><strong>ValueError</strong> :</p>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>ValueError</strong> :</p>
 <blockquote>
 <div><p>If <cite>num_dim</cite> is not a positive integer or the lengths of
 the input vectors are inconsistent.</p>
@@ -1375,19 +2398,19 @@ the input vectors are inconsistent.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>Xi</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>Xi</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
-<div><p><cite>M</cite> inputs with dimension <cite>N</cite>.</p>
+<div><p><cite>M</cite> inputs with dimension <cite>D</cite>.</p>
 </div></blockquote>
-<p><strong>Xj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<p><strong>Xj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
-<div><p><cite>M</cite> inputs with dimension <cite>N</cite>.</p>
+<div><p><cite>M</cite> inputs with dimension <cite>D</cite>.</p>
 </div></blockquote>
-<p><strong>ni</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<p><strong>ni</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
 <div><p><cite>M</cite> derivative orders for set <cite>i</cite>.</p>
 </div></blockquote>
-<p><strong>nj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>N</cite>)</p>
+<p><strong>nj</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Matrix</span></tt> or other Array-like, (<cite>M</cite>, <cite>D</cite>)</p>
 <blockquote>
 <div><p><cite>M</cite> derivative orders for set <cite>j</cite>.</p>
 </div></blockquote>
@@ -1405,13 +2428,13 @@ Default is False.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>Kij</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,)</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>Kij</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt>, (<cite>M</cite>,)</p>
 <blockquote>
 <div><p>Covariances for each of the <cite>M</cite> <cite>Xi</cite>, <cite>Xj</cite> pairs.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Raises :</th><td class="field-body"><p class="first"><strong>NotImplementedError</strong> :</p>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>NotImplementedError</strong> :</p>
 <blockquote class="last">
 <div><p>If hyper_deriv is not None and <cite>n</cite> &gt; 0.</p>
 </div></blockquote>
@@ -1424,6 +2447,465 @@ Default is False.</p>
 </dd></dl>
 
 </div>
+<div class="section" id="module-gptools.kernel.warping">
+<span id="gptools-kernel-warping-module"></span><h2>gptools.kernel.warping module<a class="headerlink" href="#module-gptools.kernel.warping" title="Permalink to this headline">¶</a></h2>
+<p>Classes and functions to warp inputs to kernels to enable fitting of
+nonstationary data. Note that this accomplishes a similar goal as the Gibbs
+kernel (which is a nonstationary version of the squared exponential kernel), but
+with the difference that the warpings in this module can be applied to any
+existing kernel. Furthermore, whereas the Gibbs kernel implements
+nonstationarity by changing the length scale of the covariance function, the
+warpings in the module act by transforming the input values directly.</p>
+<p>The module contains two core classes that work together.
+<a class="reference internal" href="#gptools.kernel.warping.WarpingFunction" title="gptools.kernel.warping.WarpingFunction"><tt class="xref py py-class docutils literal"><span class="pre">WarpingFunction</span></tt></a> gives you a way to wrap a given function in a way
+that allows you to optimize/integrate over the hyperparameters that describe the
+warping. <a class="reference internal" href="#gptools.kernel.warping.WarpedKernel" title="gptools.kernel.warping.WarpedKernel"><tt class="xref py py-class docutils literal"><span class="pre">WarpedKernel</span></tt></a> is an extension of the <tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt> base
+class and is how you apply a <a class="reference internal" href="#gptools.kernel.warping.WarpingFunction" title="gptools.kernel.warping.WarpingFunction"><tt class="xref py py-class docutils literal"><span class="pre">WarpingFunction</span></tt></a> to whatever kernel you
+want to warp.</p>
+<p>Two useful warpings have been implemented at this point:
+<a class="reference internal" href="#gptools.kernel.warping.BetaWarpedKernel" title="gptools.kernel.warping.BetaWarpedKernel"><tt class="xref py py-class docutils literal"><span class="pre">BetaWarpedKernel</span></tt></a> warps the inputs using the CDF of the beta
+distribution (i.e., the regularized incomplete beta function). This requires
+that the starting inputs be constrained to the unit hypercube [0, 1]. In order
+to get arbitrary data to this form, <a class="reference internal" href="#gptools.kernel.warping.LinearWarpedKernel" title="gptools.kernel.warping.LinearWarpedKernel"><tt class="xref py py-class docutils literal"><span class="pre">LinearWarpedKernel</span></tt></a> allows you to
+apply a linear transformation based on the known bounds of your data.</p>
+<p>So, for example, to make a beta-warped squared exponential kernel, you simply type:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">k_SE</span> <span class="o">=</span> <span class="n">gptools</span><span class="o">.</span><span class="n">SquaredExponentialKernel</span><span class="p">()</span>
+<span class="n">k_SE_beta</span> <span class="o">=</span> <span class="n">gptools</span><span class="o">.</span><span class="n">BetaWarpedKernel</span><span class="p">(</span><span class="n">k_SE</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Furthermore, if your inputs <cite>X</cite> are not confined to the unit hypercube [0, 1],
+you should use a linear transformation to map them to it:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">k_SE_beta_unit</span> <span class="o">=</span> <span class="n">gptools</span><span class="o">.</span><span class="n">LinearWarpedKernel</span><span class="p">(</span><span class="n">k_SE_beta</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span> <span class="n">X</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
+</pre></div>
+</div>
+<dl class="class">
+<dt id="gptools.kernel.warping.WarpingFunction">
+<em class="property">class </em><tt class="descclassname">gptools.kernel.warping.</tt><tt class="descname">WarpingFunction</tt><big>(</big><em>fun</em>, <em>num_dim=1</em>, <em>num_params=None</em>, <em>initial_params=None</em>, <em>fixed_params=None</em>, <em>param_bounds=None</em>, <em>param_names=None</em>, <em>enforce_bounds=False</em>, <em>hyperprior=None</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/warping.html#WarpingFunction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.warping.WarpingFunction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>Wrapper to interface a function with <a class="reference internal" href="#gptools.kernel.warping.WarpedKernel" title="gptools.kernel.warping.WarpedKernel"><tt class="xref py py-class docutils literal"><span class="pre">WarpedKernel</span></tt></a>.</p>
+<p>This lets you define a simple function <cite>fun(X, d, n, p1, p2, ...)</cite> that
+operates on one dimension of <cite>X</cite> at a time and has several hyperparameters.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>fun</strong> : callable</p>
+<blockquote>
+<div><p>Must have fingerprint <cite>fun(X, d, n, p1, p2, ...)</cite> where <cite>X</cite> is an array
+of length <cite>M</cite>, <cite>d</cite> is the index of the dimension <cite>X</cite> is from, <cite>n</cite> is a
+non-negative integer representing the order of derivative to take and
+<cite>p1</cite>, <cite>p2</cite>, ... are the parameters of the warping. Note that this form
+assumes that the warping is applied independently to each dimension.</p>
+</div></blockquote>
+<p><strong>num_dim</strong> : positive int, optional</p>
+<blockquote>
+<div><p>Number of dimensions of the input data. Must be consistent with the <cite>X</cite>
+and <cite>Xstar</cite> values passed to the
+<a class="reference internal" href="gptools.html#gptools.gaussian_process.GaussianProcess" title="gptools.gaussian_process.GaussianProcess"><tt class="xref py py-class docutils literal"><span class="pre">GaussianProcess</span></tt></a> you wish to use
+the warping function with. Default is 1.</p>
+</div></blockquote>
+<p><strong>num_params</strong> : Non-negative int, optional</p>
+<blockquote>
+<div><p>Number of parameters in the model. Default is to determine the number of
+parameters by inspection of <cite>fun</cite> or the other arguments provided.</p>
+</div></blockquote>
+<p><strong>initial_params</strong> : Array, (<cite>num_params</cite>,), optional</p>
+<blockquote>
+<div><p>Initial values to set for the hyperparameters. Default is None, in
+which case 1 is used for the initial values.</p>
+</div></blockquote>
+<p><strong>fixed_params</strong> : Array of bool, (<cite>num_params</cite>,), optional</p>
+<blockquote>
+<div><p>Sets which hyperparameters are considered fixed when optimizing the log
+likelihood. A True entry corresponds to that element being
+fixed (where the element ordering is as defined in the class).
+Default value is None (no hyperparameters are fixed).</p>
+</div></blockquote>
+<p><strong>param_bounds</strong> : list of 2-tuples (<cite>num_params</cite>,), optional</p>
+<blockquote>
+<div><p>List of bounds for each of the hyperparameters. Each 2-tuple is of the
+form (lower`, <cite>upper</cite>). If there is no bound in a given direction, it
+works best to set it to something big like 1e16. Default is (0.0, 1e16)
+for each hyperparameter. Note that this is overridden by the <cite>hyperprior</cite>
+keyword, if present.</p>
+</div></blockquote>
+<p><strong>param_names</strong> : list of str (<cite>num_params</cite>,), optional</p>
+<blockquote>
+<div><p>List of labels for the hyperparameters. Default is all empty strings.</p>
+</div></blockquote>
+<p><strong>enforce_bounds</strong> : bool, optional</p>
+<blockquote>
+<div><p>If True, an attempt to set a hyperparameter outside of its bounds will
+result in the hyperparameter being set right at its bound. If False,
+bounds are not enforced inside the kernel. Default is False (do not
+enforce bounds).</p>
+</div></blockquote>
+<p><strong>hyperprior</strong> : <tt class="xref py py-class docutils literal"><span class="pre">JointPrior</span></tt> instance or list, optional</p>
+<blockquote class="last">
+<div><p>Joint prior distribution for all hyperparameters. Can either be given
+as a <tt class="xref py py-class docutils literal"><span class="pre">JointPrior</span></tt> instance or a list of <cite>num_params</cite>
+callables or <tt class="xref py py-class docutils literal"><span class="pre">rv_frozen</span></tt> instances from <tt class="xref py py-mod docutils literal"><span class="pre">scipy.stats</span></tt>,
+in which case a <tt class="xref py py-class docutils literal"><span class="pre">IndependentJointPrior</span></tt> is constructed with
+these as the independent priors on each hyperparameter. Default is a
+uniform PDF on all hyperparameters.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="gptools.kernel.warping.WarpingFunction.__call__">
+<tt class="descname">__call__</tt><big>(</big><em>X</em>, <em>d</em>, <em>n</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/warping.html#WarpingFunction.__call__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.warping.WarpingFunction.__call__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Evaluate the warping function.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>X</strong> : Array, (<cite>M</cite>,)</p>
+<blockquote>
+<div><p><cite>M</cite> inputs corresponding to dimension <cite>d</cite>.</p>
+</div></blockquote>
+<p><strong>d</strong> : non-negative int</p>
+<blockquote>
+<div><p>Index of the dimension that <cite>X</cite> is from.</p>
+</div></blockquote>
+<p><strong>n</strong> : non-negative int</p>
+<blockquote class="last">
+<div><p>Derivative order to compute.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="gptools.kernel.warping.WarpingFunction.param_bounds">
+<tt class="descname">param_bounds</tt><a class="reference internal" href="_modules/gptools/kernel/warping.html#WarpingFunction.param_bounds"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.warping.WarpingFunction.param_bounds" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gptools.kernel.warping.WarpingFunction.set_hyperparams">
+<tt class="descname">set_hyperparams</tt><big>(</big><em>new_params</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/warping.html#WarpingFunction.set_hyperparams"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.warping.WarpingFunction.set_hyperparams" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the free hyperparameters to the new parameter values in new_params.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>new_params</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt> or other Array-like, (len(<tt class="xref py py-attr docutils literal"><span class="pre">self.params</span></tt>),)</p>
+<blockquote class="last">
+<div><p>New parameter values, ordered as dictated by the docstring for the
+class.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="gptools.kernel.warping.WarpingFunction.num_free_params">
+<tt class="descname">num_free_params</tt><a class="reference internal" href="_modules/gptools/kernel/warping.html#WarpingFunction.num_free_params"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.warping.WarpingFunction.num_free_params" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the number of free parameters.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="gptools.kernel.warping.WarpingFunction.free_param_idxs">
+<tt class="descname">free_param_idxs</tt><a class="reference internal" href="_modules/gptools/kernel/warping.html#WarpingFunction.free_param_idxs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.warping.WarpingFunction.free_param_idxs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the indices of the free parameters in the main arrays of parameters, etc.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="gptools.kernel.warping.WarpingFunction.free_params">
+<tt class="descname">free_params</tt><a class="reference internal" href="_modules/gptools/kernel/warping.html#WarpingFunction.free_params"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.warping.WarpingFunction.free_params" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the values of the free hyperparameters.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>free_params</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt></p>
+<blockquote class="last">
+<div><p>Array of the free parameters, in order.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="gptools.kernel.warping.WarpingFunction.free_param_bounds">
+<tt class="descname">free_param_bounds</tt><a class="reference internal" href="_modules/gptools/kernel/warping.html#WarpingFunction.free_param_bounds"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.warping.WarpingFunction.free_param_bounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the bounds of the free hyperparameters.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>free_param_bounds</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt></p>
+<blockquote class="last">
+<div><p>Array of the bounds of the free parameters, in order.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="gptools.kernel.warping.WarpingFunction.free_param_names">
+<tt class="descname">free_param_names</tt><a class="reference internal" href="_modules/gptools/kernel/warping.html#WarpingFunction.free_param_names"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.warping.WarpingFunction.free_param_names" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the names of the free hyperparameters.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>free_param_names</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt></p>
+<blockquote class="last">
+<div><p>Array of the names of the free parameters, in order.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="gptools.kernel.warping.beta_cdf_warp">
+<tt class="descclassname">gptools.kernel.warping.</tt><tt class="descname">beta_cdf_warp</tt><big>(</big><em>X</em>, <em>d</em>, <em>n</em>, <em>*args</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/warping.html#beta_cdf_warp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.warping.beta_cdf_warp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Warp inputs that are confined to the unit hypercube using the regularized incomplete beta function.</p>
+<p>Applies separately to each dimension, designed for use with
+<a class="reference internal" href="#gptools.kernel.warping.WarpingFunction" title="gptools.kernel.warping.WarpingFunction"><tt class="xref py py-class docutils literal"><span class="pre">WarpingFunction</span></tt></a>.</p>
+<p>Assumes that your inputs <cite>X</cite> lie entirely within the unit hypercube [0, 1].</p>
+<p>Note that you may experience some issues with constraining and computing
+derivatives at <img class="math" src="_images/math/55ba271999995cac02cf578362df5be030594ed6.png" alt="x=0"/> when <img class="math" src="_images/math/f053df68f37ffa28944fe80c99adea2c99593e38.png" alt="\alpha &lt; 1"/> and at <img class="math" src="_images/math/092fcccf083cc591757e2d96990c3368bf2ce486.png" alt="x=1"/> when
+<img class="math" src="_images/math/0480ea4455e4aa12d5b02d7bc2cad34854df89e9.png" alt="\beta &lt; 1"/>. As a workaround, try mapping your data to not touch the
+boundaries of the unit hypercube.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>X</strong> : array, (<cite>M</cite>,)</p>
+<blockquote>
+<div><p><cite>M</cite> inputs from dimension <cite>d</cite>.</p>
+</div></blockquote>
+<p><strong>d</strong> : non-negative int</p>
+<blockquote>
+<div><p>The index (starting from zero) of the dimension to apply the warping to.</p>
+</div></blockquote>
+<p><strong>n</strong> : non-negative int</p>
+<blockquote>
+<div><p>The derivative order to compute.</p>
+</div></blockquote>
+<p><strong>*args</strong> : 2N scalars</p>
+<blockquote class="last">
+<div><p>The remaining parameters to describe the warping, given as scalars.
+These are given as <cite>alpha_i</cite>, <cite>beta_i</cite> for each of the <cite>D</cite> dimensions.
+Note that these must ALL be provided for each call.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">References</p>
+<table class="docutils citation" frame="void" id="r1" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id3">[R1]</a></td><td>J. Snoek, K. Swersky, R. Zemel, R. P. Adams, &#8220;Input Warping for
+Bayesian Optimization of Non-stationary Functions&#8221; ICML (2014)</td></tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="gptools.kernel.warping.linear_warp">
+<tt class="descclassname">gptools.kernel.warping.</tt><tt class="descname">linear_warp</tt><big>(</big><em>X</em>, <em>d</em>, <em>n</em>, <em>*args</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/warping.html#linear_warp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.warping.linear_warp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Warp inputs with a linear transformation.</p>
+<p>Applies the warping</p>
+<div class="math">
+<p><img src="_images/math/e3ed850a8dc674b978d90f8daefaefeaa46c9431.png" alt="w(x) = \frac{x-a}{b-a}"/></p>
+</div><p>to each dimension. If you set <cite>a=min(X)</cite> and <cite>b=max(X)</cite> then this is a
+convenient way to map your inputs to the unit hypercube.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>X</strong> : array, (<cite>M</cite>,)</p>
+<blockquote>
+<div><p><cite>M</cite> inputs from dimension <cite>d</cite>.</p>
+</div></blockquote>
+<p><strong>d</strong> : non-negative int</p>
+<blockquote>
+<div><p>The index (starting from zero) of the dimension to apply the warping to.</p>
+</div></blockquote>
+<p><strong>n</strong> : non-negative int</p>
+<blockquote>
+<div><p>The derivative order to compute.</p>
+</div></blockquote>
+<p><strong>*args</strong> : 2N scalars</p>
+<blockquote class="last">
+<div><p>The remaining parameters to describe the warping, given as scalars.
+These are given as <cite>a_i</cite>, <cite>b_i</cite> for each of the <cite>D</cite> dimensions. Note
+that these must ALL be provided for each call.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="gptools.kernel.warping.WarpedKernel">
+<em class="property">class </em><tt class="descclassname">gptools.kernel.warping.</tt><tt class="descname">WarpedKernel</tt><big>(</big><em>k</em>, <em>w</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/warping.html#WarpedKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.warping.WarpedKernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gptools.kernel.core.Kernel" title="gptools.kernel.core.Kernel"><tt class="xref py py-class docutils literal"><span class="pre">gptools.kernel.core.Kernel</span></tt></a></p>
+<p>Kernel which has had its inputs warped through a basic, elementwise warping function.</p>
+<p>In other words, takes <img class="math" src="_images/math/1758e8ac06211dd5bb787ecc094e370c91f13138.png" alt="k(x_1, x_2, x'_1, x'_2)"/> and turns it into
+<img class="math" src="_images/math/95a6c7035aae7125e09ab6dd736728cc010a0441.png" alt="k(w_1(x_1), w_2(x_2), w_1(x'_1), w_2(x'_2))"/>.</p>
+<dl class="method">
+<dt id="gptools.kernel.warping.WarpedKernel.__call__">
+<tt class="descname">__call__</tt><big>(</big><em>Xi</em>, <em>Xj</em>, <em>ni</em>, <em>nj</em>, <em>hyper_deriv=None</em>, <em>symmetric=False</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/warping.html#WarpedKernel.__call__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.warping.WarpedKernel.__call__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="gptools.kernel.warping.WarpedKernel.enforce_bounds">
+<tt class="descname">enforce_bounds</tt><a class="reference internal" href="_modules/gptools/kernel/warping.html#WarpedKernel.enforce_bounds"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.warping.WarpedKernel.enforce_bounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Boolean indicating whether or not the kernel will explicitly enforce the bounds defined by the hyperprior.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="gptools.kernel.warping.WarpedKernel.fixed_params">
+<tt class="descname">fixed_params</tt><a class="reference internal" href="_modules/gptools/kernel/warping.html#WarpedKernel.fixed_params"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.warping.WarpedKernel.fixed_params" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="gptools.kernel.warping.WarpedKernel.params">
+<tt class="descname">params</tt><a class="reference internal" href="_modules/gptools/kernel/warping.html#WarpedKernel.params"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.warping.WarpedKernel.params" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="gptools.kernel.warping.WarpedKernel.param_names">
+<tt class="descname">param_names</tt><a class="reference internal" href="_modules/gptools/kernel/warping.html#WarpedKernel.param_names"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.warping.WarpedKernel.param_names" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="gptools.kernel.warping.WarpedKernel.free_params">
+<tt class="descname">free_params</tt><a class="reference internal" href="_modules/gptools/kernel/warping.html#WarpedKernel.free_params"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.warping.WarpedKernel.free_params" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="gptools.kernel.warping.WarpedKernel.free_param_bounds">
+<tt class="descname">free_param_bounds</tt><a class="reference internal" href="_modules/gptools/kernel/warping.html#WarpedKernel.free_param_bounds"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.warping.WarpedKernel.free_param_bounds" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="gptools.kernel.warping.WarpedKernel.free_param_names">
+<tt class="descname">free_param_names</tt><a class="reference internal" href="_modules/gptools/kernel/warping.html#WarpedKernel.free_param_names"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.warping.WarpedKernel.free_param_names" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="gptools.kernel.warping.WarpedKernel.set_hyperparams">
+<tt class="descname">set_hyperparams</tt><big>(</big><em>new_params</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/warping.html#WarpedKernel.set_hyperparams"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.warping.WarpedKernel.set_hyperparams" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the (free) hyperparameters.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>new_params</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Array</span></tt> or other Array-like</p>
+<blockquote>
+<div><p>New values of the free parameters.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>ValueError</strong> :</p>
+<blockquote class="last">
+<div><p>If the length of <cite>new_params</cite> is not consistent with <tt class="xref py py-attr docutils literal"><span class="pre">self.params</span></tt>.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="gptools.kernel.warping.BetaWarpedKernel">
+<em class="property">class </em><tt class="descclassname">gptools.kernel.warping.</tt><tt class="descname">BetaWarpedKernel</tt><big>(</big><em>k</em>, <em>**w_kwargs</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/warping.html#BetaWarpedKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.warping.BetaWarpedKernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gptools.kernel.warping.WarpedKernel" title="gptools.kernel.warping.WarpedKernel"><tt class="xref py py-class docutils literal"><span class="pre">gptools.kernel.warping.WarpedKernel</span></tt></a></p>
+<p>Class to warp any existing <tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt> with the beta CDF.</p>
+<p>Assumes that your inputs <cite>X</cite> lie entirely within the unit hypercube [0, 1].</p>
+<p>Note that you may experience some issues with constraining and computing
+derivatives at <img class="math" src="_images/math/55ba271999995cac02cf578362df5be030594ed6.png" alt="x=0"/> when <img class="math" src="_images/math/f053df68f37ffa28944fe80c99adea2c99593e38.png" alt="\alpha &lt; 1"/> and at <img class="math" src="_images/math/092fcccf083cc591757e2d96990c3368bf2ce486.png" alt="x=1"/> when
+<img class="math" src="_images/math/0480ea4455e4aa12d5b02d7bc2cad34854df89e9.png" alt="\beta &lt; 1"/>. As a workaround, try mapping your data to not touch the
+boundaries of the unit hypercube.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>k</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt></p>
+<blockquote>
+<div><p>The <tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt> to warp.</p>
+</div></blockquote>
+<p><strong>**w_kwargs</strong> : optional kwargs</p>
+<blockquote class="last">
+<div><p>All additional kwargs are passed to the constructor of
+<a class="reference internal" href="#gptools.kernel.warping.WarpingFunction" title="gptools.kernel.warping.WarpingFunction"><tt class="xref py py-class docutils literal"><span class="pre">WarpingFunction</span></tt></a>. If no hyperprior or param_bounds are
+provided, takes each <img class="math" src="_images/math/ad59b6e24a4a00ac621801f8d7513d68be654ab5.png" alt="\alpha"/>, <img class="math" src="_images/math/8ce03f78ed945f2ef3dac87c8799b55b393527e7.png" alt="\beta"/> to follow the
+log-normal distribution.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">References</p>
+<table class="docutils citation" frame="void" id="r2" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id4">[R2]</a></td><td>J. Snoek, K. Swersky, R. Zemel, R. P. Adams, &#8220;Input Warping for
+Bayesian Optimization of Non-stationary Functions&#8221; ICML (2014)</td></tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="gptools.kernel.warping.LinearWarpedKernel">
+<em class="property">class </em><tt class="descclassname">gptools.kernel.warping.</tt><tt class="descname">LinearWarpedKernel</tt><big>(</big><em>k</em>, <em>a</em>, <em>b</em><big>)</big><a class="reference internal" href="_modules/gptools/kernel/warping.html#LinearWarpedKernel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#gptools.kernel.warping.LinearWarpedKernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#gptools.kernel.warping.WarpedKernel" title="gptools.kernel.warping.WarpedKernel"><tt class="xref py py-class docutils literal"><span class="pre">gptools.kernel.warping.WarpedKernel</span></tt></a></p>
+<p>Class to warp any existing <tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt> with the linear transformation given in <a class="reference internal" href="#gptools.kernel.warping.linear_warp" title="gptools.kernel.warping.linear_warp"><tt class="xref py py-func docutils literal"><span class="pre">linear_warp()</span></tt></a>.</p>
+<p>If you set <cite>a</cite> to be the minimum of your <cite>X</cite> inputs in each dimension and <cite>b</cite>
+to be the maximum then you can use this to map data from an arbitrary domain
+to the unit hypercube [0, 1], as is required for application of the
+<a class="reference internal" href="#gptools.kernel.warping.BetaWarpedKernel" title="gptools.kernel.warping.BetaWarpedKernel"><tt class="xref py py-class docutils literal"><span class="pre">BetaWarpedKernel</span></tt></a>, for instance.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>k</strong> : <tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt></p>
+<blockquote>
+<div><p>The <tt class="xref py py-class docutils literal"><span class="pre">Kernel</span></tt> to warp.</p>
+</div></blockquote>
+<p><strong>a</strong> : list</p>
+<blockquote>
+<div><p>The <cite>a</cite> parameter in the linear warping defined in <a class="reference internal" href="#gptools.kernel.warping.linear_warp" title="gptools.kernel.warping.linear_warp"><tt class="xref py py-func docutils literal"><span class="pre">linear_warp()</span></tt></a>.
+This list must have length equal to <cite>k.num_dim</cite>.</p>
+</div></blockquote>
+<p><strong>b</strong> : list</p>
+<blockquote class="last">
+<div><p>The <cite>b</cite> parameter in the linear warping defined in <a class="reference internal" href="#gptools.kernel.warping.linear_warp" title="gptools.kernel.warping.linear_warp"><tt class="xref py py-func docutils literal"><span class="pre">linear_warp()</span></tt></a>.
+This list must have length equal to <cite>k.num_dim</cite>.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-gptools.kernel">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-gptools.kernel" title="Permalink to this headline">¶</a></h2>
+<p>Subpackage containing a variety of covariance kernels and associated helpers.</p>
+</div>
 </div>
 
 
@@ -1434,21 +2916,23 @@ Default is False.</p>
         <div class="sphinxsidebarwrapper">
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">kernel Package</a><ul>
-<li><a class="reference internal" href="#id1"><tt class="docutils literal"><span class="pre">kernel</span></tt> Package</a></li>
-<li><a class="reference internal" href="#module-gptools.kernel.core"><tt class="docutils literal"><span class="pre">core</span></tt> Module</a></li>
-<li><a class="reference internal" href="#module-gptools.kernel.gibbs"><tt class="docutils literal"><span class="pre">gibbs</span></tt> Module</a></li>
-<li><a class="reference internal" href="#module-gptools.kernel.matern"><tt class="docutils literal"><span class="pre">matern</span></tt> Module</a></li>
-<li><a class="reference internal" href="#module-gptools.kernel.noise"><tt class="docutils literal"><span class="pre">noise</span></tt> Module</a></li>
-<li><a class="reference internal" href="#module-gptools.kernel.rational_quadratic"><tt class="docutils literal"><span class="pre">rational_quadratic</span></tt> Module</a></li>
-<li><a class="reference internal" href="#module-gptools.kernel.squared_exponential"><tt class="docutils literal"><span class="pre">squared_exponential</span></tt> Module</a></li>
+<li><a class="reference internal" href="#">gptools.kernel package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-gptools.kernel.core">gptools.kernel.core module</a></li>
+<li><a class="reference internal" href="#module-gptools.kernel.gibbs">gptools.kernel.gibbs module</a></li>
+<li><a class="reference internal" href="#module-gptools.kernel.matern">gptools.kernel.matern module</a></li>
+<li><a class="reference internal" href="#module-gptools.kernel.noise">gptools.kernel.noise module</a></li>
+<li><a class="reference internal" href="#module-gptools.kernel.rational_quadratic">gptools.kernel.rational_quadratic module</a></li>
+<li><a class="reference internal" href="#module-gptools.kernel.squared_exponential">gptools.kernel.squared_exponential module</a></li>
+<li><a class="reference internal" href="#module-gptools.kernel.warping">gptools.kernel.warping module</a></li>
+<li><a class="reference internal" href="#module-gptools.kernel">Module contents</a></li>
 </ul>
 </li>
 </ul>
 
   <h4>Previous topic</h4>
   <p class="topless"><a href="gptools.html"
-                        title="previous chapter">gptools Package</a></p>
+                        title="previous chapter">gptools package</a></p>
   <h3>This Page</h3>
   <ul class="this-page-menu">
     <li><a href="_sources/gptools.kernel.txt"
@@ -1484,15 +2968,15 @@ Default is False.</p>
           <a href="np-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="gptools.html" title="gptools Package"
+          <a href="gptools.html" title="gptools package"
              >previous</a> |</li>
-        <li><a href="index.html">gptools 0.0 documentation</a> &raquo;</li>
-          <li><a href="gptools.html" >gptools Package</a> &raquo;</li> 
+        <li><a href="index.html">gptools 0.2 documentation</a> &raquo;</li>
+          <li><a href="gptools.html" >gptools package</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
-        &copy; Copyright 2013, Mark Chilenski.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+        &copy; Copyright 2014, Mark Chilenski.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
     </div>
   </body>
 </html>

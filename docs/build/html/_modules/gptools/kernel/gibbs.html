@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -8,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>gptools.kernel.gibbs &mdash; gptools 0.0 documentation</title>
+    <title>gptools.kernel.gibbs &mdash; gptools 0.2 documentation</title>
     
     <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
@@ -16,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../',
-        VERSION:     '0.0',
+        VERSION:     '0.2',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -25,7 +23,7 @@
     <script type="text/javascript" src="../../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../_static/doctools.js"></script>
-    <link rel="top" title="gptools 0.0 documentation" href="../../../index.html" />
+    <link rel="top" title="gptools 0.2 documentation" href="../../../index.html" />
     <link rel="up" title="Module code" href="../../index.html" /> 
   </head>
   <body>
@@ -41,7 +39,7 @@
         <li class="right" >
           <a href="../../../np-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../index.html">gptools 0.0 documentation</a> &raquo;</li>
+        <li><a href="../../../index.html">gptools 0.2 documentation</a> &raquo;</li>
           <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
     </div>  
@@ -52,7 +50,7 @@
           <div class="body">
             
   <h1>Source code for gptools.kernel.gibbs</h1><div class="highlight"><pre>
-<span class="c"># Copyright 2013 Mark Chilenski</span>
+<span class="c"># Copyright 2014 Mark Chilenski</span>
 <span class="c"># This program is distributed under the terms of the GNU General Purpose License (GPL).</span>
 <span class="c"># Refer to http://www.gnu.org/licenses/gpl.txt</span>
 <span class="c"># </span>
@@ -74,13 +72,20 @@
 
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
 
-<span class="kn">from</span> <span class="nn">.core</span> <span class="kn">import</span> <span class="n">ArbitraryKernel</span>
+<span class="kn">from</span> <span class="nn">.core</span> <span class="kn">import</span> <span class="n">Kernel</span><span class="p">,</span> <span class="n">ArbitraryKernel</span>
+<span class="kn">from</span> <span class="nn">..utils</span> <span class="kn">import</span> <span class="n">unique_rows</span>
 
-<span class="kn">import</span> <span class="nn">mpmath</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">mpmath</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">warnings</span>
+    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Could not import mpmath. Arbitrary warping functions for Gibbs kernels will not function.&quot;</span><span class="p">,</span>
+                  <span class="ne">ImportWarning</span><span class="p">)</span>
 <span class="kn">import</span> <span class="nn">scipy</span>
 <span class="kn">import</span> <span class="nn">scipy.interpolate</span>
+<span class="kn">import</span> <span class="nn">inspect</span>
 
-<div class="viewcode-block" id="tanh_warp"><a class="viewcode-back" href="../../../gptools.kernel.html#gptools.kernel.gibbs.tanh_warp">[docs]</a><span class="k">def</span> <span class="nf">tanh_warp</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">lw</span><span class="p">,</span> <span class="n">x0</span><span class="p">):</span>
+<div class="viewcode-block" id="tanh_warp_arb"><a class="viewcode-back" href="../../../gptools.kernel.html#gptools.kernel.gibbs.tanh_warp_arb">[docs]</a><span class="k">def</span> <span class="nf">tanh_warp_arb</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">lw</span><span class="p">,</span> <span class="n">x0</span><span class="p">):</span>
     <span class="sd">r&quot;&quot;&quot;Warps the `X` coordinate with the tanh model</span>
 <span class="sd">    </span>
 <span class="sd">    .. math::</span>
@@ -112,40 +117,7 @@
     <span class="k">else</span><span class="p">:</span>
         <span class="k">return</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">((</span><span class="n">l1</span> <span class="o">+</span> <span class="n">l2</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="n">l1</span> <span class="o">-</span> <span class="n">l2</span><span class="p">)</span> <span class="o">*</span> <span class="n">mpmath</span><span class="o">.</span><span class="n">tanh</span><span class="p">((</span><span class="n">X</span> <span class="o">-</span> <span class="n">x0</span><span class="p">)</span> <span class="o">/</span> <span class="n">lw</span><span class="p">))</span>
 </div>
-<div class="viewcode-block" id="spline_warp"><a class="viewcode-back" href="../../../gptools.kernel.html#gptools.kernel.gibbs.spline_warp">[docs]</a><span class="k">def</span> <span class="nf">spline_warp</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">lw</span><span class="p">,</span> <span class="n">x0</span><span class="p">):</span>
-    <span class="sd">r&quot;&quot;&quot;Warps the `X` coordinate with a &quot;divot&quot; spline shape.</span>
-<span class="sd">    </span>
-<span class="sd">    .. WARNING:: Broken! Do not use!</span>
-<span class="sd">    </span>
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    X : :py:class:`Array`, (`M`,) or scalar float</span>
-<span class="sd">        `M` locations to evaluate length scale at.</span>
-<span class="sd">    l1 : positive float</span>
-<span class="sd">        Global value of the length scale.</span>
-<span class="sd">    l2 : positive float</span>
-<span class="sd">        Pedestal value of the length scale.</span>
-<span class="sd">    lw : positive float</span>
-<span class="sd">        Width of the dip.</span>
-<span class="sd">    x0 : float</span>
-<span class="sd">        Location of the center of the dip in length scale.</span>
-<span class="sd">    </span>
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    l : :py:class:`Array`, (`M`,) or scalar float</span>
-<span class="sd">        The value of the length scale at the specified point.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c"># TODO: Why does this give non-PSD covariance matrices?</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">mpmath</span><span class="o">.</span><span class="n">mpf</span><span class="p">):</span>
-        <span class="n">X</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">scipy</span><span class="o">.</span><span class="n">matrix</span><span class="p">):</span>
-        <span class="n">X</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
-    <span class="k">return</span> <span class="n">scipy</span><span class="o">.</span><span class="n">interpolate</span><span class="o">.</span><span class="n">UnivariateSpline</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">x0</span><span class="o">-</span><span class="n">lw</span><span class="o">/</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">x0</span><span class="o">+</span><span class="n">lw</span><span class="o">/</span><span class="mf">2.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span>
-                                              <span class="p">[</span><span class="n">l1</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l1</span><span class="p">],</span>
-                                              <span class="n">k</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
-                                              <span class="n">s</span><span class="o">=</span><span class="mi">0</span><span class="p">)(</span><span class="n">X</span><span class="p">)</span>
-</div>
-<div class="viewcode-block" id="gauss_warp"><a class="viewcode-back" href="../../../gptools.kernel.html#gptools.kernel.gibbs.gauss_warp">[docs]</a><span class="k">def</span> <span class="nf">gauss_warp</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">lw</span><span class="p">,</span> <span class="n">x0</span><span class="p">):</span>
+<div class="viewcode-block" id="gauss_warp_arb"><a class="viewcode-back" href="../../../gptools.kernel.html#gptools.kernel.gibbs.gauss_warp_arb">[docs]</a><span class="k">def</span> <span class="nf">gauss_warp_arb</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">lw</span><span class="p">,</span> <span class="n">x0</span><span class="p">):</span>
     <span class="sd">r&quot;&quot;&quot;Warps the `X` coordinate with a Gaussian-shaped divot.</span>
 <span class="sd">    </span>
 <span class="sd">    .. math::</span>
@@ -177,7 +149,7 @@
     <span class="k">else</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">l1</span> <span class="o">-</span> <span class="p">(</span><span class="n">l1</span> <span class="o">-</span> <span class="n">l2</span><span class="p">)</span> <span class="o">*</span> <span class="n">mpmath</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mf">4.0</span> <span class="o">*</span> <span class="n">mpmath</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mf">2.0</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">X</span> <span class="o">-</span> <span class="n">x0</span><span class="p">)</span><span class="o">**</span><span class="mf">2.0</span> <span class="o">/</span> <span class="p">(</span><span class="n">lw</span><span class="o">**</span><span class="mf">2.0</span><span class="p">))</span>
 </div>
-<div class="viewcode-block" id="GibbsFunction1d"><a class="viewcode-back" href="../../../gptools.kernel.html#gptools.kernel.gibbs.GibbsFunction1d">[docs]</a><span class="k">class</span> <span class="nc">GibbsFunction1d</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="GibbsFunction1dArb"><a class="viewcode-back" href="../../../gptools.kernel.html#gptools.kernel.gibbs.GibbsFunction1dArb">[docs]</a><span class="k">class</span> <span class="nc">GibbsFunction1dArb</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">r&quot;&quot;&quot;Wrapper class for the Gibbs covariance function, permits the use of arbitrary warping.</span>
 <span class="sd">    </span>
 <span class="sd">    The covariance function is given by</span>
@@ -195,7 +167,7 @@
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">warp_function</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">warp_function</span> <span class="o">=</span> <span class="n">warp_function</span>
     
-<div class="viewcode-block" id="GibbsFunction1d.__call__"><a class="viewcode-back" href="../../../gptools.kernel.html#gptools.kernel.gibbs.GibbsFunction1d.__call__">[docs]</a>    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Xi</span><span class="p">,</span> <span class="n">Xj</span><span class="p">,</span> <span class="n">sigmaf</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">lw</span><span class="p">,</span> <span class="n">x0</span><span class="p">):</span>
+<div class="viewcode-block" id="GibbsFunction1dArb.__call__"><a class="viewcode-back" href="../../../gptools.kernel.html#gptools.kernel.gibbs.GibbsFunction1dArb.__call__">[docs]</a>    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Xi</span><span class="p">,</span> <span class="n">Xj</span><span class="p">,</span> <span class="n">sigmaf</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">lw</span><span class="p">,</span> <span class="n">x0</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Evaluate the covariance function between points `Xi` and `Xj`.</span>
 <span class="sd">        </span>
 <span class="sd">        Parameters</span>
@@ -227,7 +199,7 @@
             <span class="k">return</span> <span class="n">sigmaf</span><span class="o">**</span><span class="mf">2.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">mpmath</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">li</span> <span class="o">*</span> <span class="n">lj</span> <span class="o">/</span> <span class="p">(</span><span class="n">li</span><span class="o">**</span><span class="mf">2.0</span> <span class="o">+</span> <span class="n">lj</span><span class="o">**</span><span class="mf">2.0</span><span class="p">))</span> <span class="o">*</span>
                                   <span class="n">mpmath</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">Xi</span> <span class="o">-</span> <span class="n">Xj</span><span class="p">)</span><span class="o">**</span><span class="mf">2.0</span> <span class="o">/</span> <span class="p">(</span><span class="n">li</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">lj</span><span class="o">**</span><span class="mi">2</span><span class="p">)))</span>
 </div></div>
-<div class="viewcode-block" id="GibbsKernel1dtanh"><a class="viewcode-back" href="../../../gptools.kernel.html#gptools.kernel.gibbs.GibbsKernel1dtanh">[docs]</a><span class="k">class</span> <span class="nc">GibbsKernel1dtanh</span><span class="p">(</span><span class="n">ArbitraryKernel</span><span class="p">):</span>
+<div class="viewcode-block" id="GibbsKernel1dTanhArb"><a class="viewcode-back" href="../../../gptools.kernel.html#gptools.kernel.gibbs.GibbsKernel1dTanhArb">[docs]</a><span class="k">class</span> <span class="nc">GibbsKernel1dTanhArb</span><span class="p">(</span><span class="n">ArbitraryKernel</span><span class="p">):</span>
     <span class="sd">r&quot;&quot;&quot;Gibbs warped squared exponential covariance function in 1d.</span>
 <span class="sd">    </span>
 <span class="sd">    Computes derivatives using :py:func:`mpmath.diff` and is hence in general</span>
@@ -261,47 +233,11 @@
 <span class="sd">        All parameters are passed to :py:class:`~gptools.kernel.core.Kernel`.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">GibbsKernel1dtanh</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span>
-                                                <span class="n">GibbsFunction1d</span><span class="p">(</span><span class="n">tanh_warp</span><span class="p">),</span>
-                                                <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">GibbsKernel1dTanhArb</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">GibbsFunction1dArb</span><span class="p">(</span><span class="n">tanh_warp_arb</span><span class="p">),</span>
+                                                   <span class="n">num_dim</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                                                   <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 </div>
-<div class="viewcode-block" id="GibbsKernel1dSpline"><a class="viewcode-back" href="../../../gptools.kernel.html#gptools.kernel.gibbs.GibbsKernel1dSpline">[docs]</a><span class="k">class</span> <span class="nc">GibbsKernel1dSpline</span><span class="p">(</span><span class="n">ArbitraryKernel</span><span class="p">):</span>
-    <span class="sd">r&quot;&quot;&quot;Gibbs warped squared exponential covariance function in 1d.</span>
-<span class="sd">    </span>
-<span class="sd">    .. WARNING:: Broken! Do not use!</span>
-<span class="sd">    </span>
-<span class="sd">    Computes derivatives using :py:func:`mpmath.diff` and is hence in general</span>
-<span class="sd">    much slower than a hard-coded implementation of a given kernel.</span>
-<span class="sd">    </span>
-<span class="sd">    The covariance function is given by</span>
-<span class="sd">    </span>
-<span class="sd">    .. math::</span>
-
-<span class="sd">        k = \left ( \frac{2l(x)l(x&#39;)}{l^2(x)+l^2(x&#39;)} \right )^{1/2}\exp\left ( -\frac{(x-x&#39;)^2}{l^2(x)+l^2(x&#39;)} \right )</span>
-<span class="sd">    </span>
-<span class="sd">    Warps the length scale using a spline.</span>
-<span class="sd">    </span>
-<span class="sd">    The order of the hyperparameters is:</span>
-<span class="sd">    </span>
-<span class="sd">    = ====== ==================================================</span>
-<span class="sd">    0 sigmaf Amplitude of the covariance function</span>
-<span class="sd">    1 l1     Global value of the length scale.</span>
-<span class="sd">    2 l2     Pedestal value of the length scale.</span>
-<span class="sd">    3 lw     Width of the dip.</span>
-<span class="sd">    4 x0     Location of the center of the dip in length scale.</span>
-<span class="sd">    = ====== ==================================================</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    **kwargs</span>
-<span class="sd">        All parameters are passed to :py:class:`~gptools.kernel.core.Kernel`.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">GibbsKernel1dSpline</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span>
-                                                  <span class="n">GibbsFunction1d</span><span class="p">(</span><span class="n">spline_warp</span><span class="p">),</span>
-                                                  <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-</div>
-<div class="viewcode-block" id="GibbsKernel1dGauss"><a class="viewcode-back" href="../../../gptools.kernel.html#gptools.kernel.gibbs.GibbsKernel1dGauss">[docs]</a><span class="k">class</span> <span class="nc">GibbsKernel1dGauss</span><span class="p">(</span><span class="n">ArbitraryKernel</span><span class="p">):</span>
+<div class="viewcode-block" id="GibbsKernel1dGaussArb"><a class="viewcode-back" href="../../../gptools.kernel.html#gptools.kernel.gibbs.GibbsKernel1dGaussArb">[docs]</a><span class="k">class</span> <span class="nc">GibbsKernel1dGaussArb</span><span class="p">(</span><span class="n">ArbitraryKernel</span><span class="p">):</span>
     <span class="sd">r&quot;&quot;&quot;Gibbs warped squared exponential covariance function in 1d.</span>
 <span class="sd">    </span>
 <span class="sd">    Computes derivatives using :py:func:`mpmath.diff` and is hence in general</span>
@@ -335,9 +271,553 @@
 <span class="sd">        All parameters are passed to :py:class:`~gptools.kernel.core.Kernel`.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">GibbsKernel1dGauss</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span>
-                                                 <span class="n">GibbsFunction1d</span><span class="p">(</span><span class="n">gauss_warp</span><span class="p">),</span>
-                                                 <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+        <span class="nb">super</span><span class="p">(</span><span class="n">GibbsKernel1dGaussArb</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">GibbsFunction1dArb</span><span class="p">(</span><span class="n">gauss_warp_arb</span><span class="p">),</span>
+                                                    <span class="n">num_dim</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                                                    <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="GibbsKernel1d"><a class="viewcode-back" href="../../../gptools.kernel.html#gptools.kernel.gibbs.GibbsKernel1d">[docs]</a><span class="k">class</span> <span class="nc">GibbsKernel1d</span><span class="p">(</span><span class="n">Kernel</span><span class="p">):</span>
+    <span class="sd">r&quot;&quot;&quot;Univariate Gibbs kernel with arbitrary length scale warping for low derivatives.</span>
+<span class="sd">    </span>
+<span class="sd">    The covariance function is given by</span>
+<span class="sd">    </span>
+<span class="sd">    .. math::</span>
+<span class="sd">    </span>
+<span class="sd">        k = \left ( \frac{2l(x)l(x&#39;)}{l^2(x)+l^2(x&#39;)} \right )^{1/2}\exp\left ( -\frac{(x-x&#39;)^2}{l^2(x)+l^2(x&#39;)} \right )</span>
+<span class="sd">    </span>
+<span class="sd">    The derivatives are hard-coded using expressions obtained from Mathematica.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    l_func : callable</span>
+<span class="sd">        Function that dictates the length scale warping and its derivative.</span>
+<span class="sd">        Must have fingerprint (`x`, `n`, `p1`, `p2`, ...) where `p1` is element</span>
+<span class="sd">        one of the kernel&#39;s parameters (i.e., element zero is skipped).</span>
+<span class="sd">    num_params : int, optional</span>
+<span class="sd">        The number of parameters of the length scale function. If not passed,</span>
+<span class="sd">        introspection will be used to determine this. This will fail if you have</span>
+<span class="sd">        used the \*args syntax in your function definition. This count should</span>
+<span class="sd">        include sigma_f, even though it is not passed to the length scale</span>
+<span class="sd">        function.</span>
+<span class="sd">    **kwargs</span>
+<span class="sd">        All remaining arguments are passed to :py:class:`~gptools.kernel.core.Kernel`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">l_func</span><span class="p">,</span> <span class="n">num_params</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">l_func</span> <span class="o">=</span> <span class="n">l_func</span>
+        <span class="c"># TODO: Some of the logic from warping should be ported over.</span>
+        <span class="k">if</span> <span class="n">num_params</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c"># There are two unimportant parameters at the start of the l_func</span>
+            <span class="c"># fingerprint, then we have to add one for sigma_f.</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">num_params</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">inspect</span><span class="o">.</span><span class="n">getargspec</span><span class="p">(</span><span class="n">l_func</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+                <span class="c"># Need to remove self from the arg list for bound method:</span>
+                <span class="n">num_params</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">inspect</span><span class="o">.</span><span class="n">getargspec</span><span class="p">(</span><span class="n">l_func</span><span class="o">.</span><span class="n">__call__</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span> <span class="o">-</span> <span class="mi">3</span> <span class="o">+</span> <span class="mi">1</span>
+        
+        <span class="nb">super</span><span class="p">(</span><span class="n">GibbsKernel1d</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">num_dim</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_params</span><span class="o">=</span><span class="n">num_params</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="GibbsKernel1d.__call__"><a class="viewcode-back" href="../../../gptools.kernel.html#gptools.kernel.gibbs.GibbsKernel1d.__call__">[docs]</a>    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Xi</span><span class="p">,</span> <span class="n">Xj</span><span class="p">,</span> <span class="n">ni</span><span class="p">,</span> <span class="n">nj</span><span class="p">,</span> <span class="n">hyper_deriv</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">symmetric</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate the covariance between points `Xi` and `Xj` with derivative order `ni`, `nj`.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        Xi : :py:class:`Matrix` or other Array-like, (`M`, `D`)</span>
+<span class="sd">            `M` inputs with dimension `D`.</span>
+<span class="sd">        Xj : :py:class:`Matrix` or other Array-like, (`M`, `D`)</span>
+<span class="sd">            `M` inputs with dimension `D`.</span>
+<span class="sd">        ni : :py:class:`Matrix` or other Array-like, (`M`, `D`)</span>
+<span class="sd">            `M` derivative orders for set `i`.</span>
+<span class="sd">        nj : :py:class:`Matrix` or other Array-like, (`M`, `D`)</span>
+<span class="sd">            `M` derivative orders for set `j`.</span>
+<span class="sd">        hyper_deriv : Non-negative int or None, optional</span>
+<span class="sd">            The index of the hyperparameter to compute the first derivative</span>
+<span class="sd">            with respect to. If None, no derivatives are taken. Hyperparameter</span>
+<span class="sd">            derivatives are not supported at this point. Default is None.</span>
+<span class="sd">        symmetric : bool, optional</span>
+<span class="sd">            Whether or not the input `Xi`, `Xj` are from a symmetric matrix.</span>
+<span class="sd">            Default is False.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Kij : :py:class:`Array`, (`M`,)</span>
+<span class="sd">            Covariances for each of the `M` `Xi`, `Xj` pairs.</span>
+<span class="sd">        </span>
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        NotImplementedError</span>
+<span class="sd">            If the `hyper_deriv` keyword is not None.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">hyper_deriv</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s">&quot;Hyperparameter derivatives have not been implemented!&quot;</span><span class="p">)</span>
+        
+        <span class="n">n_combined</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">scipy</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">ni</span><span class="p">,</span> <span class="n">nj</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">n_combined_unique</span> <span class="o">=</span> <span class="n">unique_rows</span><span class="p">(</span><span class="n">n_combined</span><span class="p">)</span>
+        
+        <span class="n">x</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">Xi</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">Xj</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        
+        <span class="n">lx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">l_func</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+        <span class="n">ly</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">l_func</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+        <span class="n">lx1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">l_func</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+        <span class="n">ly1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">l_func</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+        
+        <span class="n">x_y</span> <span class="o">=</span> <span class="n">x</span> <span class="o">-</span> <span class="n">y</span>
+        <span class="n">lx2ly2</span> <span class="o">=</span> <span class="n">lx</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">ly</span><span class="o">**</span><span class="mi">2</span>
+        
+        <span class="n">k</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">Xi</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">n_combined_state</span> <span class="ow">in</span> <span class="n">n_combined_unique</span><span class="p">:</span>
+            <span class="n">idxs</span> <span class="o">=</span> <span class="p">(</span><span class="n">n_combined</span> <span class="o">==</span> <span class="n">n_combined_state</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="c"># Derviative expressions evaluated with Mathematica, assuming l&gt;0.</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">n_combined_state</span> <span class="o">==</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]))</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+                <span class="n">k</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">scipy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">lx</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">/</span> <span class="n">lx2ly2</span><span class="p">[</span><span class="n">idxs</span><span class="p">])</span> <span class="o">*</span>
+                           <span class="n">scipy</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="n">lx2ly2</span><span class="p">[</span><span class="n">idxs</span><span class="p">]))</span>
+            <span class="k">elif</span> <span class="p">(</span><span class="n">n_combined_state</span> <span class="o">==</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]))</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+                <span class="n">k</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="p">(</span>
+                        <span class="n">scipy</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="n">lx2ly2</span><span class="p">[</span><span class="n">idxs</span><span class="p">]))</span> <span class="o">*</span>
+                        <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span>
+                            <span class="o">-</span><span class="mi">4</span> <span class="o">*</span> <span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="n">lx</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">3</span> <span class="o">-</span>
+                            <span class="mi">4</span> <span class="o">*</span> <span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="n">lx</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span>
+                            <span class="mi">4</span> <span class="o">*</span> <span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">lx</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">lx1</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">-</span> 
+                            <span class="n">lx</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">4</span> <span class="o">*</span> <span class="n">lx1</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">+</span>
+                            <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">4</span> <span class="o">*</span> <span class="n">lx1</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">scipy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">lx</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">])</span> <span class="o">/</span> <span class="n">lx2ly2</span><span class="p">[</span><span class="n">idxs</span><span class="p">])</span> <span class="o">*</span> <span class="n">lx2ly2</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">elif</span> <span class="p">(</span><span class="n">n_combined_state</span> <span class="o">==</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]))</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+                <span class="n">k</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="p">(</span>
+                        <span class="n">scipy</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="n">lx2ly2</span><span class="p">[</span><span class="n">idxs</span><span class="p">]))</span> <span class="o">*</span>
+                        <span class="n">lx</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span>
+                            <span class="mi">4</span> <span class="o">*</span> <span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">3</span> <span class="o">+</span>
+                            <span class="mi">4</span> <span class="o">*</span> <span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="n">lx</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span>
+                            <span class="mi">4</span> <span class="o">*</span> <span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">ly1</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">-</span> 
+                            <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">4</span> <span class="o">*</span> <span class="n">ly1</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">+</span>
+                            <span class="n">lx</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">4</span> <span class="o">*</span> <span class="n">ly1</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">scipy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">lx</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">])</span> <span class="o">/</span> <span class="n">lx2ly2</span><span class="p">[</span><span class="n">idxs</span><span class="p">])</span> <span class="o">*</span> <span class="n">lx2ly2</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">elif</span> <span class="p">(</span><span class="n">n_combined_state</span> <span class="o">==</span> <span class="n">scipy</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]))</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+                <span class="n">k</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="p">(</span>
+                        <span class="n">scipy</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="n">lx2ly2</span><span class="p">[</span><span class="n">idxs</span><span class="p">]))</span> <span class="o">*</span>
+                        <span class="p">(</span>
+                            <span class="o">-</span><span class="n">lx</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">8</span> <span class="o">*</span> <span class="n">lx1</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="n">ly1</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">+</span>
+                            <span class="mi">4</span> <span class="o">*</span> <span class="n">lx</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">7</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">-</span> <span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="n">ly1</span><span class="p">[</span><span class="n">idxs</span><span class="p">])</span> <span class="o">-</span>
+                            <span class="mi">4</span> <span class="o">*</span> <span class="n">lx</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">5</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span>
+                                <span class="mi">4</span> <span class="o">*</span> <span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span>
+                                <span class="mi">6</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span>
+                                <span class="mi">3</span> <span class="o">*</span> <span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="n">ly1</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span>
+                            <span class="p">)</span> <span class="o">+</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">6</span> <span class="o">*</span> <span class="n">lx1</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span>
+                                <span class="mi">4</span> <span class="o">*</span> <span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">+</span>
+                                <span class="mi">4</span> <span class="o">*</span> <span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">ly1</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">-</span>
+                                <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">ly1</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span>
+                            <span class="p">)</span> <span class="o">+</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">lx</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">6</span> <span class="o">*</span> <span class="n">lx1</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span>
+                                <span class="o">-</span><span class="mi">5</span> <span class="o">*</span> <span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">+</span>
+                                <span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">ly1</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">+</span>
+                                <span class="mi">2</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">ly1</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span>
+                            <span class="p">)</span> <span class="o">-</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">lx</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">4</span> <span class="o">*</span> <span class="p">(</span>
+                                <span class="mi">4</span> <span class="o">*</span> <span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">-</span>
+                                <span class="mi">2</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">3</span> <span class="o">+</span>
+                                <span class="mi">4</span> <span class="o">*</span> <span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">3</span> <span class="o">*</span> <span class="n">ly1</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">-</span>
+                                <span class="mi">5</span> <span class="o">*</span> <span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">ly1</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span>
+                            <span class="p">)</span> <span class="o">-</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">lx</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">3</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span>
+                                <span class="mi">8</span> <span class="o">*</span> <span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">-</span>
+                                <span class="mi">6</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">3</span> <span class="o">+</span>
+                                <span class="mi">4</span> <span class="o">*</span> <span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">3</span> <span class="o">*</span> <span class="n">ly1</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">-</span>
+                                <span class="mi">9</span> <span class="o">*</span> <span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">ly1</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span>
+                            <span class="p">)</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">lx</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">4</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="n">lx1</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span>
+                                <span class="mi">8</span> <span class="o">*</span> <span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">3</span> <span class="o">-</span>
+                                <span class="mi">18</span> <span class="o">*</span> <span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span>
+                                <span class="mi">18</span> <span class="o">*</span> <span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="n">ly1</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">+</span>
+                                <span class="mi">9</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">3</span> <span class="o">*</span> <span class="n">ly1</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span>
+                            <span class="p">)</span> <span class="o">+</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">lx</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">lx1</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span>
+                                <span class="mi">4</span> <span class="o">*</span> <span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">3</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">-</span>
+                                <span class="mi">3</span> <span class="o">*</span> <span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">3</span> <span class="o">+</span>
+                                <span class="mi">4</span> <span class="o">*</span> <span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">4</span> <span class="o">*</span> <span class="n">ly1</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">-</span>
+                                <span class="mi">9</span> <span class="o">*</span> <span class="n">x_y</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">ly1</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">+</span>
+                                <span class="mi">2</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">4</span> <span class="o">*</span> <span class="n">ly1</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span>
+                            <span class="p">)</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">scipy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">lx</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span> <span class="o">*</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">])</span> <span class="o">/</span> <span class="p">(</span><span class="n">lx</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">ly</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span> <span class="o">*</span> <span class="n">lx2ly2</span><span class="p">[</span><span class="n">idxs</span><span class="p">]</span><span class="o">**</span><span class="mi">5</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s">&quot;Derivatives greater than [1, 1] are not supported!&quot;</span><span class="p">)</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">k</span>
+        <span class="k">return</span> <span class="n">k</span>
+</div></div>
+<div class="viewcode-block" id="tanh_warp"><a class="viewcode-back" href="../../../gptools.kernel.html#gptools.kernel.gibbs.tanh_warp">[docs]</a><span class="k">def</span> <span class="nf">tanh_warp</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">lw</span><span class="p">,</span> <span class="n">x0</span><span class="p">):</span>
+    <span class="sd">r&quot;&quot;&quot;Implements a tanh warping function and its derivative.</span>
+<span class="sd">    </span>
+<span class="sd">    .. math::</span>
+<span class="sd">    </span>
+<span class="sd">        l = \frac{l_1 + l_2}{2} - \frac{l_1 - l_2}{2}\tanh\frac{x-x_0}{l_w}</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    x : float or array of float</span>
+<span class="sd">        Locations to evaluate the function at.</span>
+<span class="sd">    n : int</span>
+<span class="sd">        Derivative order to take. Used for ALL of the points.</span>
+<span class="sd">    l1 : positive float</span>
+<span class="sd">        Left saturation value.</span>
+<span class="sd">    l2 : positive float</span>
+<span class="sd">        Right saturation value.</span>
+<span class="sd">    lw : positive float</span>
+<span class="sd">        Transition width.</span>
+<span class="sd">    x0 : float</span>
+<span class="sd">        Transition location.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    l : float or array</span>
+<span class="sd">        Warped length scale at the given locations.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    NotImplementedError</span>
+<span class="sd">        If `n` &gt; 1.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">l1</span> <span class="o">+</span> <span class="n">l2</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span> <span class="o">-</span> <span class="p">(</span><span class="n">l1</span> <span class="o">-</span> <span class="n">l2</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">scipy</span><span class="o">.</span><span class="n">tanh</span><span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="n">x0</span><span class="p">)</span> <span class="o">/</span> <span class="n">lw</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="o">-</span><span class="p">(</span><span class="n">l1</span> <span class="o">-</span> <span class="n">l2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">lw</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">scipy</span><span class="o">.</span><span class="n">cosh</span><span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="n">x0</span><span class="p">)</span> <span class="o">/</span> <span class="n">lw</span><span class="p">))</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mf">2.0</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s">&quot;Only derivatives up to order 1 are supported!&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="GibbsKernel1dTanh"><a class="viewcode-back" href="../../../gptools.kernel.html#gptools.kernel.gibbs.GibbsKernel1dTanh">[docs]</a><span class="k">class</span> <span class="nc">GibbsKernel1dTanh</span><span class="p">(</span><span class="n">GibbsKernel1d</span><span class="p">):</span>
+    <span class="sd">r&quot;&quot;&quot;Gibbs warped squared exponential covariance function in 1d.</span>
+<span class="sd">    </span>
+<span class="sd">    Uses hard-coded implementation up to first derivatives.</span>
+<span class="sd">    </span>
+<span class="sd">    The covariance function is given by</span>
+<span class="sd">    </span>
+<span class="sd">    .. math::</span>
+
+<span class="sd">        k = \left ( \frac{2l(x)l(x&#39;)}{l^2(x)+l^2(x&#39;)} \right )^{1/2}\exp\left ( -\frac{(x-x&#39;)^2}{l^2(x)+l^2(x&#39;)} \right )</span>
+<span class="sd">    </span>
+<span class="sd">    Warps the length scale using a hyperbolic tangent:</span>
+<span class="sd">    </span>
+<span class="sd">    .. math::</span>
+<span class="sd">    </span>
+<span class="sd">        l = \frac{l_1 + l_2}{2} - \frac{l_1 - l_2}{2}\tanh\frac{x-x_0}{l_w}</span>
+<span class="sd">    </span>
+<span class="sd">    The order of the hyperparameters is:</span>
+<span class="sd">    </span>
+<span class="sd">    = ====== =======================================================================</span>
+<span class="sd">    0 sigmaf Amplitude of the covariance function</span>
+<span class="sd">    1 l1     Small-X saturation value of the length scale.</span>
+<span class="sd">    2 l2     Large-X saturation value of the length scale.</span>
+<span class="sd">    3 lw     Length scale of the transition between the two length scales.</span>
+<span class="sd">    4 x0     Location of the center of the transition between the two length scales.</span>
+<span class="sd">    = ====== =======================================================================</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    **kwargs</span>
+<span class="sd">        All parameters are passed to :py:class:`~gptools.kernel.core.Kernel`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">GibbsKernel1dTanh</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">tanh_warp</span><span class="p">,</span>
+                                                <span class="n">param_names</span><span class="o">=</span><span class="p">[</span><span class="s">r&#39;\sigma_f&#39;</span><span class="p">,</span>
+                                                             <span class="s">&#39;l_1&#39;</span><span class="p">,</span>
+                                                             <span class="s">&#39;l_2&#39;</span><span class="p">,</span>
+                                                             <span class="s">&#39;l_w&#39;</span><span class="p">,</span>
+                                                             <span class="s">&#39;x_0&#39;</span><span class="p">],</span>
+                                                <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="double_tanh_warp"><a class="viewcode-back" href="../../../gptools.kernel.html#gptools.kernel.gibbs.double_tanh_warp">[docs]</a><span class="k">def</span> <span class="nf">double_tanh_warp</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">lcore</span><span class="p">,</span> <span class="n">lmid</span><span class="p">,</span> <span class="n">ledge</span><span class="p">,</span> <span class="n">la</span><span class="p">,</span> <span class="n">lb</span><span class="p">,</span> <span class="n">xa</span><span class="p">,</span> <span class="n">xb</span><span class="p">):</span>
+    <span class="sd">r&quot;&quot;&quot;Implements a sum-of-tanh warping function and its derivative.</span>
+<span class="sd">    </span>
+<span class="sd">    .. math::</span>
+<span class="sd">    </span>
+<span class="sd">        l = a\tanh\frac{x-x_a}{l_a} + b\tanh\frac{x-x_b}{l_b}</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    x : float or array of float</span>
+<span class="sd">        Locations to evaluate the function at.</span>
+<span class="sd">    n : int</span>
+<span class="sd">        Derivative order to take. Used for ALL of the points.</span>
+<span class="sd">    lcore : float</span>
+<span class="sd">        Core length scale.</span>
+<span class="sd">    lmid : float</span>
+<span class="sd">        Intermediate length scale.</span>
+<span class="sd">    ledge : float</span>
+<span class="sd">        Edge length scale.</span>
+<span class="sd">    la : positive float</span>
+<span class="sd">        Transition of first tanh.</span>
+<span class="sd">    lb : positive float</span>
+<span class="sd">        Transition of second tanh.</span>
+<span class="sd">    xa : float</span>
+<span class="sd">        Transition of first tanh.</span>
+<span class="sd">    xb : float</span>
+<span class="sd">        Transition of second tanh.</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    l : float or array</span>
+<span class="sd">        Warped length scale at the given locations.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    NotImplementedError</span>
+<span class="sd">        If `n` &gt; 1.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">dot</span><span class="p">([[</span><span class="o">-</span><span class="mf">0.5</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.5</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mi">0</span><span class="p">]],</span>
+                        <span class="p">[[</span><span class="n">lcore</span><span class="p">],</span> <span class="p">[</span><span class="n">ledge</span><span class="p">],</span> <span class="p">[</span><span class="n">lmid</span><span class="p">]])</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">a</span> <span class="o">*</span> <span class="n">scipy</span><span class="o">.</span><span class="n">tanh</span><span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="n">xa</span><span class="p">)</span> <span class="o">/</span> <span class="n">la</span><span class="p">)</span> <span class="o">+</span> <span class="n">b</span> <span class="o">*</span> <span class="n">scipy</span><span class="o">.</span><span class="n">tanh</span><span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="n">xb</span><span class="p">)</span> <span class="o">/</span> <span class="n">lb</span><span class="p">)</span> <span class="o">+</span> <span class="n">c</span>
+    <span class="k">elif</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">a</span> <span class="o">/</span> <span class="n">la</span> <span class="o">*</span> <span class="p">(</span><span class="n">scipy</span><span class="o">.</span><span class="n">cosh</span><span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="n">xa</span><span class="p">)</span> <span class="o">/</span> <span class="n">la</span><span class="p">))</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mf">2.0</span><span class="p">)</span> <span class="o">+</span>
+                <span class="n">b</span> <span class="o">/</span> <span class="n">lb</span> <span class="o">*</span> <span class="p">(</span><span class="n">scipy</span><span class="o">.</span><span class="n">cosh</span><span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="n">xb</span><span class="p">)</span> <span class="o">/</span> <span class="n">lb</span><span class="p">))</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mf">2.0</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s">&quot;Only derivatives up to order 1 are supported!&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="GibbsKernel1dDoubleTanh"><a class="viewcode-back" href="../../../gptools.kernel.html#gptools.kernel.gibbs.GibbsKernel1dDoubleTanh">[docs]</a><span class="k">class</span> <span class="nc">GibbsKernel1dDoubleTanh</span><span class="p">(</span><span class="n">GibbsKernel1d</span><span class="p">):</span>
+    <span class="sd">r&quot;&quot;&quot;Gibbs warped squared exponential covariance function in 1d.</span>
+<span class="sd">    </span>
+<span class="sd">    Uses hard-coded implementation up to first derivatives.</span>
+<span class="sd">    </span>
+<span class="sd">    The covariance function is given by</span>
+<span class="sd">    </span>
+<span class="sd">    .. math::</span>
+
+<span class="sd">        k = \left ( \frac{2l(x)l(x&#39;)}{l^2(x)+l^2(x&#39;)} \right )^{1/2}\exp\left ( -\frac{(x-x&#39;)^2}{l^2(x)+l^2(x&#39;)} \right )</span>
+<span class="sd">    </span>
+<span class="sd">    Warps the length scale using two hyperbolic tangents:</span>
+<span class="sd">    </span>
+<span class="sd">    .. math::</span>
+<span class="sd">    </span>
+<span class="sd">        l = a\tanh\frac{x-x_a}{l_a} + b\tanh\frac{x-x_b}{l_b}</span>
+<span class="sd">    </span>
+<span class="sd">    The order of the hyperparameters is:</span>
+<span class="sd">    </span>
+<span class="sd">    = ====== ====================================</span>
+<span class="sd">    0 sigmaf Amplitude of the covariance function</span>
+<span class="sd">    1 lcore  Core length scale</span>
+<span class="sd">    2 lmid   Intermediate length scale</span>
+<span class="sd">    3 ledge  Edge length scale</span>
+<span class="sd">    4 la     Width of first tanh</span>
+<span class="sd">    5 lb     Width of second tanh</span>
+<span class="sd">    6 xa     Center of first tanh</span>
+<span class="sd">    7 xb     Center of second tanh</span>
+<span class="sd">    = ====== ====================================</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    **kwargs</span>
+<span class="sd">        All parameters are passed to :py:class:`~gptools.kernel.core.Kernel`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">GibbsKernel1dDoubleTanh</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span>
+            <span class="n">double_tanh_warp</span><span class="p">,</span>
+            <span class="n">param_names</span><span class="o">=</span><span class="p">[</span><span class="s">r&#39;\sigma_f&#39;</span><span class="p">,</span> <span class="s">&#39;l_c&#39;</span><span class="p">,</span> <span class="s">&#39;l_m&#39;</span><span class="p">,</span> <span class="s">&#39;l_e&#39;</span><span class="p">,</span> <span class="s">&#39;l_a&#39;</span><span class="p">,</span> <span class="s">&#39;l_b&#39;</span><span class="p">,</span> <span class="s">&#39;x_a&#39;</span><span class="p">,</span> <span class="s">&#39;x_b&#39;</span><span class="p">],</span>
+            <span class="o">**</span><span class="n">kwargs</span>
+        <span class="p">)</span>
+</div>
+<div class="viewcode-block" id="cubic_bucket_warp"><a class="viewcode-back" href="../../../gptools.kernel.html#gptools.kernel.gibbs.cubic_bucket_warp">[docs]</a><span class="k">def</span> <span class="nf">cubic_bucket_warp</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">l3</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">w1</span><span class="p">,</span> <span class="n">w2</span><span class="p">,</span> <span class="n">w3</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Warps the length scale with a piecewise cubic &quot;bucket&quot; shape.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    x : float or array-like of float</span>
+<span class="sd">        Locations to evaluate length scale at.</span>
+<span class="sd">    n : non-negative int</span>
+<span class="sd">        Derivative order to evaluate. Only first derivatives are supported.</span>
+<span class="sd">    l1 : positive float</span>
+<span class="sd">        Length scale to the left of the bucket.</span>
+<span class="sd">    l2 : positive float</span>
+<span class="sd">        Length scale in the bucket.</span>
+<span class="sd">    l3 : positive float</span>
+<span class="sd">        Length scale to the right of the bucket.</span>
+<span class="sd">    x0 : float</span>
+<span class="sd">        Location of the center of the bucket.</span>
+<span class="sd">    w1 : positive float</span>
+<span class="sd">        Width of the left side cubic section.</span>
+<span class="sd">    w2 : positive float</span>
+<span class="sd">        Width of the bucket.</span>
+<span class="sd">    w3 : positive float</span>
+<span class="sd">        Width of the right side cubic section.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">x1</span> <span class="o">=</span> <span class="n">x0</span> <span class="o">-</span> <span class="n">w2</span> <span class="o">/</span> <span class="mf">2.0</span> <span class="o">-</span> <span class="n">w1</span> <span class="o">/</span> <span class="mf">2.0</span>
+    <span class="n">x2</span> <span class="o">=</span> <span class="n">x0</span> <span class="o">+</span> <span class="n">w2</span> <span class="o">/</span> <span class="mf">2.0</span> <span class="o">+</span> <span class="n">w3</span> <span class="o">/</span> <span class="mf">2.0</span>
+    <span class="n">x_shift_1</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">x1</span> <span class="o">+</span> <span class="n">w1</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">)</span> <span class="o">/</span> <span class="n">w1</span>
+    <span class="n">x_shift_2</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">x2</span> <span class="o">+</span> <span class="n">w3</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">)</span> <span class="o">/</span> <span class="n">w3</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">l1</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">&lt;=</span> <span class="p">(</span><span class="n">x1</span> <span class="o">-</span> <span class="n">w1</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">))</span> <span class="o">+</span> <span class="p">(</span>
+                <span class="o">-</span><span class="mf">2.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">l2</span> <span class="o">-</span> <span class="n">l1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">x_shift_1</span><span class="o">**</span><span class="mi">3</span> <span class="o">-</span> <span class="mf">3.0</span> <span class="o">/</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">x_shift_1</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="n">l1</span>
+            <span class="p">)</span> <span class="o">*</span> <span class="p">((</span><span class="n">x</span> <span class="o">&gt;</span> <span class="p">(</span><span class="n">x1</span> <span class="o">-</span> <span class="n">w1</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">))</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">x</span> <span class="o">&lt;</span> <span class="p">(</span><span class="n">x1</span> <span class="o">+</span> <span class="n">w1</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">)))</span> <span class="o">+</span>
+            <span class="n">l2</span> <span class="o">*</span> <span class="p">((</span><span class="n">x</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="n">x1</span> <span class="o">+</span> <span class="n">w1</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">))</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">x</span> <span class="o">&lt;=</span> <span class="n">x2</span> <span class="o">-</span> <span class="n">w3</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">))</span> <span class="o">+</span> <span class="p">(</span>
+                <span class="o">-</span><span class="mf">2.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">l3</span> <span class="o">-</span> <span class="n">l2</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">x_shift_2</span><span class="o">**</span><span class="mi">3</span> <span class="o">-</span> <span class="mf">3.0</span> <span class="o">/</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">x_shift_2</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="n">l2</span>
+            <span class="p">)</span> <span class="o">*</span> <span class="p">((</span><span class="n">x</span> <span class="o">&gt;</span> <span class="p">(</span><span class="n">x2</span> <span class="o">-</span> <span class="n">w3</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">))</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">x</span> <span class="o">&lt;</span> <span class="p">(</span><span class="n">x2</span> <span class="o">+</span> <span class="n">w3</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">)))</span> <span class="o">+</span>
+            <span class="n">l3</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="n">x2</span> <span class="o">+</span> <span class="n">w3</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">))</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="p">(</span>
+                <span class="o">-</span><span class="mf">2.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">l2</span> <span class="o">-</span> <span class="n">l1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="n">x_shift_1</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="mf">3.0</span> <span class="o">*</span> <span class="n">x_shift_1</span><span class="p">)</span> <span class="o">/</span> <span class="n">w1</span>
+            <span class="p">)</span> <span class="o">*</span> <span class="p">((</span><span class="n">x</span> <span class="o">&gt;</span> <span class="p">(</span><span class="n">x1</span> <span class="o">-</span> <span class="n">w1</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">))</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">x</span> <span class="o">&lt;</span> <span class="p">(</span><span class="n">x1</span> <span class="o">+</span> <span class="n">w1</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">)))</span> <span class="o">+</span>
+            <span class="p">(</span>
+                <span class="o">-</span><span class="mf">2.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">l3</span> <span class="o">-</span> <span class="n">l2</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="n">x_shift_2</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="mf">3.0</span> <span class="o">*</span> <span class="n">x_shift_2</span><span class="p">)</span> <span class="o">/</span> <span class="n">w3</span>
+            <span class="p">)</span> <span class="o">*</span> <span class="p">((</span><span class="n">x</span> <span class="o">&gt;</span> <span class="p">(</span><span class="n">x2</span> <span class="o">-</span> <span class="n">w3</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">))</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">x</span> <span class="o">&lt;</span> <span class="p">(</span><span class="n">x2</span> <span class="o">+</span> <span class="n">w3</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">)))</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s">&quot;Only up to first derivatives are supported!&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="GibbsKernel1dCubicBucket"><a class="viewcode-back" href="../../../gptools.kernel.html#gptools.kernel.gibbs.GibbsKernel1dCubicBucket">[docs]</a><span class="k">class</span> <span class="nc">GibbsKernel1dCubicBucket</span><span class="p">(</span><span class="n">GibbsKernel1d</span><span class="p">):</span>
+    <span class="sd">r&quot;&quot;&quot;Gibbs warped squared exponential covariance function in 1d.</span>
+
+<span class="sd">    Uses hard-coded implementation up to first derivatives.</span>
+
+<span class="sd">    The covariance function is given by</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        k = \left ( \frac{2l(x)l(x&#39;)}{l^2(x)+l^2(x&#39;)} \right )^{1/2}\exp\left ( -\frac{(x-x&#39;)^2}{l^2(x)+l^2(x&#39;)} \right )</span>
+
+<span class="sd">    Warps the length scale using a &quot;bucket&quot; function with cubic joins.</span>
+<span class="sd">    </span>
+<span class="sd">    The order of the hyperparameters is:</span>
+
+<span class="sd">    = ====== ========================================</span>
+<span class="sd">    0 sigmaf Amplitude of the covariance function</span>
+<span class="sd">    1 l1     Length scale to the left of the bucket.</span>
+<span class="sd">    2 l2     Length scale in the bucket.</span>
+<span class="sd">    3 l3     Length scale to the right of the bucket.</span>
+<span class="sd">    4 x0     Location of the center of the bucket.</span>
+<span class="sd">    5 w1     Width of the left side cubic section.</span>
+<span class="sd">    6 w2     Width of the bucket.</span>
+<span class="sd">    7 w3     Width of the right side cubic section.</span>
+<span class="sd">    = ====== ========================================</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    **kwargs</span>
+<span class="sd">        All parameters are passed to :py:class:`~gptools.kernel.core.Kernel`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">GibbsKernel1dBucket</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">cubic_bucket_warp</span><span class="p">,</span>
+                                                  <span class="p">[</span><span class="s">r&#39;\sigma_f&#39;</span><span class="p">,</span>
+                                                   <span class="s">&#39;l_1&#39;</span><span class="p">,</span>
+                                                   <span class="s">&#39;l_2&#39;</span><span class="p">,</span>
+                                                   <span class="s">&#39;l_3&#39;</span><span class="p">,</span>
+                                                   <span class="s">&#39;x_0&#39;</span><span class="p">,</span>
+                                                   <span class="s">&#39;w_1&#39;</span><span class="p">,</span>
+                                                   <span class="s">&#39;w_2&#39;</span><span class="p">,</span>
+                                                   <span class="s">&#39;w_3&#39;</span><span class="p">],</span>
+                                                  <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="quintic_bucket_warp"><a class="viewcode-back" href="../../../gptools.kernel.html#gptools.kernel.gibbs.quintic_bucket_warp">[docs]</a><span class="k">def</span> <span class="nf">quintic_bucket_warp</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">,</span> <span class="n">l3</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">w1</span><span class="p">,</span> <span class="n">w2</span><span class="p">,</span> <span class="n">w3</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Warps the length scale with a piecewise quintic &quot;bucket&quot; shape.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    x : float or array-like of float</span>
+<span class="sd">        Locations to evaluate length scale at.</span>
+<span class="sd">    n : non-negative int</span>
+<span class="sd">        Derivative order to evaluate. Only first derivatives are supported.</span>
+<span class="sd">    l1 : positive float</span>
+<span class="sd">        Length scale to the left of the bucket.</span>
+<span class="sd">    l2 : positive float</span>
+<span class="sd">        Length scale in the bucket.</span>
+<span class="sd">    l3 : positive float</span>
+<span class="sd">        Length scale to the right of the bucket.</span>
+<span class="sd">    x0 : float</span>
+<span class="sd">        Location of the center of the bucket.</span>
+<span class="sd">    w1 : positive float</span>
+<span class="sd">        Width of the left side quintic section.</span>
+<span class="sd">    w2 : positive float</span>
+<span class="sd">        Width of the bucket.</span>
+<span class="sd">    w3 : positive float</span>
+<span class="sd">        Width of the right side quintic section.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">x1</span> <span class="o">=</span> <span class="n">x0</span> <span class="o">-</span> <span class="n">w2</span> <span class="o">/</span> <span class="mf">2.0</span> <span class="o">-</span> <span class="n">w1</span> <span class="o">/</span> <span class="mf">2.0</span>
+    <span class="n">x2</span> <span class="o">=</span> <span class="n">x0</span> <span class="o">+</span> <span class="n">w2</span> <span class="o">/</span> <span class="mf">2.0</span> <span class="o">+</span> <span class="n">w3</span> <span class="o">/</span> <span class="mf">2.0</span>
+    <span class="n">x_shift_1</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">x1</span><span class="p">)</span> <span class="o">/</span> <span class="n">w1</span>
+    <span class="n">x_shift_3</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">x2</span><span class="p">)</span> <span class="o">/</span> <span class="n">w3</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">l1</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">&lt;=</span> <span class="p">(</span><span class="n">x1</span> <span class="o">-</span> <span class="n">w1</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">))</span> <span class="o">+</span> <span class="p">(</span>
+                <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">l2</span> <span class="o">-</span> <span class="n">l1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span>
+                    <span class="mf">3.0</span> <span class="o">/</span> <span class="mf">8.0</span> <span class="o">*</span> <span class="n">x_shift_1</span><span class="o">**</span><span class="mi">5</span> <span class="o">-</span>
+                    <span class="mf">5.0</span> <span class="o">/</span> <span class="mf">4.0</span> <span class="o">*</span> <span class="n">x_shift_1</span><span class="o">**</span><span class="mi">3</span> <span class="o">+</span>
+                    <span class="mf">15.0</span> <span class="o">/</span> <span class="mf">8.0</span> <span class="o">*</span> <span class="n">x_shift_1</span>
+                <span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">l1</span> <span class="o">+</span> <span class="n">l2</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span>
+            <span class="p">)</span> <span class="o">*</span> <span class="p">((</span><span class="n">x</span> <span class="o">&gt;</span> <span class="p">(</span><span class="n">x1</span> <span class="o">-</span> <span class="n">w1</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">))</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">x</span> <span class="o">&lt;</span> <span class="p">(</span><span class="n">x1</span> <span class="o">+</span> <span class="n">w1</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">)))</span> <span class="o">+</span>
+            <span class="n">l2</span> <span class="o">*</span> <span class="p">((</span><span class="n">x</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="n">x1</span> <span class="o">+</span> <span class="n">w1</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">))</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">x</span> <span class="o">&lt;=</span> <span class="n">x2</span> <span class="o">-</span> <span class="n">w3</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">))</span> <span class="o">+</span> <span class="p">(</span>
+                <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">l3</span> <span class="o">-</span> <span class="n">l2</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span>
+                    <span class="mf">3.0</span> <span class="o">/</span> <span class="mf">8.0</span> <span class="o">*</span> <span class="n">x_shift_3</span><span class="o">**</span><span class="mi">5</span> <span class="o">-</span>
+                    <span class="mf">5.0</span> <span class="o">/</span> <span class="mf">4.0</span> <span class="o">*</span> <span class="n">x_shift_3</span><span class="o">**</span><span class="mi">3</span> <span class="o">+</span>
+                    <span class="mf">15.0</span> <span class="o">/</span> <span class="mf">8.0</span> <span class="o">*</span> <span class="n">x_shift_3</span>
+                <span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">l2</span> <span class="o">+</span> <span class="n">l3</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span>
+            <span class="p">)</span> <span class="o">*</span> <span class="p">((</span><span class="n">x</span> <span class="o">&gt;</span> <span class="p">(</span><span class="n">x2</span> <span class="o">-</span> <span class="n">w3</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">))</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">x</span> <span class="o">&lt;</span> <span class="p">(</span><span class="n">x2</span> <span class="o">+</span> <span class="n">w3</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">)))</span> <span class="o">+</span>
+            <span class="n">l3</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="n">x2</span> <span class="o">+</span> <span class="n">w3</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">))</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="p">(</span>
+                <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">l2</span> <span class="o">-</span> <span class="n">l1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span>
+                    <span class="mf">5.0</span> <span class="o">*</span> <span class="mf">3.0</span> <span class="o">/</span> <span class="mf">8.0</span> <span class="o">*</span> <span class="n">x_shift_1</span><span class="o">**</span><span class="mi">4</span> <span class="o">-</span>
+                    <span class="mf">3.0</span> <span class="o">*</span> <span class="mf">5.0</span> <span class="o">/</span> <span class="mf">4.0</span> <span class="o">*</span> <span class="n">x_shift_1</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span>
+                    <span class="mf">15.0</span> <span class="o">/</span> <span class="mf">8.0</span>
+                <span class="p">)</span> <span class="o">/</span> <span class="n">w1</span>
+            <span class="p">)</span> <span class="o">*</span> <span class="p">((</span><span class="n">x</span> <span class="o">&gt;</span> <span class="p">(</span><span class="n">x1</span> <span class="o">-</span> <span class="n">w1</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">))</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">x</span> <span class="o">&lt;</span> <span class="p">(</span><span class="n">x1</span> <span class="o">+</span> <span class="n">w1</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">)))</span> <span class="o">+</span> <span class="p">(</span>
+                <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">l3</span> <span class="o">-</span> <span class="n">l2</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span>
+                    <span class="mf">5.0</span> <span class="o">*</span> <span class="mf">3.0</span> <span class="o">/</span> <span class="mf">8.0</span> <span class="o">*</span> <span class="n">x_shift_3</span><span class="o">**</span><span class="mi">4</span> <span class="o">-</span>
+                    <span class="mf">3.0</span> <span class="o">*</span> <span class="mf">5.0</span> <span class="o">/</span> <span class="mf">4.0</span> <span class="o">*</span> <span class="n">x_shift_3</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span>
+                    <span class="mf">15.0</span> <span class="o">/</span> <span class="mf">8.0</span>
+                <span class="p">)</span> <span class="o">/</span> <span class="n">w3</span>
+            <span class="p">)</span> <span class="o">*</span> <span class="p">((</span><span class="n">x</span> <span class="o">&gt;</span> <span class="p">(</span><span class="n">x2</span> <span class="o">-</span> <span class="n">w3</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">))</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">x</span> <span class="o">&lt;</span> <span class="p">(</span><span class="n">x2</span> <span class="o">+</span> <span class="n">w3</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">)))</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s">&quot;Only up to first derivatives are supported!&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="GibbsKernel1dQuinticBucket"><a class="viewcode-back" href="../../../gptools.kernel.html#gptools.kernel.gibbs.GibbsKernel1dQuinticBucket">[docs]</a><span class="k">class</span> <span class="nc">GibbsKernel1dQuinticBucket</span><span class="p">(</span><span class="n">GibbsKernel1d</span><span class="p">):</span>
+    <span class="sd">r&quot;&quot;&quot;Gibbs warped squared exponential covariance function in 1d.</span>
+
+<span class="sd">    Uses hard-coded implementation up to first derivatives.</span>
+
+<span class="sd">    The covariance function is given by</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        k = \left ( \frac{2l(x)l(x&#39;)}{l^2(x)+l^2(x&#39;)} \right )^{1/2}\exp\left ( -\frac{(x-x&#39;)^2}{l^2(x)+l^2(x&#39;)} \right )</span>
+
+<span class="sd">    Warps the length scale using a &quot;bucket&quot; function with quintic joins.</span>
+
+<span class="sd">    The order of the hyperparameters is:</span>
+
+<span class="sd">    = ====== ========================================</span>
+<span class="sd">    0 sigmaf Amplitude of the covariance function</span>
+<span class="sd">    1 l1     Length scale to the left of the bucket.</span>
+<span class="sd">    2 l2     Length scale in the bucket.</span>
+<span class="sd">    3 l3     Length scale to the right of the bucket.</span>
+<span class="sd">    4 x0     Location of the center of the bucket.</span>
+<span class="sd">    5 w1     Width of the left side quintic section.</span>
+<span class="sd">    6 w2     Width of the bucket.</span>
+<span class="sd">    7 w3     Width of the right side quintic section.</span>
+<span class="sd">    = ====== ========================================</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    **kwargs</span>
+<span class="sd">        All parameters are passed to :py:class:`~gptools.kernel.core.Kernel`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">GibbsKernel1dQuinticBucket</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">quintic_bucket_warp</span><span class="p">,</span>
+                                                         <span class="p">[</span><span class="s">r&#39;\sigma_f&#39;</span><span class="p">,</span>
+                                                          <span class="s">&#39;l_1&#39;</span><span class="p">,</span>
+                                                          <span class="s">&#39;l_2&#39;</span><span class="p">,</span>
+                                                          <span class="s">&#39;l_3&#39;</span><span class="p">,</span>
+                                                          <span class="s">&#39;x_0&#39;</span><span class="p">,</span>
+                                                          <span class="s">&#39;w_1&#39;</span><span class="p">,</span>
+                                                          <span class="s">&#39;w_2&#39;</span><span class="p">,</span>
+                                                          <span class="s">&#39;w_3&#39;</span><span class="p">],</span>
+                                                         <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 </pre></div>
 
           </div>
@@ -374,13 +854,13 @@
         <li class="right" >
           <a href="../../../np-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../index.html">gptools 0.0 documentation</a> &raquo;</li>
+        <li><a href="../../../index.html">gptools 0.2 documentation</a> &raquo;</li>
           <li><a href="../../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
-        &copy; Copyright 2013, Mark Chilenski.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+        &copy; Copyright 2014, Mark Chilenski.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
     </div>
   </body>
 </html>
