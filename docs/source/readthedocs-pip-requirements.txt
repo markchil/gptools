@@ -1,4 +1,4 @@
-Cython
+cython
 numpy
 scipy
 mpmath
