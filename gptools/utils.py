@@ -1211,11 +1211,25 @@ def summarize_sampler(sampler, burn=0, thin=1, ci=0.95):
     
     return (mean, ci_l, ci_u)
 
-def plot_sampler(sampler, labels=None, burn=0):
+def plot_sampler(sampler, labels=None, burn=0, chain_mask=None):
     """Plot the results of MCMC sampler (posterior and chains).
-    """
     
-    # Loosely based on triangle.py
+    Loosely based on triangle.py.
+    
+    Parameters
+    ----------
+    sampler : :py:class:`emcee.EnsembleSampler` instance
+        The sampler to plot the chains/marginals of.
+    labels : list of str, optional
+        The labels to use for each of the free parameters. Default is to leave
+        the axes unlabeled.
+    burn : int, optional
+        The number of samples to burn before making the marginal histograms.
+        Default is zero (use all samples).
+    chain_mask : (index) array
+        Mask identifying the chains to keep before plotting, in case there are
+        bad chains. Default is to use all chains.
+    """
     
     # Create axes:
     k = sampler.flatchain.shape[1]
@@ -1245,7 +1259,9 @@ def plot_sampler(sampler, labels=None, burn=0):
     axes = scipy.asarray(axes)
     
     # Update axes with the data:
-    flat_trace = sampler.chain[:, burn:, :]
+    if chain_mask is None:
+        chain_mask = scipy.ones(sampler.chain.shape[0], dtype=bool)
+    flat_trace = sampler.chain[chain_mask, burn:, :]
     flat_trace = flat_trace.reshape((-1, k))
     
     # j is the row, i is the column.
