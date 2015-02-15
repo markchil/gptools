@@ -1211,7 +1211,7 @@ def summarize_sampler(sampler, burn=0, thin=1, ci=0.95):
     
     return (mean, ci_l, ci_u)
 
-def plot_sampler(sampler, labels=None, burn=0, chain_mask=None):
+def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50):
     """Plot the results of MCMC sampler (posterior and chains).
     
     Loosely based on triangle.py.
@@ -1267,7 +1267,7 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None):
     # j is the row, i is the column.
     for i in xrange(0, k):
         axes[i, i].clear()
-        axes[i, i].hist(flat_trace[:, i], bins=50, color='black')
+        axes[i, i].hist(flat_trace[:, i], bins=bins, color='black')
         if i == k - 1:
             axes[i, i].set_xlabel(labels[i])
         if i < k - 1:
@@ -1278,7 +1278,7 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None):
         #     axes[j, i].set_frame_on(False)
         for j in xrange(i + 1, k):
             axes[j, i].clear()
-            ct, x, y, im = axes[j, i].hist2d(flat_trace[:, i], flat_trace[:, j], bins=50, cmap='gray_r')
+            ct, x, y, im = axes[j, i].hist2d(flat_trace[:, i], flat_trace[:, j], bins=bins, cmap='gray_r')
             # xmid = 0.5 * (x[1:] + x[:-1])
             # ymid = 0.5 * (y[1:] + y[:-1])
             # axes[j, i].contour(xmid, ymid, ct.T, colors='k')
