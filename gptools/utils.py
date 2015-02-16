@@ -1211,7 +1211,7 @@ def summarize_sampler(sampler, burn=0, thin=1, ci=0.95):
     
     return (mean, ci_l, ci_u)
 
-def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50):
+def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50, points=None, plot_samples=False):
     """Plot the results of MCMC sampler (posterior and chains).
     
     Loosely based on triangle.py.
@@ -1226,9 +1226,13 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50):
     burn : int, optional
         The number of samples to burn before making the marginal histograms.
         Default is zero (use all samples).
-    chain_mask : (index) array
+    chain_mask : (index) array, optional
         Mask identifying the chains to keep before plotting, in case there are
         bad chains. Default is to use all chains.
+    points : array, (`D`,) or (`D`, `N`), optional
+        Array of point(s) to plot onto each marginal and chain. Default is None.
+    plot_samples : bool, optional
+        If True, the samples are plotted as individual points. Default is False.
     """
     
     # Create axes:
@@ -1268,6 +1272,14 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50):
     for i in xrange(0, k):
         axes[i, i].clear()
         axes[i, i].hist(flat_trace[:, i], bins=bins, color='black')
+        if plot_samples:
+            axes[i, i].plot(flat_trace[:, i], scipy.zeros_like(flat_trace[:, i]), ',', alpha=0.1)
+        if points is not None:
+            # axvline can only take a scalar x, so we have to loop:
+            try:
+                [axes[i, i].axvline(x=pt, linewidth=3) for pt in points[i]]
+            except TypeError:
+                axes[i, i].axvline(x=points[i], linewidth=3)
         if i == k - 1:
             axes[i, i].set_xlabel(labels[i])
         if i < k - 1:
@@ -1279,6 +1291,10 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50):
         for j in xrange(i + 1, k):
             axes[j, i].clear()
             ct, x, y, im = axes[j, i].hist2d(flat_trace[:, i], flat_trace[:, j], bins=bins, cmap='gray_r')
+            if plot_samples:
+                axes[j, i].plot(flat_trace[:, i], flat_trace[:, j], ',', alpha=0.1)
+            if points is not None:
+                axes[j, i].plot(points[i], points[j], '.')
             # xmid = 0.5 * (x[1:] + x[:-1])
             # ymid = 0.5 * (y[1:] + y[:-1])
             # axes[j, i].contour(xmid, ymid, ct.T, colors='k')
@@ -1293,6 +1309,11 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50):
         axes[-1, i].clear()
         axes[-1, i].plot(sampler.chain[:, :, i].T)
         axes[-1, i].axvline(burn, color='r', linewidth=3)
+        if points is not None:
+            try:
+                [axes[-1, i].axhline(y=pt, linewidth=3) for pt in points[i]]
+            except TypeError:
+                axes[-1, i].axhline(y=points[i], linewidth=3)
         axes[-1, i].set_ylabel(labels[i])
         axes[-1, i].set_xlabel('step')
     
