@@ -1050,7 +1050,7 @@ class GaussianProcess(object):
     def draw_sample(self, Xstar, n=0, num_samp=1, rand_vars=None,
                     rand_type='standard normal', diag_factor=1e3,
                     method='cholesky', num_eig=None, mean=None, cov=None,
-                    **kwargs):
+                    modify_sign=None, **kwargs):
         """Draw a sample evaluated at the given points `Xstar`.
         
         Parameters
@@ -1105,14 +1105,33 @@ class GaussianProcess(object):
             number of test points). If it is None, then all eigenvalues are
             computed. Default is None (compute all eigenvalues). This keyword
             only has an effect if `method` is 'eig'.
-        mean : array, (`M`,)
+        mean : array, (`M`,), optional
             If you have pre-computed the mean and covariance matrix, then you
             can simply pass them in with the `mean` and `cov` keywords to save
             on having to call :py:meth:`predict`.
-        cov : array, (`M`, `M`)
+        cov : array, (`M`, `M`), optional
             If you have pre-computed the mean and covariance matrix, then you
             can simply pass them in with the `mean` and `cov` keywords to save
             on having to call :py:meth:`predict`.
+        modify_sign : {None, 'left value', 'right value', 'left slope', 'right slope', 'left concavity', 'right concavity'}, optional
+            If None (the default), the eigenvectors as returned by
+            :py:func:`scipy.linalg.eigh` are used without modification. To
+            modify the sign of the eigenvectors (necessary for some advanced use
+            cases), set this kwarg to one of the following:
+            
+                * 'left value': forces the first value of each eigenvector to be
+                  positive.
+                * 'right value': forces the last value of each eigenvector to be
+                  positive.
+                * 'left slope': forces the slope to be positive at the start of
+                  each eigenvector.
+                * 'right slope': forces the slope to be positive at the end of
+                  each eigenvector.
+                * 'left concavity': forces the second derivative to be positive
+                  at the start of each eigenvector.
+                * 'right concavity': forces the second derivative to be positive
+                  at the end of each eigenvector.
+        
         **kwargs : optional kwargs
             All extra keyword arguments are passed to :py:meth:`predict` when
             evaluating the mean and covariance matrix of the GP.
@@ -1152,8 +1171,10 @@ class GaussianProcess(object):
             rand_vars = numpy.random.standard_normal((num_eig, num_samp))
         valid_types = ('standard normal', 'uniform')
         if rand_type not in valid_types:
-            raise ValueError("rand_type %s not recognized! Valid options "
-                             "are: %s." % (rand_type, valid_types,))
+            raise ValueError(
+                "rand_type %s not recognized! Valid options are: %s."
+                % (rand_type, valid_types,)
+            )
         if rand_type == 'uniform':
             rand_vars = scipy.stats.norm.ppf(rand_vars)
         
@@ -1170,6 +1191,24 @@ class GaussianProcess(object):
                 cov + diag_factor * sys.float_info.epsilon * scipy.eye(cov.shape[0]),
                 eigvals=(len(mean) - 1 - (num_eig - 1), len(mean) - 1)
             )
+            if modify_sign is not None:
+                if modify_sign == 'left value':
+                    modify_mask = (Q[0, :] < 0.0)
+                elif modify_sign == 'right value':
+                    modify_mask = (Q[-1, :] < 0.0)
+                elif modify_sign == 'left slope':
+                    modify_mask = ((Q[1, :] - Q[0, :]) < 0.0)
+                elif modify_sign == 'right slope':
+                    modify_mask = ((Q[-1, :] - Q[-2, :]) < 0.0)
+                elif modify_sign == 'left concavity':
+                    modify_mask = ((Q[2, :] - 2 * Q[1, :] + Q[0, :]) < 0.0)
+                elif modify_sign == 'right concavity':
+                    modify_mask = ((Q[-1, :] - 2 * Q[-2, :] + Q[-3, :]) < 0.0)
+                else:
+                    raise ValueError(
+                        "modify_sign %s not recognized!" % (modify_sign,)
+                    )
+                Q[:, modify_mask] *= -1.0
             Lam_1_2 = scipy.diag(scipy.sqrt(eig))
             L = Q.dot(Lam_1_2)
         else:
