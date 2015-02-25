@@ -38,153 +38,6 @@ except ImportError:
                   ImportWarning)
 
 
-class LessThanUniformPotential(object):
-    """Class to implement a potential to enforce an inequality constraint.
-    
-    Specifically lets you change the param with l_idx to have a uniform prior
-    between its lower bound and the param with g_idx.
-    
-    Returns log((ub-lb)/(theta[g_idx]-lb)) if theta[l_idx] <= theta[g_idx],
-    double_min otherwise.
-    
-    Parameters
-    ----------
-    l_idx : int
-        Index of the parameter that is required to be lesser.
-    g_idx : int
-        Index of the parameter that is required to be greater.
-    """
-    def __init__(self, l_idx, g_idx):
-        self.l_idx = l_idx
-        self.g_idx = g_idx
-    
-    def __call__(self, theta, k):
-        """Return the log-density of the potential.
-        
-        Parameters
-        ----------
-        theta : array-like
-            Array of the hyperparameters.
-        k : Kernel instance
-            The kernel the hyperparameters apply to.
-        
-        Returns
-        -------
-        f : float
-            Returns log((ub-lb)/(theta[g_idx]-lb)) if the condition is met, -inf if not.
-        """
-        if theta[self.l_idx] <= theta[self.g_idx] and theta[self.l_idx] >= k.param_bounds[self.l_idx][0]:
-            return (scipy.log(k.param_bounds[self.l_idx][1] - k.param_bounds[self.l_idx][0]) -
-                    scipy.log(theta[self.g_idx] - k.param_bounds[self.l_idx][0]))
-        else:
-            return -scipy.inf
-
-class JeffreysPrior(object):
-    """Class to implement a Jeffreys prior over a finite range. Returns log-density.
-    
-    Parameters
-    ----------
-    idx : int
-        The index this prior applies to.
-    bounds : 2-tuple
-        The bounds for the parameter this prior corresponds to: (lb, ub).
-    """
-    def __init__(self, idx, bounds):
-        self.idx = idx
-        self.bounds = bounds
-    
-    def __call__(self, theta):
-        if self.bounds[0] <= theta[self.idx] and theta[self.idx] <= self.bounds[1]:
-            return -scipy.log(scipy.log(self.bounds[1] / self.bounds[0])) - scipy.log(theta[self.idx])
-        else:
-            return -scipy.inf
-            
-    def interval(self, alpha):
-        if alpha == 1:
-            return self.bounds
-        else:
-            raise ValueError("Unsupported interval!")
-
-class LinearPrior(object):
-    """Class to implement a linear prior. Returns log-density.
-    
-    Parameters
-    ----------
-    idx : int
-        The index this prior applies to.
-    bounds : 2-tuple
-        The bounds for the parameter this prior corresponds to: (lb, ub).
-    """
-    def __init__(self, idx, bounds):
-        self.bounds = bounds
-        self.idx = idx
-    
-    def __call__(self, theta):
-        """Return the log-density of the uniform prior.
-        
-        Parameters
-        ----------
-        theta : array-like, or float
-            Value of values of the hyperparameter.
-        
-        Returns
-        -------
-        f : :py:class:`Array` or float
-            Returns log(2/(b-a)^2) + log(b-theta) if theta is in bounds, -inf
-            if theta is out of bounds.
-        """
-        if self.bounds[0] <= theta[self.idx] and theta[self.idx] <= self.bounds[1]:
-            return scipy.log(2 / (self.bounds[1] - self.bounds[0])**2) + scipy.log(self.bounds[1] - theta[self.idx])
-        else:
-            return -scipy.inf
-    
-    def interval(self, alpha):
-        if alpha == 1:
-            return self.bounds
-        else:
-            raise ValueError("Unsupported interval!")
-
-class UniformPrior(object):
-    """Class to implement a uniform prior. Returns log-density.
-    
-    Parameters
-    ----------
-    idx : int
-        The index this prior applies to.
-    bounds : 2-tuple
-        The bounds for the parameter this prior corresponds to: (lb, ub).
-    """
-    def __init__(self, idx, bounds):
-        self.bounds = bounds
-        self.idx = idx
-        
-    def __call__(self, theta):
-        """Return the log-PDF of the uniform prior.
-        
-        Parameters
-        ----------
-        theta : array-like
-            Values of the hyperparameters.
-        
-        Returns
-        -------
-        f : :py:class:`Array` or float
-            Returns -log(ub - lb) if theta is scalar and in bounds, double_min
-            if theta is scalar and out of bounds and an appropriately-shaped
-            array if theta is array-like.
-        """
-        if self.bounds[0] <= theta[self.idx] and theta[self.idx] <= self.bounds[1]:
-            return -scipy.log(self.bounds[1] - self.bounds[0])
-        else:
-            return -scipy.inf  #scipy.finfo('d').min
-    
-    def interval(self, alpha):
-        # Can't store the frozen distribution since it isn't pickleable.
-        return scipy.stats.uniform.interval(alpha, loc=self.bounds[0], scale=self.bounds[1] - self.bounds[0])
-    
-    def rvs(self, size=None):
-        return scipy.stats.uniform.rvs(size=size, loc=self.bounds[0], scale=self.bounds[1] - self.bounds[0])
-
 class JointPrior(object):
     """Abstract class for objects implementing joint priors over hyperparameters.
     """
@@ -1211,7 +1064,7 @@ def summarize_sampler(sampler, burn=0, thin=1, ci=0.95):
     
     return (mean, ci_l, ci_u)
 
-def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50, points=None, plot_samples=False):
+def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50, points=None, plot_samples=False, chain_alpha=0.1):
     """Plot the results of MCMC sampler (posterior and chains).
     
     Loosely based on triangle.py.
@@ -1233,6 +1086,10 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50, points=
         Array of point(s) to plot onto each marginal and chain. Default is None.
     plot_samples : bool, optional
         If True, the samples are plotted as individual points. Default is False.
+    chain_alpha : float, optional
+        The transparency to use for the plots of the individual chains. Setting
+        this to something low lets you better visualize what is going on.
+        Default is 0.1.
     """
     
     # Create axes:
@@ -1307,7 +1164,7 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50, points=
             if j == k - 1:
                 axes[j, i].set_xlabel(labels[i])
         axes[-1, i].clear()
-        axes[-1, i].plot(sampler.chain[:, :, i].T)
+        axes[-1, i].plot(sampler.chain[:, :, i].T, alpha=chain_alpha)
         axes[-1, i].axvline(burn, color='r', linewidth=3)
         if points is not None:
             try:

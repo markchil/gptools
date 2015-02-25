@@ -1584,6 +1584,8 @@ class GaussianProcess(object):
                 raise NotImplementedError(
                     "Sampler type %s not supported!" % (sampler_type,)
                 )
+        else:
+            sampler.a = sampler_a
         if sampler.chain.size == 0:
             theta0 = self.hyperprior.random_draw(size=nwalkers).T
             theta0 = theta0[:, ~self.fixed_params]
