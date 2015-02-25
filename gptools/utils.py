@@ -165,8 +165,18 @@ class UniformJointPrior(JointPrior):
     ----------
     bounds : list of tuples, (`num_params`,)
         The bounds for each of the random variables.
+    ub : list of float, (`num_params`,), optional
+        The upper bounds for each of the random variables. If present, `bounds`
+        is then taken to be a list of float with the lower bounds. This gives
+        :py:class:`UniformJointPrior` a similar calling fingerprint as the other
+        :py:class:`JointPrior` classes.
     """
-    def __init__(self, bounds):
+    def __init__(self, bounds, ub=None):
+        if ub is not None:
+            try:
+                bounds = zip(bounds, ub)
+            except TypeError:
+                bounds = [(bounds, ub)]
         self.bounds = bounds
     
     def __call__(self, theta):
