@@ -156,7 +156,13 @@ class ProductJointPrior(JointPrior):
             The number/shape of samples to draw. If None, only one sample is
             returned. Default is None.
         """
-        return scipy.vstack((self.p1.random_draw(size=size), self.p2.random_draw(size=size)))
+        draw_1 = self.p1.random_draw(size=size)
+        draw_2 = self.p2.random_draw(size=size)
+        
+        if draw_1.ndim == 1:
+            return scipy.hstack((draw_1, draw_2))
+        else:
+            return scipy.vstack((draw_1, draw_2))
 
 class UniformJointPrior(JointPrior):
     """Uniform prior over the specified bounds.
