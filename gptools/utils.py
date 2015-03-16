@@ -502,9 +502,9 @@ class GammaJointPrior(JointPrior):
         a = scipy.atleast_1d(scipy.asarray(a, dtype=float))
         b = scipy.atleast_1d(scipy.asarray(b, dtype=float))
         if a.shape != b.shape:
-            raise ValueError("sigma and mu must have the same shape!")
+            raise ValueError("a and b must have the same shape!")
         if a.ndim != 1:
-            raise ValueError("sigma and mu must both be one dimensional!")
+            raise ValueError("a and b must both be one dimensional!")
         self.a = a
         self.b = b
     
@@ -537,6 +537,38 @@ class GammaJointPrior(JointPrior):
             returned. Default is None.
         """
         return scipy.asarray([scipy.stats.gamma.rvs(a, loc=0, scale=1.0 / b, size=size) for a, b in zip(self.a, self.b)])
+
+class GammaJointPriorAlt(GammaJointPrior):
+    """Joint prior for which each hyperparameter has a gamma prior with fixed hyper-hyperparameters.
+    
+    This is an alternate form that lets you specify the mode and standard
+    deviation instead of the shape and rate parameters.
+    
+    Parameters
+    ----------
+    m : list of float, same size as `s`
+        Modes
+    s : list of float
+        Standard deviations
+    """
+    def __init__(self, m, s):
+        m = scipy.atleast_1d(scipy.asarray(m, dtype=float))
+        s = scipy.atleast_1d(scipy.asarray(s, dtype=float))
+        if m.shape != s.shape:
+            raise ValueError("s and mu must have the same shape!")
+        if m.ndim != 1:
+            raise ValueError("s and mu must both be one dimensional!")
+        self.m = m
+        self.s = s
+    
+    @property
+    def a(self):
+        return 1.0 + self.b * self.m
+    
+    @property
+    def b(self):
+        return (self.m + scipy.sqrt(self.m**2 + 4.0 * self.s**2)) / (2.0 * self.s**2)
+    
 
 def wrap_fmin_slsqp(fun, guess, opt_kwargs={}):
     """Wrapper for :py:func:`fmin_slsqp` to allow it to be called with :py:func:`minimize`-like syntax.
