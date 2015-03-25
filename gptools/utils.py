@@ -30,12 +30,21 @@ import numpy.random
 import copy
 import itertools
 try:
+    import emcee
+except ImportError:
+    warnings.warn(
+        "Could not import emcee: MCMC sampling will not be available.",
+        ImportWarning
+    )
+try:
     import matplotlib.pyplot as plt
     import matplotlib.widgets as mplw
     import matplotlib.gridspec as mplgs
 except ImportError:
-    warnings.warn("Could not import matplotlib. plot_QQ keyword for compute_stats will not function.",
-                  ImportWarning)
+    warnings.warn(
+        "Could not import matplotlib. plot_QQ keyword for compute_stats will not function.",
+        ImportWarning
+    )
 
 
 class JointPrior(object):
@@ -1141,7 +1150,7 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50, points=
     """
     
     # Create axes:
-    k = sampler.flatchain.shape[1]
+    k = sampler.flatchain.shape[-1]
     
     if labels is None:
         labels = [''] * k
@@ -1168,10 +1177,18 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50, points=
     axes = scipy.asarray(axes)
     
     # Update axes with the data:
-    if chain_mask is None:
-        chain_mask = scipy.ones(sampler.chain.shape[0], dtype=bool)
-    flat_trace = sampler.chain[chain_mask, burn:, :]
-    flat_trace = flat_trace.reshape((-1, k))
+    if isinstance(sampler, emcee.EnsembleSampler):
+        if chain_mask is None:
+            chain_mask = scipy.ones(sampler.chain.shape[0], dtype=bool)
+        flat_trace = sampler.chain[chain_mask, burn:, :]
+        flat_trace = flat_trace.reshape((-1, k))
+    elif isinstance(sampler, emcee.PTSampler):
+        if chain_mask is None:
+            chain_mask = scipy.ones(sampler.nwalkers, dtype=bool)
+        flat_trace = sampler.chain[0, chain_mask, burn:, :]
+        flat_trace = flat_trace.reshape((-1, k))
+    else:
+        raise ValueError("Unknown sampler class: %s" % (type(sampler),))
     
     # j is the row, i is the column.
     for i in xrange(0, k):
@@ -1212,7 +1229,10 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50, points=
             if j == k - 1:
                 axes[j, i].set_xlabel(labels[i])
         axes[-1, i].clear()
-        axes[-1, i].plot(sampler.chain[:, :, i].T, alpha=chain_alpha)
+        if isinstance(sampler, emcee.EnsembleSampler):
+            axes[-1, i].plot(sampler.chain[:, :, i].T, alpha=chain_alpha)
+        elif isinstance(sampler, emcee.PTSampler):
+            axes[-1, i].plot(sampler.chain[0, :, :, i].T, alpha=chain_alpha)
         axes[-1, i].axvline(burn, color='r', linewidth=3)
         if points is not None:
             try:

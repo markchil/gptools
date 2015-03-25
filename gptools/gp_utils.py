@@ -34,8 +34,10 @@ try:
     import matplotlib.gridspec as mplgs
 except ImportError:
     import warnings
-    warnings.warn("Could not import matplotlib. slice_plot will not be available.",
-                  ImportWarning)
+    warnings.warn(
+        "Could not import matplotlib. slice_plot will not be available.",
+        ImportWarning
+    )
 import itertools
 import scipy
 import copy

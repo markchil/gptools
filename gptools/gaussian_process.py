@@ -38,12 +38,17 @@ from mpl_toolkits.mplot3d import Axes3D
 try:
     import emcee
 except ImportError:
-    warnings.warn("Could not import emcee: MCMC sampling will not be available.")
+    warnings.warn(
+        "Could not import emcee: MCMC sampling will not be available.",
+        ImportWarning
+    )
 try:
     import triangle
 except ImportError:
-    warnings.warn("Could not import triangle: plotting of MCMC results will not "
-                  "be available.")
+    warnings.warn(
+        "Could not import triangle: plotting of MCMC results will not be available.",
+        ImportWarning
+    )
 
 class GaussianProcess(object):
     r"""Gaussian process.
@@ -555,7 +560,8 @@ class GaussianProcess(object):
             return (X_bad, y_bad, err_y_bad, n_bad, bad_idxs, T_bad)
     
     def optimize_hyperparameters(self, method='SLSQP', opt_kwargs={},
-                                 verbose=False, random_starts=None, num_proc=None):
+                                 verbose=False, random_starts=None, num_proc=None,
+                                 max_tries=1):
         r"""Optimize the hyperparameters by maximizing the log likelihood.
         
         Leaves the :py:class:`GaussianProcess` instance in the optimized state.
@@ -594,6 +600,10 @@ class GaussianProcess(object):
             Number of processors to use with random starts. If 0, processing is
             not done in parallel. If None, all available processors are used.
             Default is None (use all available processors).
+        max_tries : int
+            Number of times to run through the random start procedure if a
+            solution is not found. Default is to only go through the procedure
+            once.
         """
         if opt_kwargs is None:
             opt_kwargs = {}
@@ -626,56 +636,71 @@ class GaussianProcess(object):
             param_samples = param_samples[:, ~self.fixed_params]
         if 'bounds' not in opt_kwargs:
             opt_kwargs['bounds'] = param_ranges
-        if num_proc <= 1:
-            res = []
-            for samp in param_samples:
-                try:
-                    res += [
-                        scipy.optimize.minimize(
-                            self.update_hyperparameters,
-                            samp,
-                            **opt_kwargs
-                        )
-                    ]
-                except AttributeError:
-                    warnings.warn(
-                        "scipy.optimize.minimize not available, defaulting to "
-                        "fmin_slsqp.",
-                        RuntimeWarning
-                    )
-                    res += [
-                        wrap_fmin_slsqp(
-                            self.update_hyperparameters,
-                            samp,
-                            opt_kwargs=opt_kwargs
-                        )
-                    ]
-                except:
-                    warnings.warn(
-                        "Minimizer failed, skipping sample. Error is: %s: %s. "
-                        "State of params is: %s %s"
-                        % (
-                            sys.exc_info()[0],
-                            sys.exc_info()[1],
-                            str(self.k.free_params),
-                            str(self.noise_k.free_params)
-                        ),
-                        RuntimeWarning
-                    )
-        else:
-            pool = multiprocessing.Pool(processes=num_proc)
-            try:
-                res = pool.map(
-                    _OptimizeHyperparametersEval(self, opt_kwargs),
-                    param_samples
+        trial = 0
+        res_min = None
+        while trial < max_tries and res_min is None:
+            if trial >= 1:
+                warnings.warn(
+                    "No solutions found on trial %d, retrying random starts." % (trial - 1,),
+                    RuntimeWarning
                 )
-            finally:
-                pool.close()
-            # Filter out the failed convergences:
-            res = [r for r in res if r is not None]
-        try:
-            res_min = min(res, key=lambda r: r.fun)
-        except ValueError:
+            trial += 1
+            if num_proc <= 1:
+                res = []
+                for samp in param_samples:
+                    try:
+                        res += [
+                            scipy.optimize.minimize(
+                                self.update_hyperparameters,
+                                samp,
+                                **opt_kwargs
+                            )
+                        ]
+                    except AttributeError:
+                        warnings.warn(
+                            "scipy.optimize.minimize not available, defaulting to "
+                            "fmin_slsqp.",
+                            RuntimeWarning
+                        )
+                        res += [
+                            wrap_fmin_slsqp(
+                                self.update_hyperparameters,
+                                samp,
+                                opt_kwargs=opt_kwargs
+                            )
+                        ]
+                    except:
+                        warnings.warn(
+                            "Minimizer failed, skipping sample. Error is: %s: %s. "
+                            "State of params is: %s %s"
+                            % (
+                                sys.exc_info()[0],
+                                sys.exc_info()[1],
+                                str(self.k.free_params),
+                                str(self.noise_k.free_params)
+                            ),
+                            RuntimeWarning
+                        )
+            else:
+                pool = multiprocessing.Pool(processes=num_proc)
+                try:
+                    res = pool.map(
+                        _OptimizeHyperparametersEval(self, opt_kwargs),
+                        param_samples
+                    )
+                finally:
+                    pool.close()
+                # Filter out the failed convergences:
+                res = [r for r in res if r is not None]
+            
+            try:
+                res_min = min(res, key=lambda r: r.fun)
+                if scipy.isnan(res_min.fun) or scipy.isinf(res_min.fun):
+                    res_min = None
+            except ValueError:
+                res_min = None
+        
+        if res_min is None:
             raise ValueError(
                 "Optimizer failed to find a valid solution. Try changing the "
                 "parameter bounds, picking a new initial guess or increasing the "
