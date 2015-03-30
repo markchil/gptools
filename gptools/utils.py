@@ -579,6 +579,78 @@ class GammaJointPriorAlt(GammaJointPrior):
         return (self.m + scipy.sqrt(self.m**2 + 4.0 * self.s**2)) / (2.0 * self.s**2)
     
 
+class SortedUniformJointPrior(JointPrior):
+    """Joint prior for a set of variables which must be strictly increasing but are otherwise uniformly-distributed.
+    
+    Parameters
+    ----------
+    num_var : int
+        The number of variables represented.
+    lb : float
+        The lower bound for all of the variables.
+    ub : float
+        The upper bound for all of the variables.
+    """
+    def __init__(self, num_var, lb, ub):
+        self.num_var = num_var
+        self.lb = lb
+        self.ub = ub
+    
+    def __call__(self, theta):
+        """Evaluate the log-probability of the variables.
+        
+        Parameters
+        ----------
+        theta : array
+            The parameters to find the log-probability of.
+        """
+        # The PDF of the order statistics of n uniform random variables is
+        # constant and equal to n!. But, we further want the condition that the
+        # order statistics come to us sorted. We just return the un-normalized
+        # log-probability for simplicity.
+        if (scipy.sort(theta) != theta).all():
+            return -scipy.inf
+        else:
+            return 0.0
+    
+    @property
+    def bounds(self):
+        return [(self.ub, self.lb)] * self.num_var
+    
+    def random_draw(self, size=None):
+        """Draw random samples of the hyperparameters.
+        
+        Parameters
+        ----------
+        size : None, int or array-like, optional
+            The number/shape of samples to draw. If None, only one sample is
+            returned. Default is None.
+        """
+        if size is None:
+            size = 1
+            single_val = True
+        else:
+            single_val = False
+        
+        out_shape = [self.num_var]
+        try:
+            out_shape.extend(size)
+        except TypeError:
+            out_shape.append(size)
+        
+        out = scipy.sort(
+            numpy.random.uniform(
+                low=self.lb,
+                high=self.ub,
+                size=out_shape
+            ),
+            axis=0
+        )
+        if not single_val:
+            return out
+        else:
+            return out.ravel()
+
 def wrap_fmin_slsqp(fun, guess, opt_kwargs={}):
     """Wrapper for :py:func:`fmin_slsqp` to allow it to be called with :py:func:`minimize`-like syntax.
 
