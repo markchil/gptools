@@ -1194,14 +1194,14 @@ def summarize_sampler(sampler, burn=0, thin=1, ci=0.95):
     
     return (mean, ci_l, ci_u)
 
-def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50, points=None, plot_samples=False, chain_alpha=0.1):
+def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50, points=None, plot_samples=False, chain_alpha=0.1, temp_idx=0):
     """Plot the results of MCMC sampler (posterior and chains).
     
     Loosely based on triangle.py.
     
     Parameters
     ----------
-    sampler : :py:class:`emcee.EnsembleSampler` instance
+    sampler : :py:class:`emcee.Sampler` instance
         The sampler to plot the chains/marginals of.
     labels : list of str, optional
         The labels to use for each of the free parameters. Default is to leave
@@ -1220,6 +1220,9 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50, points=
         The transparency to use for the plots of the individual chains. Setting
         this to something low lets you better visualize what is going on.
         Default is 0.1.
+    temp_idx : int, optional
+        Index of the temperature to plot when plotting a
+        :py:class:`emcee.PTSampler`. Default is 0 (samples from the posterior).
     """
     
     # Create axes:
@@ -1258,7 +1261,7 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50, points=
     elif isinstance(sampler, emcee.PTSampler):
         if chain_mask is None:
             chain_mask = scipy.ones(sampler.nwalkers, dtype=bool)
-        flat_trace = sampler.chain[0, chain_mask, burn:, :]
+        flat_trace = sampler.chain[temp_idx, chain_mask, burn:, :]
         flat_trace = flat_trace.reshape((-1, k))
     else:
         raise ValueError("Unknown sampler class: %s" % (type(sampler),))
@@ -1305,7 +1308,7 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50, points=
         if isinstance(sampler, emcee.EnsembleSampler):
             axes[-1, i].plot(sampler.chain[:, :, i].T, alpha=chain_alpha)
         elif isinstance(sampler, emcee.PTSampler):
-            axes[-1, i].plot(sampler.chain[0, :, :, i].T, alpha=chain_alpha)
+            axes[-1, i].plot(sampler.chain[temp_idx, :, :, i].T, alpha=chain_alpha)
         axes[-1, i].axvline(burn, color='r', linewidth=3)
         if points is not None:
             try:
