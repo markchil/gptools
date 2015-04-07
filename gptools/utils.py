@@ -604,15 +604,14 @@ class SortedUniformJointPrior(JointPrior):
         theta : array
             The parameters to find the log-probability of.
         """
-        # The PDF of the order statistics of n uniform random variables is
-        # constant and equal to n!. But, we further want the condition that the
-        # order statistics come to us sorted. We just return the un-normalized
-        # log-probability for simplicity.
         theta = scipy.asarray(theta)
         if (scipy.sort(theta) != theta).all() or (theta < self.lb).any() or (theta > self.ub).any():
             return -scipy.inf
         else:
-            return 0.0
+            return (
+                scipy.log(scipy.misc.factorial(self.num_var)) -
+                self.num_var * scipy.log(self.ub - self.lb)
+            )
     
     @property
     def bounds(self):
