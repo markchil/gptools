@@ -615,7 +615,7 @@ class SortedUniformJointPrior(JointPrior):
     
     @property
     def bounds(self):
-        return [(self.ub, self.lb)] * self.num_var
+        return [(self.lb, self.ub)] * self.num_var
     
     def random_draw(self, size=None):
         """Draw random samples of the hyperparameters.
