@@ -1752,7 +1752,11 @@ class GaussianProcess(object):
             if sampler is None:
                 sampler = self.sample_hyperparameter_posterior(burn=burn, **kwargs)
                 # If we create the sampler, we need to make sure we clean up its pool:
-                sampler.pool.close()
+                try:
+                    sampler.pool.close()
+                except AttributeError:
+                    # This will occur if only one thread is used.
+                    pass
                 
             flat_trace = sampler.chain[:, burn::thin, :]
             flat_trace = flat_trace.reshape((-1, flat_trace.shape[2]))
