@@ -1201,7 +1201,9 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50, points=
     Parameters
     ----------
     sampler : :py:class:`emcee.Sampler` instance
-        The sampler to plot the chains/marginals of.
+        The sampler to plot the chains/marginals of. Can also be an array of
+        samples which matches the shape of the `chain` attribute that would be
+        present in a :py:class:`emcee.Sampler` instance.
     labels : list of str, optional
         The labels to use for each of the free parameters. Default is to leave
         the axes unlabeled.
@@ -1225,7 +1227,11 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50, points=
     """
     
     # Create axes:
-    k = sampler.flatchain.shape[-1]
+    try:
+        k = sampler.flatchain.shape[-1]
+    except AttributeError:
+        # Assumes array input is only case where there is no "flatchain" attribute.
+        k = sampler.shape[-1]
     
     if labels is None:
         labels = [''] * k
@@ -1262,6 +1268,17 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50, points=
             chain_mask = scipy.ones(sampler.nwalkers, dtype=bool)
         flat_trace = sampler.chain[temp_idx, chain_mask, burn:, :]
         flat_trace = flat_trace.reshape((-1, k))
+    elif isinstance(sampler, scipy.ndarray):
+        if sampler.ndim == 4:
+            if chain_mask is None:
+                chain_mask = scipy.ones(sampler.shape[1], dtype=bool)
+            flat_trace = sampler[temp_idx, chain_mask, burn:, :]
+            flat_trace = flat_trace.reshape((-1, k))
+        else:
+            if chain_mask is None:
+                chain_mask = scipy.ones(sampler.shape[0], dtype=bool)
+            flat_trace = sampler[chain_mask, burn:, :]
+            flat_trace = flat_trace.reshape((-1, k))
     else:
         raise ValueError("Unknown sampler class: %s" % (type(sampler),))
     
@@ -1308,6 +1325,11 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50, points=
             axes[-1, i].plot(sampler.chain[:, :, i].T, alpha=chain_alpha)
         elif isinstance(sampler, emcee.PTSampler):
             axes[-1, i].plot(sampler.chain[temp_idx, :, :, i].T, alpha=chain_alpha)
+        else:
+            if sampler.ndim == 4:
+                axes[-1, i].plot(sampler[temp_idx, :, :, i].T, alpha=chain_alpha)
+            else:
+                axes[-1, i].plot(sampler[:, :, i].T, alpha=chain_alpha)
         axes[-1, i].axvline(burn, color='r', linewidth=3)
         if points is not None:
             try:
