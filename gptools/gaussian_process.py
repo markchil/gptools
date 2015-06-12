@@ -1078,6 +1078,12 @@ class GaussianProcess(object):
                     modify_sign=None, **kwargs):
         """Draw a sample evaluated at the given points `Xstar`.
         
+        Note that this function draws samples from the GP given the current
+        values for the hyperparameters (which may be in a nonsense state if you
+        just created the instance or called a method that performs MCMC sampling).
+        If you want to draw random samples from MCMC output, use the
+        `return_samples` and `full_output` keywords to :py:meth:`predict`.
+        
         Parameters
         ----------
         Xstar : array, (`M`, `D`)
