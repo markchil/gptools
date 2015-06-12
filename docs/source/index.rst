@@ -14,6 +14,8 @@ Installation is as simple as::
 
     pip install gptools
 
+A comprehensive demo is provided at https://github.com/markchil/gptools/blob/master/demo/demo.py, with extensive comments showing how the code functions on real data (also hosted on the github). This should be consulted in parallel with this manual.
+
 Overview
 --------
 
