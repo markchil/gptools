@@ -68,7 +68,7 @@ class DiagonalNoiseKernel(Kernel):
         super(DiagonalNoiseKernel, self).__init__(num_dim=num_dim,
                                                   num_params=1,
                                                   initial_params=initial_noise,
-                                                  fixed_params=[fixed_noise],
+                                                  fixed_params=[True] if fixed_noise else None,
                                                   param_bounds=noise_bound,
                                                   hyperprior=hyperprior,
                                                   param_names=[r'\sigma_n'])
