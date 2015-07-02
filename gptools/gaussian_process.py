@@ -37,11 +37,13 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 try:
     import emcee
+    from emcee.interruptible_pool import InterruptiblePool
 except ImportError:
     warnings.warn(
         "Could not import emcee: MCMC sampling will not be available.",
         ImportWarning
     )
+    InterruptiblePool = multiprocessing.Pool
 try:
     import triangle
 except ImportError:
@@ -682,7 +684,7 @@ class GaussianProcess(object):
                             RuntimeWarning
                         )
             else:
-                pool = multiprocessing.Pool(processes=num_proc)
+                pool = InterruptiblePool(processes=num_proc)
                 try:
                     res = pool.map(
                         _OptimizeHyperparametersEval(self, opt_kwargs),
@@ -1772,7 +1774,7 @@ class GaussianProcess(object):
         num_proc = kwargs.get('num_proc', multiprocessing.cpu_count())
         
         if num_proc > 1:
-            pool = multiprocessing.Pool(processes=num_proc)
+            pool = InterruptiblePool(processes=num_proc)
             try:
                 res = pool.map(
                     _ComputeGPWrapper(
