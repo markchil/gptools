@@ -19,7 +19,7 @@ A comprehensive demo is provided at https://github.com/markchil/gptools/blob/mas
 Overview
 --------
 
-:py:mod:`gptools` is a Python package that provides a convenient, powerful and extensible implementation of Gaussian process regression (GPR). Central to :py:mod:`gptool`'s implementation is support for derivatives and their variances. Furthermore, the implementation supports the incorporation of arbitrary linearly transformed quantities into the GP.
+:py:mod:`gptools` is a Python package that provides a convenient, powerful and extensible implementation of Gaussian process regression (GPR). Central to :py:mod:`gptools`' implementation is support for derivatives and their variances. Furthermore, the implementation supports the incorporation of arbitrary linearly transformed quantities into the GP.
 
 There are two key classes:
 
