@@ -383,8 +383,11 @@ class IndependentJointPrior(JointPrior):
     @property
     def bounds(self):
         """The bounds of the random variable.
+        
+        Actually returns the 95% interval, because this is used for setting
+        bounds on optimizers/etc. where infinite bounds may not be useful.
         """
-        return [p.interval(1) for p in self.univariate_priors]
+        return [p.interval(0.95) for p in self.univariate_priors]
     
     def random_draw(self, size=None):
         """Draw random samples of the hyperparameters.
@@ -433,8 +436,12 @@ class NormalJointPrior(JointPrior):
     @property
     def bounds(self):
         """The bounds of the random variable.
+        
+        
+        Actually returns the 95% interval, because this is used for setting
+        bounds on optimizers/etc. where infinite bounds may not be useful.
         """
-        return [scipy.stats.norm.interval(1, loc=m, scale=s) for s, m in zip(self.sigma, self.mu)]
+        return [scipy.stats.norm.interval(0.95, loc=m, scale=s) for s, m in zip(self.sigma, self.mu)]
     
     def random_draw(self, size=None):
         """Draw random samples of the hyperparameters.
@@ -483,8 +490,11 @@ class LogNormalJointPrior(JointPrior):
     @property
     def bounds(self):
         """The bounds of the random variable.
+        
+        Actually returns the 95% interval, because this is used for setting
+        bounds on optimizers/etc. where infinite bounds may not be useful.
         """
-        return [scipy.stats.lognorm.interval(1, s, loc=0, scale=em) for s, em in zip(self.sigma, self.emu)]
+        return [scipy.stats.lognorm.interval(0.95, s, loc=0, scale=em) for s, em in zip(self.sigma, self.emu)]
     
     def random_draw(self, size=None):
         """Draw random samples of the hyperparameters.
@@ -533,8 +543,11 @@ class GammaJointPrior(JointPrior):
     @property
     def bounds(self):
         """The bounds of the random variable.
+        
+        Actually returns the 95% interval, because this is used for setting
+        bounds on optimizers/etc. where infinite bounds may not be useful.
         """
-        return [scipy.stats.gamma.interval(1, a, loc=0, scale=1.0 / b) for a, b in zip(self.a, self.b)]
+        return [scipy.stats.gamma.interval(0.95, a, loc=0, scale=1.0 / b) for a, b in zip(self.a, self.b)]
     
     def random_draw(self, size=None):
         """Draw random samples of the hyperparameters.
