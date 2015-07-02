@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-gptools: Gaussian process regression with support for arbitrary derivatives
-===========================================================================
+gptools: Gaussian processes with arbitrary derivative constraints and predictions
+=================================================================================
 
 Source home: https://github.com/markchil/gptools
 
