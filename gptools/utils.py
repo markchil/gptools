@@ -1206,7 +1206,7 @@ def summarize_sampler(sampler, burn=0, thin=1, ci=0.95):
     
     return (mean, ci_l, ci_u)
 
-def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50, points=None, plot_samples=False, chain_alpha=0.1, temp_idx=0):
+def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50, points=None, plot_samples=False, plot_hist=True, chain_alpha=0.1, temp_idx=0):
     """Plot the results of MCMC sampler (posterior and chains).
     
     Loosely based on triangle.py.
@@ -1298,7 +1298,8 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50, points=
     # j is the row, i is the column.
     for i in xrange(0, k):
         axes[i, i].clear()
-        axes[i, i].hist(flat_trace[:, i], bins=bins, color='black')
+        if plot_hist:
+            axes[i, i].hist(flat_trace[:, i], bins=bins, color='black')
         if plot_samples:
             axes[i, i].plot(flat_trace[:, i], scipy.zeros_like(flat_trace[:, i]), ',', alpha=0.1)
         if points is not None:
@@ -1317,7 +1318,13 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50, points=
         #     axes[j, i].set_frame_on(False)
         for j in xrange(i + 1, k):
             axes[j, i].clear()
-            ct, x, y, im = axes[j, i].hist2d(flat_trace[:, i], flat_trace[:, j], bins=bins, cmap='gray_r')
+            if plot_hist:
+                ct, x, y, im = axes[j, i].hist2d(
+                    flat_trace[:, i],
+                    flat_trace[:, j],
+                    bins=bins,
+                    cmap='gray_r'
+                )
             if plot_samples:
                 axes[j, i].plot(flat_trace[:, i], flat_trace[:, j], ',', alpha=0.1)
             if points is not None:
