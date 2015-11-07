@@ -742,7 +742,7 @@ class GammaJointPrior(JointPrior):
             Values between 0 and 1 to evaluate inverse CDF at.
         """
         q = scipy.atleast_1d(q)
-        if len(q) != len(self.sigma):
+        if len(q) != len(self.a):
             raise ValueError("length of q must equal the number of parameters!")
         if q.ndim != 1:
             raise ValueError("q must be one-dimensional!")
