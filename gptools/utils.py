@@ -49,6 +49,11 @@ except ImportError:
 
 class JointPrior(object):
     """Abstract class for objects implementing joint priors over hyperparameters.
+    
+    In addition to the abstract methods defined in this template,
+    implementations should also have an attribute named `bounds` which contains
+    the bounds (for a prior with finite bounds) or the 95%% interval (for a
+    prior which is unbounded in at least one direction).
     """
     
     def __call__(self, theta):
@@ -71,6 +76,23 @@ class JointPrior(object):
             returned. Default is None.
         """
         raise NotImplementedError("random_draw must be implemented in your own class.")
+    
+    def sample_u(self, q):
+        r"""Extract a sample from random variates uniform on :math:`[0, 1]`.
+        
+        For a univariate distribution, this is simply evaluating the inverse
+        CDF. To facilitate efficient sampling, this function returns a *vector*
+        of PPF values, one value for each variable. Basically, the idea is that,
+        given a vector :math:`q` of `num_params` values each of which is
+        distributed uniformly on :math:`[0, 1]`, this function will return
+        corresponding samples for each variable.
+        
+        Parameters
+        ----------
+        q : array-like, (`num_params`,)
+            Values between 0 and 1 to evaluate inverse CDF at.
+        """
+        raise NotImplementedError("ppf must be implemented in your own class.")
     
     def __mul__(self, other):
         """Multiply two :py:class:`JointPrior` instances together.
@@ -154,9 +176,32 @@ class ProductJointPrior(JointPrior):
         p1_num_params = len(self.p1.bounds)
         return self.p1(theta[:p1_num_params]) + self.p2(theta[p1_num_params:])
     
+    def sample_u(self, q):
+        r"""Extract a sample from random variates uniform on :math:`[0, 1]`.
+        
+        For a univariate distribution, this is simply evaluating the inverse
+        CDF. To facilitate efficient sampling, this function returns a *vector*
+        of PPF values, one value for each variable. Basically, the idea is that,
+        given a vector :math:`q` of `num_params` values each of which is
+        distributed uniformly on :math:`[0, 1]`, this function will return
+        corresponding samples for each variable.
+        
+        Parameters
+        ----------
+        q : array-like, (`num_params`,)
+            Values between 0 and 1 to evaluate inverse CDF at.
+        """
+        p1_num_params = len(self.p1.bounds)
+        return scipy.concatenate(
+            (
+                self.p1.sample_u(q[:p1_num_params]),
+                self.p2.sample_u(q[p1_num_params:])
+            )
+        )
+    
     def random_draw(self, size=None):
         """Draw random samples of the hyperparameters.
-
+        
         The outputs of the two priors are stacked vertically.
         
         Parameters
@@ -211,6 +256,30 @@ class UniformJointPrior(JointPrior):
                 break
         return ll
     
+    def sample_u(self, q):
+        r"""Extract a sample from random variates uniform on :math:`[0, 1]`.
+        
+        For a univariate distribution, this is simply evaluating the inverse
+        CDF. To facilitate efficient sampling, this function returns a *vector*
+        of PPF values, one value for each variable. Basically, the idea is that,
+        given a vector :math:`q` of `num_params` values each of which is
+        distributed uniformly on :math:`[0, 1]`, this function will return
+        corresponding samples for each variable.
+        
+        Parameters
+        ----------
+        q : array of float
+            Values between 0 and 1 to evaluate inverse CDF at.
+        """
+        q = scipy.atleast_1d(q)
+        if len(q) != len(self.bounds):
+            raise ValueError("length of q must equal the number of parameters!")
+        if q.ndim != 1:
+            raise ValueError("q must be one-dimensional!")
+        if (q < 0).any() or (q > 1).any():
+            raise ValueError("q must be within [0, 1]!")
+        return scipy.asarray([(b[1] - b[0]) * v + b[0] for v, b in zip(q, self.bounds)])
+    
     def random_draw(self, size=None):
         """Draw random samples of the hyperparameters.
         
@@ -244,6 +313,24 @@ class CoreEdgeJointPrior(UniformJointPrior):
                 ll = -scipy.inf
                 break
         return ll
+    
+    def sample_u(self, q):
+        r"""Extract a sample from random variates uniform on :math:`[0, 1]`.
+        
+        For a univariate distribution, this is simply evaluating the inverse
+        CDF. To facilitate efficient sampling, this function returns a *vector*
+        of PPF values, one value for each variable. Basically, the idea is that,
+        given a vector :math:`q` of `num_params` values each of which is
+        distributed uniformly on :math:`[0, 1]`, this function will return
+        corresponding samples for each variable.
+        
+        Parameters
+        ----------
+        q : array of float
+            Values between 0 and 1 to evaluate inverse CDF at.
+        """
+        # TODO: Do this!
+        raise NotImplementedError("Not done yet!")
     
     def random_draw(self, size=None):
         """Draw random samples of the hyperparameters.
@@ -308,6 +395,24 @@ class CoreMidEdgeJointPrior(UniformJointPrior):
                 ll = -scipy.inf
                 break
         return ll
+    
+    def sample_u(self, q):
+        r"""Extract a sample from random variates uniform on :math:`[0, 1]`.
+        
+        For a univariate distribution, this is simply evaluating the inverse
+        CDF. To facilitate efficient sampling, this function returns a *vector*
+        of PPF values, one value for each variable. Basically, the idea is that,
+        given a vector :math:`q` of `num_params` values each of which is
+        distributed uniformly on :math:`[0, 1]`, this function will return
+        corresponding samples for each variable.
+        
+        Parameters
+        ----------
+        q : array of float
+            Values between 0 and 1 to evaluate inverse CDF at.
+        """
+        # TODO: Do this!
+        raise NotImplementedError("Not done yet!")
     
     def random_draw(self, size=None):
         """Draw random samples of the hyperparameters.
@@ -389,6 +494,30 @@ class IndependentJointPrior(JointPrior):
         """
         return [p.interval(0.95) for p in self.univariate_priors]
     
+    def sample_u(self, q):
+        r"""Extract a sample from random variates uniform on :math:`[0, 1]`.
+        
+        For a univariate distribution, this is simply evaluating the inverse
+        CDF. To facilitate efficient sampling, this function returns a *vector*
+        of PPF values, one value for each variable. Basically, the idea is that,
+        given a vector :math:`q` of `num_params` values each of which is
+        distributed uniformly on :math:`[0, 1]`, this function will return
+        corresponding samples for each variable.
+        
+        Parameters
+        ----------
+        q : array of float
+            Values between 0 and 1 to evaluate inverse CDF at.
+        """
+        q = scipy.atleast_1d(q)
+        if len(q) != len(self.univariate_priors):
+            raise ValueError("length of q must equal the number of parameters!")
+        if q.ndim != 1:
+            raise ValueError("q must be one-dimensional!")
+        if (q < 0).any() or (q > 1).any():
+            raise ValueError("q must be within [0, 1]!")
+        return scipy.asarray([p.ppf(v) for v, p in zip(q, self.univariate_priors)])
+    
     def random_draw(self, size=None):
         """Draw random samples of the hyperparameters.
         
@@ -443,6 +572,30 @@ class NormalJointPrior(JointPrior):
         """
         return [scipy.stats.norm.interval(0.95, loc=m, scale=s) for s, m in zip(self.sigma, self.mu)]
     
+    def sample_u(self, q):
+        r"""Extract a sample from random variates uniform on :math:`[0, 1]`.
+        
+        For a univariate distribution, this is simply evaluating the inverse
+        CDF. To facilitate efficient sampling, this function returns a *vector*
+        of PPF values, one value for each variable. Basically, the idea is that,
+        given a vector :math:`q` of `num_params` values each of which is
+        distributed uniformly on :math:`[0, 1]`, this function will return
+        corresponding samples for each variable.
+        
+        Parameters
+        ----------
+        q : array of float
+            Values between 0 and 1 to evaluate inverse CDF at.
+        """
+        q = scipy.atleast_1d(q)
+        if len(q) != len(self.sigma):
+            raise ValueError("length of q must equal the number of parameters!")
+        if q.ndim != 1:
+            raise ValueError("q must be one-dimensional!")
+        if (q < 0).any() or (q > 1).any():
+            raise ValueError("q must be within [0, 1]!")
+        return scipy.asarray([scipy.stats.norm.ppf(v, loc=m, scale=s) for v, s, m in zip(q, self.sigma, self.mu)])
+    
     def random_draw(self, size=None):
         """Draw random samples of the hyperparameters.
         
@@ -496,6 +649,30 @@ class LogNormalJointPrior(JointPrior):
         """
         return [scipy.stats.lognorm.interval(0.95, s, loc=0, scale=em) for s, em in zip(self.sigma, self.emu)]
     
+    def sample_u(self, q):
+        r"""Extract a sample from random variates uniform on :math:`[0, 1]`.
+        
+        For a univariate distribution, this is simply evaluating the inverse
+        CDF. To facilitate efficient sampling, this function returns a *vector*
+        of PPF values, one value for each variable. Basically, the idea is that,
+        given a vector :math:`q` of `num_params` values each of which is
+        distributed uniformly on :math:`[0, 1]`, this function will return
+        corresponding samples for each variable.
+        
+        Parameters
+        ----------
+        q : array of float
+            Values between 0 and 1 to evaluate inverse CDF at.
+        """
+        q = scipy.atleast_1d(q)
+        if len(q) != len(self.sigma):
+            raise ValueError("length of q must equal the number of parameters!")
+        if q.ndim != 1:
+            raise ValueError("q must be one-dimensional!")
+        if (q < 0).any() or (q > 1).any():
+            raise ValueError("q must be within [0, 1]!")
+        return scipy.asarray([scipy.stats.lognorm.ppf(v, s, loc=0, scale=em) for v, s, em in zip(q, self.sigma, self.emu)])
+    
     def random_draw(self, size=None):
         """Draw random samples of the hyperparameters.
         
@@ -548,6 +725,30 @@ class GammaJointPrior(JointPrior):
         bounds on optimizers/etc. where infinite bounds may not be useful.
         """
         return [scipy.stats.gamma.interval(0.95, a, loc=0, scale=1.0 / b) for a, b in zip(self.a, self.b)]
+    
+    def sample_u(self, q):
+        r"""Extract a sample from random variates uniform on :math:`[0, 1]`.
+        
+        For a univariate distribution, this is simply evaluating the inverse
+        CDF. To facilitate efficient sampling, this function returns a *vector*
+        of PPF values, one value for each variable. Basically, the idea is that,
+        given a vector :math:`q` of `num_params` values each of which is
+        distributed uniformly on :math:`[0, 1]`, this function will return
+        corresponding samples for each variable.
+        
+        Parameters
+        ----------
+        q : array of float
+            Values between 0 and 1 to evaluate inverse CDF at.
+        """
+        q = scipy.atleast_1d(q)
+        if len(q) != len(self.sigma):
+            raise ValueError("length of q must equal the number of parameters!")
+        if q.ndim != 1:
+            raise ValueError("q must be one-dimensional!")
+        if (q < 0).any() or (q > 1).any():
+            raise ValueError("q must be within [0, 1]!")
+        return scipy.asarray([scipy.stats.gamma.ppf(v, a, loc=0, scale=1.0 / b) for v, a, b in zip(q, self.a, self.b)])
     
     def random_draw(self, size=None):
         """Draw random samples of the hyperparameters.
@@ -629,6 +830,31 @@ class SortedUniformJointPrior(JointPrior):
     @property
     def bounds(self):
         return [(self.lb, self.ub)] * self.num_var
+    
+    def sample_u(self, q):
+        r"""Extract a sample from random variates uniform on :math:`[0, 1]`.
+        
+        For a univariate distribution, this is simply evaluating the inverse
+        CDF. To facilitate efficient sampling, this function returns a *vector*
+        of PPF values, one value for each variable. Basically, the idea is that,
+        given a vector :math:`q` of `num_params` values each of which is
+        distributed uniformly on :math:`[0, 1]`, this function will return
+        corresponding samples for each variable.
+        
+        Parameters
+        ----------
+        q : array of float
+            Values between 0 and 1 to evaluate inverse CDF at.
+        """
+        q = scipy.atleast_1d(q)
+        if len(q) != self.num_var:
+            raise ValueError("length of q must equal the number of parameters!")
+        if q.ndim != 1:
+            raise ValueError("q must be one-dimensional!")
+        if (q < 0).any() or (q > 1).any():
+            raise ValueError("q must be within [0, 1]!")
+        q = scipy.sort(q)
+        return scipy.asarray([(self.ub - self.lb) * v + self.lb for v in q])
     
     def random_draw(self, size=None):
         """Draw random samples of the hyperparameters.
