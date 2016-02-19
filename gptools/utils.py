@@ -94,6 +94,24 @@ class JointPrior(object):
         """
         raise NotImplementedError("ppf must be implemented in your own class.")
     
+    def elementwise_cdf(self, p):
+        r"""Convert a sample to random variates uniform on :math:`[0, 1]`.
+        
+        For a univariate distribution, this is simply evaluating the CDF. To
+        facilitate efficient sampling, this function returns a *vector* of CDF
+        values, one value for each variable. Basically, the idea is that, given
+        a vector :math:`q` of `num_params` values each of which is distributed
+        according to the prior, this function will return variables uniform on
+        :math:`[0, 1]` corresponding to each variable. This is the inverse
+        operation to :py:meth:`sample_u`.
+        
+        Parameters
+        ----------
+        p : array-like, (`num_params`,)
+            Values to evaluate CDF at.
+        """
+        raise NotImplementedError("cdf must be implemented in your own class.")
+    
     def __mul__(self, other):
         """Multiply two :py:class:`JointPrior` instances together.
         """
@@ -199,6 +217,30 @@ class ProductJointPrior(JointPrior):
             )
         )
     
+    def elementwise_cdf(self, p):
+        r"""Convert a sample to random variates uniform on :math:`[0, 1]`.
+        
+        For a univariate distribution, this is simply evaluating the CDF. To
+        facilitate efficient sampling, this function returns a *vector* of CDF
+        values, one value for each variable. Basically, the idea is that, given
+        a vector :math:`q` of `num_params` values each of which is distributed
+        according to the prior, this function will return variables uniform on
+        :math:`[0, 1]` corresponding to each variable. This is the inverse
+        operation to :py:meth:`sample_u`.
+        
+        Parameters
+        ----------
+        p : array-like, (`num_params`,)
+            Values to evaluate CDF at.
+        """
+        p1_num_params = len(self.p1.bounds)
+        return scipy.concatenate(
+            (
+                self.p1.elementwise_cdf(p[:p1_num_params]),
+                self.p2.elementwise_cdf(p[p1_num_params:])
+            )
+        )
+    
     def random_draw(self, size=None):
         """Draw random samples of the hyperparameters.
         
@@ -280,6 +322,37 @@ class UniformJointPrior(JointPrior):
             raise ValueError("q must be within [0, 1]!")
         return scipy.asarray([(b[1] - b[0]) * v + b[0] for v, b in zip(q, self.bounds)])
     
+    def elementwise_cdf(self, p):
+        r"""Convert a sample to random variates uniform on :math:`[0, 1]`.
+        
+        For a univariate distribution, this is simply evaluating the CDF. To
+        facilitate efficient sampling, this function returns a *vector* of CDF
+        values, one value for each variable. Basically, the idea is that, given
+        a vector :math:`q` of `num_params` values each of which is distributed
+        according to the prior, this function will return variables uniform on
+        :math:`[0, 1]` corresponding to each variable. This is the inverse
+        operation to :py:meth:`sample_u`.
+        
+        Parameters
+        ----------
+        p : array-like, (`num_params`,)
+            Values to evaluate CDF at.
+        """
+        p = scipy.atleast_1d(p)
+        if len(p) != len(self.bounds):
+            raise ValueError("length of p must equal the number of parameters!")
+        if p.ndim != 1:
+            raise ValueError("p must be one-dimensional!")
+        c = scipy.zeros(len(self.bounds))
+        for k in xrange(0, len(self.bounds)):
+            if p[k] <= self.bounds[k][0]:
+                c[k] = 0.0
+            elif p[k] >= self.bounds[k][1]:
+                c[k] = 1.0
+            else:
+                c[k] = (p[k] - self.bounds[k][0]) / (self.bounds[k][1] - self.bounds[k][0])
+        return c
+    
     def random_draw(self, size=None):
         """Draw random samples of the hyperparameters.
         
@@ -328,6 +401,25 @@ class CoreEdgeJointPrior(UniformJointPrior):
         ----------
         q : array of float
             Values between 0 and 1 to evaluate inverse CDF at.
+        """
+        # TODO: Do this!
+        raise NotImplementedError("Not done yet!")
+    
+    def elementwise_cdf(self, p):
+        r"""Convert a sample to random variates uniform on :math:`[0, 1]`.
+        
+        For a univariate distribution, this is simply evaluating the CDF. To
+        facilitate efficient sampling, this function returns a *vector* of CDF
+        values, one value for each variable. Basically, the idea is that, given
+        a vector :math:`q` of `num_params` values each of which is distributed
+        according to the prior, this function will return variables uniform on
+        :math:`[0, 1]` corresponding to each variable. This is the inverse
+        operation to :py:meth:`sample_u`.
+        
+        Parameters
+        ----------
+        p : array-like, (`num_params`,)
+            Values to evaluate CDF at.
         """
         # TODO: Do this!
         raise NotImplementedError("Not done yet!")
@@ -410,6 +502,25 @@ class CoreMidEdgeJointPrior(UniformJointPrior):
         ----------
         q : array of float
             Values between 0 and 1 to evaluate inverse CDF at.
+        """
+        # TODO: Do this!
+        raise NotImplementedError("Not done yet!")
+    
+    def elementwise_cdf(self, p):
+        r"""Convert a sample to random variates uniform on :math:`[0, 1]`.
+        
+        For a univariate distribution, this is simply evaluating the CDF. To
+        facilitate efficient sampling, this function returns a *vector* of CDF
+        values, one value for each variable. Basically, the idea is that, given
+        a vector :math:`q` of `num_params` values each of which is distributed
+        according to the prior, this function will return variables uniform on
+        :math:`[0, 1]` corresponding to each variable. This is the inverse
+        operation to :py:meth:`sample_u`.
+        
+        Parameters
+        ----------
+        p : array-like, (`num_params`,)
+            Values to evaluate CDF at.
         """
         # TODO: Do this!
         raise NotImplementedError("Not done yet!")
@@ -518,6 +629,29 @@ class IndependentJointPrior(JointPrior):
             raise ValueError("q must be within [0, 1]!")
         return scipy.asarray([p.ppf(v) for v, p in zip(q, self.univariate_priors)])
     
+    def elementwise_cdf(self, p):
+        r"""Convert a sample to random variates uniform on :math:`[0, 1]`.
+        
+        For a univariate distribution, this is simply evaluating the CDF. To
+        facilitate efficient sampling, this function returns a *vector* of CDF
+        values, one value for each variable. Basically, the idea is that, given
+        a vector :math:`q` of `num_params` values each of which is distributed
+        according to the prior, this function will return variables uniform on
+        :math:`[0, 1]` corresponding to each variable. This is the inverse
+        operation to :py:meth:`sample_u`.
+        
+        Parameters
+        ----------
+        p : array-like, (`num_params`,)
+            Values to evaluate CDF at.
+        """
+        p = scipy.atleast_1d(p)
+        if len(p) != len(self.univariate_priors):
+            raise ValueError("length of p must equal the number of parameters!")
+        if p.ndim != 1:
+            raise ValueError("p must be one-dimensional!")
+        return scipy.asarray([pr.cdf(v) for v, pr in zip(p, self.univariate_priors)])
+    
     def random_draw(self, size=None):
         """Draw random samples of the hyperparameters.
         
@@ -596,6 +730,29 @@ class NormalJointPrior(JointPrior):
             raise ValueError("q must be within [0, 1]!")
         return scipy.asarray([scipy.stats.norm.ppf(v, loc=m, scale=s) for v, s, m in zip(q, self.sigma, self.mu)])
     
+    def elementwise_cdf(self, p):
+        r"""Convert a sample to random variates uniform on :math:`[0, 1]`.
+        
+        For a univariate distribution, this is simply evaluating the CDF. To
+        facilitate efficient sampling, this function returns a *vector* of CDF
+        values, one value for each variable. Basically, the idea is that, given
+        a vector :math:`q` of `num_params` values each of which is distributed
+        according to the prior, this function will return variables uniform on
+        :math:`[0, 1]` corresponding to each variable. This is the inverse
+        operation to :py:meth:`sample_u`.
+        
+        Parameters
+        ----------
+        p : array-like, (`num_params`,)
+            Values to evaluate CDF at.
+        """
+        p = scipy.atleast_1d(p)
+        if len(p) != len(self.sigma):
+            raise ValueError("length of p must equal the number of parameters!")
+        if p.ndim != 1:
+            raise ValueError("p must be one-dimensional!")
+        return scipy.asarray([scipy.stats.norm.cdf(v, loc=m, scale=s) for v, s, m in zip(p, self.sigma, self.mu)])
+    
     def random_draw(self, size=None):
         """Draw random samples of the hyperparameters.
         
@@ -673,6 +830,29 @@ class LogNormalJointPrior(JointPrior):
             raise ValueError("q must be within [0, 1]!")
         return scipy.asarray([scipy.stats.lognorm.ppf(v, s, loc=0, scale=em) for v, s, em in zip(q, self.sigma, self.emu)])
     
+    def elementwise_cdf(self, p):
+        r"""Convert a sample to random variates uniform on :math:`[0, 1]`.
+        
+        For a univariate distribution, this is simply evaluating the CDF. To
+        facilitate efficient sampling, this function returns a *vector* of CDF
+        values, one value for each variable. Basically, the idea is that, given
+        a vector :math:`q` of `num_params` values each of which is distributed
+        according to the prior, this function will return variables uniform on
+        :math:`[0, 1]` corresponding to each variable. This is the inverse
+        operation to :py:meth:`sample_u`.
+        
+        Parameters
+        ----------
+        p : array-like, (`num_params`,)
+            Values to evaluate CDF at.
+        """
+        p = scipy.atleast_1d(p)
+        if len(p) != len(self.sigma):
+            raise ValueError("length of p must equal the number of parameters!")
+        if p.ndim != 1:
+            raise ValueError("p must be one-dimensional!")
+        return scipy.asarray([scipy.stats.lognorm.cdf(v, s, loc=0, scale=em) for v, s, em in zip(p, self.sigma, self.emu)])
+    
     def random_draw(self, size=None):
         """Draw random samples of the hyperparameters.
         
@@ -749,6 +929,30 @@ class GammaJointPrior(JointPrior):
         if (q < 0).any() or (q > 1).any():
             raise ValueError("q must be within [0, 1]!")
         return scipy.asarray([scipy.stats.gamma.ppf(v, a, loc=0, scale=1.0 / b) for v, a, b in zip(q, self.a, self.b)])
+    
+    def elementwise_cdf(self, p):
+        r"""Convert a sample to random variates uniform on :math:`[0, 1]`.
+        
+        For a univariate distribution, this is simply evaluating the CDF. To
+        facilitate efficient sampling, this function returns a *vector* of CDF
+        values, one value for each variable. Basically, the idea is that, given
+        a vector :math:`q` of `num_params` values each of which is distributed
+        according to the prior, this function will return variables uniform on
+        :math:`[0, 1]` corresponding to each variable. This is the inverse
+        operation to :py:meth:`sample_u`.
+        
+        Parameters
+        ----------
+        p : array-like, (`num_params`,)
+            Values to evaluate CDF at.
+        """
+        p = scipy.atleast_1d(p)
+        if len(p) != len(self.a):
+            raise ValueError("length of p must equal the number of parameters!")
+        if p.ndim != 1:
+            raise ValueError("p must be one-dimensional!")
+        return scipy.asarray([scipy.stats.gamma.cdf(v, a, loc=0, scale=1.0 / b) for v, a, b in zip(p, self.a, self.b)])
+        
     
     def random_draw(self, size=None):
         """Draw random samples of the hyperparameters.
@@ -855,6 +1059,37 @@ class SortedUniformJointPrior(JointPrior):
             raise ValueError("q must be within [0, 1]!")
         q = scipy.sort(q)
         return scipy.asarray([(self.ub - self.lb) * v + self.lb for v in q])
+    
+    def elementwise_cdf(self, p):
+        r"""Convert a sample to random variates uniform on :math:`[0, 1]`.
+        
+        For a univariate distribution, this is simply evaluating the CDF. To
+        facilitate efficient sampling, this function returns a *vector* of CDF
+        values, one value for each variable. Basically, the idea is that, given
+        a vector :math:`q` of `num_params` values each of which is distributed
+        according to the prior, this function will return variables uniform on
+        :math:`[0, 1]` corresponding to each variable. This is the inverse
+        operation to :py:meth:`sample_u`.
+        
+        Parameters
+        ----------
+        p : array-like, (`num_params`,)
+            Values to evaluate CDF at.
+        """
+        p = scipy.atleast_1d(p)
+        if len(p) != len(self.bounds):
+            raise ValueError("length of p must equal the number of parameters!")
+        if p.ndim != 1:
+            raise ValueError("p must be one-dimensional!")
+        c = scipy.zeros(len(self.bounds))
+        for k in xrange(0, len(self.bounds)):
+            if p[k] <= self.bounds[k][0]:
+                c[k] = 0.0
+            elif p[k] >= self.bounds[k][1]:
+                c[k] = 1.0
+            else:
+                c[k] = (p[k] - self.bounds[k][0]) / (self.bounds[k][1] - self.bounds[k][0])
+        return c
     
     def random_draw(self, size=None):
         """Draw random samples of the hyperparameters.
