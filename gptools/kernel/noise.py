@@ -119,7 +119,7 @@ class ZeroKernel(DiagonalNoiseKernel):
     """
     def __init__(self, num_dim=1):
         super(ZeroKernel, self).__init__(num_dim=num_dim, initial_noise=0.0, fixed_noise=True)
-
+    
     def __call__(self, Xi, Xj, ni, nj, hyper_deriv=None, symmetric=False):
         """Return zeros the same length as the input Xi.
         
