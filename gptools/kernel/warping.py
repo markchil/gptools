@@ -53,7 +53,8 @@ you should use a linear transformation to map them to it::
 from __future__ import division
 
 from .core import Kernel
-from ..utils import UniformJointPrior, LogNormalJointPrior, CombinedBounds, MaskedBounds
+from ..utils import UniformJointPrior, LogNormalJointPrior, CombinedBounds, MaskedBounds, fixed_poch
+from ..splines import spev
 
 import inspect
 import scipy
@@ -114,7 +115,6 @@ class WarpingFunction(object):
                  fixed_params=None, param_bounds=None, param_names=None,
                  enforce_bounds=False, hyperprior=None):
         self.fun = fun
-        self.num_dim = num_dim
         
         # TODO: Some of this logic can probably by ported back to Kernel...
         # TODO: But, it also needs to be done better...
@@ -154,7 +154,7 @@ class WarpingFunction(object):
             param_names = [''] * self.num_params
         elif len(param_names) != self.num_params:
             raise ValueError("param_names must be a list of length num_params!")
-        self.param_names = param_names
+        self.param_names = scipy.asarray(param_names, dtype=str)
         
         if num_dim < 1 or not isinstance(num_dim, (int, long)):
             raise ValueError("num_dim must be an integer > 0!")
@@ -354,10 +354,15 @@ def beta_cdf_warp(X, d, n, *args):
         # http://functions.wolfram.com/GammaBetaErf/BetaRegularized/20/01/01/
         return (1 - X)**(b - 1) * X**(a - 1) / scipy.special.beta(a, b)
     else:
-        # TODO: There is a generalized form at http://functions.wolfram.com/GammaBetaErf/BetaRegularized/20/02/01/
-        raise NotImplementedError(
-            "Derivatives of order greater than one are not yet supported!"
-        )
+        # http://functions.wolfram.com/GammaBetaErf/BetaRegularized/20/02/01/
+        out = scipy.zeros_like(X)
+        for k in range(0, n):
+            out += (
+                (-1.0)**(n - k) * scipy.special.binom(n - 1, k) *
+                fixed_poch(1.0 - b, k) * fixed_poch(1.0 - a, n - k - 1.0) *
+                (X / (1.0 - X))**k
+            )
+        return -(1.0 - X)**(b - 1.0) * X**(a - n) * out / scipy.special.beta(a, b)
 
 def linear_warp(X, d, n, *args):
     r"""Warp inputs with a linear transformation.
@@ -395,6 +400,66 @@ def linear_warp(X, d, n, *args):
         return 1.0 / (b - a) * scipy.ones_like(X)
     else:
         return scipy.zeros_like(X)
+
+class ISplineWarp(object):
+    """Warps inputs with an I-spline.
+    
+    Applies the warping
+    
+    .. math::
+        
+        w(x) = \sum_{i=1}^{nt + k - 2}C_i I_{i,k}(x|t)
+    
+    to each dimension, where :math:`C_i` are the coefficients and
+    :math:`I_{i,k}(x|t)` are the I-spline basis functions with knot grid
+    :math:`t`.
+    
+    Parameters
+    ----------
+    nt : int or array of int (`D`,)
+        The number of knots. If this is a single int, it is used for all of the
+        dimensions. If it is an array of ints, it is the number of knots for
+        each dimension.
+    k : int, optional
+        The polynomial degree of I-spline to use. The same degree is used for
+        all dimensions. The default is 3 (cubic I-splines).
+    """
+    def __init__(self, nt, k=3):
+        self.nt = nt
+        self.k = k
+    
+    def __call__(self, X, d, n, *args):
+        """Evaluate the I-spline warping function.
+        
+        Parameters
+        ----------
+        X : array, (`M`,)
+            `M` inputs from dimension `d`.
+        d : non-negative int
+            The index (starting from zero) of the dimension to apply the warping
+            to.
+        n : non-negative int
+            The derivative order to compute.
+        *args : scalar flots
+            The remaining parameters to describe the warping, given as scalars.
+            These are given as the knots followed by the coefficients, for each
+            dimension. Note that these must ALL be provided for each call.
+        """
+        X = scipy.asarray(X, dtype=float)
+        args = scipy.asarray(args, dtype=float)
+        try:
+            iter(self.nt)
+        except TypeError:
+            nt = self.nt * scipy.ones(d + 1)
+        else:
+            nt = self.nt
+        i = 0
+        for j in range(0, d):
+            i += 2 * nt[j] + self.k - 2
+        t = args[i:i + nt[d]]
+        # No DC offset for the mapping, always map the origin to 0:
+        C = scipy.concatenate(([0.0,], args[i + nt[d]:i + 2 * nt[d] + self.k - 2]))
+        return spev(t, C, self.k, X, n=n, I_spline=True)
 
 class WarpedKernel(Kernel):
     """Kernel which has had its inputs warped through a basic, elementwise warping function.
@@ -438,6 +503,32 @@ class WarpedKernel(Kernel):
             out[first_deriv_mask_i] *= self.w(Xi[first_deriv_mask_i, d], d, 1)
             out[first_deriv_mask_j] *= self.w(Xj[first_deriv_mask_j, d], d, 1)
         return out
+    
+    def w_func(self, X, d, n):
+        """Evaluate the (possibly recursive) warping function and its derivatives.
+        
+        Parameters
+        ----------
+        X : array, (`M`,)
+            The points (from dimension `d`) to evaluate the warping function at.
+        d : int
+            The dimension to warp.
+        n : int
+            The derivative order to compute. So far only 0 and 1 are supported.
+        """
+        if n == 0:
+            wX = self.w(X, d, 0)
+            if isinstance(self.k, WarpedKernel):
+                wX = self.k.w_func(wX, d, 0)
+            return wX
+        elif n == 1:
+            wXn = self.w(X, d, n)
+            if isinstance(self.k, WarpedKernel):
+                wX = self.w_func(X, d, 0)
+                wXn *= self.k.w_func(wX, d, n)
+            return wXn
+        else:
+            raise ValueError("Derivative orders greater than one are not supported!")
     
     @property
     def enforce_bounds(self):
@@ -623,3 +714,45 @@ class LinearWarpedKernel(WarpedKernel):
             param_names=param_names
         )
         super(LinearWarpedKernel, self).__init__(k, w)
+
+class ISplineWarpedKernel(WarpedKernel):
+    """Class to warp any existing :py:class:`Kernel` with the I-spline transformation given in :py:func:`ISplineWarp`.
+    
+    Parameters
+    ----------
+    k : :py:class:`Kernel`
+        The :py:class:`Kernel` to warp.
+    nt : int or array of int
+        The number of knots. If this is a single int, it is used for all of the
+        dimensions. If it is an array of ints, it is the number of knots for
+        each dimension.
+    k_deg : int, optional
+        The polynomial degree of I-spline to use. The same degree is used for
+        all dimensions. The default is 3 (cubic I-splines).
+    **w_kwargs : optional kwargs
+        All additional keyword arguments are passed to the constructor of
+        :py:class:`WarpingFunction`.
+    """
+    def __init__(self, k, nt, k_deg=3, **w_kwargs):
+        try:
+            iter(nt)
+        except TypeError:
+            nt = nt * scipy.ones(k.num_dim, dtype=int)
+        else:
+            nt = scipy.asarray(nt, dtype=int)
+            if len(nt) != k.num_dim:
+                raise ValueError("nt must have length equal to k.num_dim!")
+        param_names = []
+        initial_params = []
+        param_bounds = []  # Set this to be narrow so the LL doesn't overflow.
+        for d, ntv in enumerate(nt):
+            param_names += ['t_{%d,%d}' % (d, i + 1) for i in range(ntv)]
+            param_names += ['C_{%d,%d}' % (d, i + 1) for i in range(ntv + k_deg - 2)]
+        w = WarpingFunction(
+            ISplineWarp(nt, k=k_deg),
+            num_dim=k.num_dim,
+            param_names=param_names,
+            num_params=len(param_names),
+            **w_kwargs
+        )
+        super(ISplineWarpedKernel, self).__init__(k, w)
