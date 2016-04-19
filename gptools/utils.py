@@ -56,13 +56,27 @@ class JointPrior(object):
     prior which is unbounded in at least one direction).
     """
     
-    def __call__(self, theta):
+    def __init__(self, i=1.0):
+        """Sets the interval that :py:attr:`bounds` should return.
+        
+        Parameters
+        ----------
+        i : float, optional
+            The interval to return. Default is 1.0 (100%%). Another useful value
+            is 95%%.
+        """
+        self.i = 1.0
+    
+    def __call__(self, theta, hyper_deriv=None):
         """Evaluate the prior log-PDF at the given values of the hyperparameters, theta.
         
         Parameters
         ----------
         theta : array-like, (`num_params`,)
             The hyperparameters to evaluate the log-PDF at.
+        hyper_deriv : int or None, optional
+            If present, return the derivative of the log-PDF with respect to
+            the variable with this index.
         """
         raise NotImplementedError("__call__ must be implemented in your own class.")
     
@@ -119,6 +133,15 @@ class JointPrior(object):
 
 class CombinedBounds(object):
     """Object to support reassignment of the bounds from a combined prior.
+    
+    Works for any types of arrays.
+    
+    Parameters
+    ----------
+    l1 : array-like
+        The first list.
+    l2 : array-like
+        The second list.
     """
     # TODO: This could use a lot more work!
     def __init__(self, l1, l2):
@@ -126,35 +149,82 @@ class CombinedBounds(object):
         self.l2 = l2
     
     def __getitem__(self, pos):
+        """Get the item(s) at `pos`.
+        
+        `pos` can be a basic slice object. But, the method is implemented by
+        turning the internal array-like objects into lists, so only the basic
+        indexing capabilities supported by the list data type can be used.
+        """
         return (list(self.l1) + list(self.l2))[pos]
     
     def __setitem__(self, pos, value):
+        """Set the item at location pos to value.
+        
+        Only works for scalar indices.
+        """
         if pos < len(self.l1):
             self.l1[pos] = value
         else:
             self.l2[pos - len(self.l1)] = value
     
     def __len__(self):
+        """Get the length of the combined arrays.
+        """
         return len(self.l1) + len(self.l2)
     
     def __invert__(self):
+        """Return the elementwise inverse.
+        """
         return ~scipy.asarray(self)
+    
+    def __str__(self):
+        """Get user-friendly string representation.
+        """
+        return str(self[:])
+    
+    def __repr__(self):
+        """Get exact string representation.
+        """
+        return str(self) + " from CombinedBounds(" + str(self.l1) + ", " + str(self.l2) + ")"
 
 class MaskedBounds(object):
     """Object to support reassignment of free parameter bounds.
+    
+    Parameters
+    ----------
+    a : array
+        The array to be masked.
+    m : array of int
+        The indices in `a` which are to be accessible.
     """
     def __init__(self, a, m):
         self.a = a
         self.m = m
     
     def __getitem__(self, pos):
+        """Get the item(s) at location `pos` in the masked array.
+        """
         return self.a[self.m[pos]]
     
     def __setitem__(self, pos, value):
+        """Set the item(s) at location `pos` in the masked array.
+        """
         self.a[self.m[pos]] = value
     
     def __len__(self):
+        """Get the length of the masked array.
+        """
         return len(self.m)
+    
+    def __str__(self):
+        """Get user-friendly string representation.
+        """
+        return str(self[:])
+    
+    def __repr__(self):
+        """Get exact string representation.
+        """
+        return str(self) + " from MaskedBounds(" + str(self.a) + ", " + str(self.m) + ")"
 
 class ProductJointPrior(JointPrior):
     """Product of two independent priors.
@@ -166,10 +236,20 @@ class ProductJointPrior(JointPrior):
     """
     def __init__(self, p1, p2):
         if not isinstance(p1, JointPrior) or not isinstance(p2, JointPrior):
-            raise TypeError("Both arguments to ProductPrior must be instances "
-                            "of type JointPrior!")
+            raise TypeError(
+                "Both arguments to ProductPrior must be instances of JointPrior!"
+            )
         self.p1 = p1
         self.p2 = p2
+    
+    @property
+    def i(self):
+        return min(self.p1.i, self.p2.i)
+    
+    @i.setter
+    def i(self, v):
+        self.p1.i = i
+        self.p2.i = i
     
     @property
     def bounds(self):
@@ -181,7 +261,7 @@ class ProductJointPrior(JointPrior):
         self.p1.bounds = v[:num_p1_bounds]
         self.p2.bounds = v[num_p1_bounds:]
 
-    def __call__(self, theta):
+    def __call__(self, theta, hyper_deriv=None):
         """Evaluate the prior log-PDF at the given values of the hyperparameters, theta.
         
         The log-PDFs of the two priors are summed.
@@ -192,6 +272,11 @@ class ProductJointPrior(JointPrior):
             The hyperparameters to evaluate the log-PDF at.
         """
         p1_num_params = len(self.p1.bounds)
+        if hyper_deriv is not None:
+            if hyper_deriv < p1_num_params:
+                return self.p1(theta[:p1_num_params], hyper_deriv=hyper_deriv)
+            else:
+                return self.p2(theta[p1_num_params:], hyper_deriv=hyper_deriv - p1_num_params)
         return self.p1(theta[:p1_num_params]) + self.p2(theta[p1_num_params:])
     
     def sample_u(self, q):
@@ -273,7 +358,8 @@ class UniformJointPrior(JointPrior):
         :py:class:`UniformJointPrior` a similar calling fingerprint as the other
         :py:class:`JointPrior` classes.
     """
-    def __init__(self, bounds, ub=None):
+    def __init__(self, bounds, ub=None, **kwargs):
+        super(UniformJointPrior, self).__init__(**kwargs)
         if ub is not None:
             try:
                 bounds = zip(bounds, ub)
@@ -281,7 +367,7 @@ class UniformJointPrior(JointPrior):
                 bounds = [(bounds, ub)]
         self.bounds = bounds
     
-    def __call__(self, theta):
+    def __call__(self, theta, hyper_deriv=None):
         """Evaluate the prior log-PDF at the given values of the hyperparameters, theta.
         
         Parameters
@@ -289,7 +375,9 @@ class UniformJointPrior(JointPrior):
         theta : array-like, (`num_params`,)
             The hyperparameters to evaluate the log-PDF at.
         """
-        ll = 0
+        if hyper_deriv is not None:
+            return 0.0
+        ll = 0.0
         for v, b in zip(theta, self.bounds):
             if b[0] <= v and v <= b[1]:
                 ll += -scipy.log(b[1] - b[0])
@@ -368,7 +456,7 @@ class CoreEdgeJointPrior(UniformJointPrior):
     """Prior for use with Gibbs kernel warping functions with an inequality constraint between the core and edge length scales.
     """
     
-    def __call__(self, theta):
+    def __call__(self, theta, hyper_deriv=None):
         """Evaluate the prior log-PDF at the given values of the hyperparameters, theta.
         
         Parameters
@@ -376,6 +464,8 @@ class CoreEdgeJointPrior(UniformJointPrior):
         theta : array-like, (`num_params`,)
             The hyperparameters to evaluate the log-PDF at.
         """
+        if hyper_deriv is not None:
+            return 0.0
         ll = 0
         bounds_new = copy.copy(self.bounds)
         bounds_new[2] = (self.bounds[2][0], theta[1])
@@ -464,7 +554,7 @@ class CoreMidEdgeJointPrior(UniformJointPrior):
     """Prior for use with Gibbs kernel warping functions with an inequality constraint between the core, mid and edge length scales and the core-mid and mid-edge joins.
     """
     
-    def __call__(self, theta):
+    def __call__(self, theta, hyper_deriv=None):
         """Evaluate the prior log-PDF at the given values of the hyperparameters, theta.
         
         Parameters
@@ -472,6 +562,8 @@ class CoreMidEdgeJointPrior(UniformJointPrior):
         theta : array-like, (`num_params`,)
             The hyperparameters to evaluate the log-PDF at.
         """
+        if hyper_deriv is not None:
+            return 0.0
         ll = 0
         bounds_new = copy.copy(self.bounds)
         # lc < lm:
@@ -578,9 +670,10 @@ class IndependentJointPrior(JointPrior):
         :py:mod:`scipy.stats`.
     """
     def __init__(self, univariate_priors):
+        super(IndependentJointPrior, self).__init__(**kwargs)
         self.univariate_priors = univariate_priors
     
-    def __call__(self, theta):
+    def __call__(self, theta, hyper_deriv=None):
         """Evaluate the prior log-PDF at the given values of the hyperparameters, theta.
         
         Parameters
@@ -588,6 +681,10 @@ class IndependentJointPrior(JointPrior):
         theta : array-like, (`num_params`,)
             The hyperparameters to evaluate the log-PDF at.
         """
+        if hyper_deriv is not None:
+            raise NotImplementedError(
+                "Hyperparameter derivatives not supported for IndependentJointPrior!"
+            )
         ll = 0
         for v, p in zip(theta, self.univariate_priors):
             try:
@@ -600,10 +697,10 @@ class IndependentJointPrior(JointPrior):
     def bounds(self):
         """The bounds of the random variable.
         
-        Actually returns the 95% interval, because this is used for setting
+        Set `self.i=0.95` to return the 95% interval if this is used for setting
         bounds on optimizers/etc. where infinite bounds may not be useful.
         """
-        return [p.interval(0.95) for p in self.univariate_priors]
+        return [p.interval(self.i) for p in self.univariate_priors]
     
     def sample_u(self, q):
         r"""Extract a sample from random variates uniform on :math:`[0, 1]`.
@@ -673,7 +770,8 @@ class NormalJointPrior(JointPrior):
     sigma : list of float
         Standard deviations of the hyperparameters.
     """
-    def __init__(self, mu, sigma):
+    def __init__(self, mu, sigma, **kwargs):
+        super(NormalJointPrior, self).__init__(**kwargs)
         sigma = scipy.atleast_1d(scipy.asarray(sigma, dtype=float))
         mu = scipy.atleast_1d(scipy.asarray(mu, dtype=float))
         if sigma.shape != mu.shape:
@@ -683,7 +781,7 @@ class NormalJointPrior(JointPrior):
         self.sigma = sigma
         self.mu = mu
     
-    def __call__(self, theta):
+    def __call__(self, theta, hyper_deriv=None):
         """Evaluate the prior log-PDF at the given values of the hyperparameters, theta.
         
         Parameters
@@ -691,6 +789,8 @@ class NormalJointPrior(JointPrior):
         theta : array-like, (`num_params`,)
             The hyperparameters to evaluate the log-PDF at.
         """
+        if hyper_deriv is not None:
+            return (self.mu[hyper_deriv] - theta[hyper_deriv]) / self.sigma[hyper_deriv]**2.0
         ll = 0
         for v, s, m in zip(theta, self.sigma, self.mu):
             ll += scipy.stats.norm.logpdf(v, loc=m, scale=s)
@@ -700,11 +800,10 @@ class NormalJointPrior(JointPrior):
     def bounds(self):
         """The bounds of the random variable.
         
-        
-        Actually returns the 95% interval, because this is used for setting
+        Set `self.i=0.95` to return the 95% interval if this is used for setting
         bounds on optimizers/etc. where infinite bounds may not be useful.
         """
-        return [scipy.stats.norm.interval(0.95, loc=m, scale=s) for s, m in zip(self.sigma, self.mu)]
+        return [scipy.stats.norm.interval(self.i, loc=m, scale=s) for s, m in zip(self.sigma, self.mu)]
     
     def sample_u(self, q):
         r"""Extract a sample from random variates uniform on :math:`[0, 1]`.
@@ -774,7 +873,8 @@ class LogNormalJointPrior(JointPrior):
     sigma : list of float
         Standard deviations of the logarithms of the hyperparameters.
     """
-    def __init__(self, mu, sigma):
+    def __init__(self, mu, sigma, **kwargs):
+        super(LogNormalJointPrior, self).__init__(**kwargs)
         sigma = scipy.atleast_1d(scipy.asarray(sigma, dtype=float))
         mu = scipy.atleast_1d(scipy.asarray(mu, dtype=float))
         if sigma.shape != mu.shape:
@@ -784,7 +884,7 @@ class LogNormalJointPrior(JointPrior):
         self.sigma = sigma
         self.emu = scipy.exp(mu)
     
-    def __call__(self, theta):
+    def __call__(self, theta, hyper_deriv=None):
         """Evaluate the prior log-PDF at the given values of the hyperparameters, theta.
         
         Parameters
@@ -792,6 +892,11 @@ class LogNormalJointPrior(JointPrior):
         theta : array-like, (`num_params`,)
             The hyperparameters to evaluate the log-PDF at.
         """
+        if hyper_deriv is not None:
+            return -1.0 / theta[hyper_deriv] * (
+                1.0 + scipy.log(theta[hyper_deriv] / self.emu[hyper_deriv]) /
+                self.sigma[hyper_deriv]**2.0
+            )
         ll = 0
         for v, s, em in zip(theta, self.sigma, self.emu):
             ll += scipy.stats.lognorm.logpdf(v, s, loc=0, scale=em)
@@ -801,10 +906,10 @@ class LogNormalJointPrior(JointPrior):
     def bounds(self):
         """The bounds of the random variable.
         
-        Actually returns the 95% interval, because this is used for setting
+        Set `self.i=0.95` to return the 95% interval if this is used for setting
         bounds on optimizers/etc. where infinite bounds may not be useful.
         """
-        return [scipy.stats.lognorm.interval(0.95, s, loc=0, scale=em) for s, em in zip(self.sigma, self.emu)]
+        return [scipy.stats.lognorm.interval(self.i, s, loc=0, scale=em) for s, em in zip(self.sigma, self.emu)]
     
     def sample_u(self, q):
         r"""Extract a sample from random variates uniform on :math:`[0, 1]`.
@@ -874,7 +979,8 @@ class GammaJointPrior(JointPrior):
     b : list of float
         Rate parameters.
     """
-    def __init__(self, a, b):
+    def __init__(self, a, b, **kwargs):
+        super(GammaJointPrior, self).__init__(**kwargs)
         a = scipy.atleast_1d(scipy.asarray(a, dtype=float))
         b = scipy.atleast_1d(scipy.asarray(b, dtype=float))
         if a.shape != b.shape:
@@ -884,7 +990,7 @@ class GammaJointPrior(JointPrior):
         self.a = a
         self.b = b
     
-    def __call__(self, theta):
+    def __call__(self, theta, hyper_deriv=None):
         """Evaluate the prior log-PDF at the given values of the hyperparameters, theta.
         
         Parameters
@@ -892,6 +998,11 @@ class GammaJointPrior(JointPrior):
         theta : array-like, (`num_params`,)
             The hyperparameters to evaluate the log-PDF at.
         """
+        if hyper_deriv is not None:
+            if self.a[hyper_deriv] == 1.0 and theta[hyper_deriv] == 0.0:
+                return -self.b[hyper_deriv]
+            else:
+                return (self.a[hyper_deriv] - 1.0) / theta[hyper_deriv] - self.b[hyper_deriv]
         ll = 0
         for v, a, b in zip(theta, self.a, self.b):
             ll += scipy.stats.gamma.logpdf(v, a, loc=0, scale=1.0 / b)
@@ -901,10 +1012,10 @@ class GammaJointPrior(JointPrior):
     def bounds(self):
         """The bounds of the random variable.
         
-        Actually returns the 95% interval, because this is used for setting
+        Set `self.i=0.95` to return the 95% interval if this is used for setting
         bounds on optimizers/etc. where infinite bounds may not be useful.
         """
-        return [scipy.stats.gamma.interval(0.95, a, loc=0, scale=1.0 / b) for a, b in zip(self.a, self.b)]
+        return [scipy.stats.gamma.interval(self.i, a, loc=0, scale=1.0 / b) for a, b in zip(self.a, self.b)]
     
     def sample_u(self, q):
         r"""Extract a sample from random variates uniform on :math:`[0, 1]`.
@@ -952,7 +1063,6 @@ class GammaJointPrior(JointPrior):
         if p.ndim != 1:
             raise ValueError("p must be one-dimensional!")
         return scipy.asarray([scipy.stats.gamma.cdf(v, a, loc=0, scale=1.0 / b) for v, a, b in zip(p, self.a, self.b)])
-        
     
     def random_draw(self, size=None):
         """Draw random samples of the hyperparameters.
@@ -978,7 +1088,8 @@ class GammaJointPriorAlt(GammaJointPrior):
     s : list of float
         Standard deviations
     """
-    def __init__(self, m, s):
+    def __init__(self, m, s, i=1.0):
+        self.i = i
         m = scipy.atleast_1d(scipy.asarray(m, dtype=float))
         s = scipy.atleast_1d(scipy.asarray(s, dtype=float))
         if m.shape != s.shape:
@@ -995,7 +1106,6 @@ class GammaJointPriorAlt(GammaJointPrior):
     @property
     def b(self):
         return (self.m + scipy.sqrt(self.m**2 + 4.0 * self.s**2)) / (2.0 * self.s**2)
-    
 
 class SortedUniformJointPrior(JointPrior):
     """Joint prior for a set of variables which must be strictly increasing but are otherwise uniformly-distributed.
@@ -1009,12 +1119,13 @@ class SortedUniformJointPrior(JointPrior):
     ub : float
         The upper bound for all of the variables.
     """
-    def __init__(self, num_var, lb, ub):
+    def __init__(self, num_var, lb, ub, **kwargs):
+        super(SortedUniformJointPrior, self).__init__(**kwargs)
         self.num_var = num_var
         self.lb = lb
         self.ub = ub
     
-    def __call__(self, theta):
+    def __call__(self, theta, hyper_deriv=None):
         """Evaluate the log-probability of the variables.
         
         Parameters
@@ -1022,6 +1133,8 @@ class SortedUniformJointPrior(JointPrior):
         theta : array
             The parameters to find the log-probability of.
         """
+        if hyper_deriv is not None:
+            return 0.0
         theta = scipy.asarray(theta)
         if (scipy.sort(theta) != theta).all() or (theta < self.lb).any() or (theta > self.ub).any():
             return -scipy.inf
@@ -1225,6 +1338,157 @@ def wrap_fmin_slsqp(fun, guess, opt_kwargs={}):
                   message=smode,
                   nit=its)
 
+def fixed_poch(a, n):
+    """Implementation of the Pochhammer symbol :math:`(a)_n` which handles negative integer arguments properly.
+    
+    Need conditional statement because scipy's impelementation of the Pochhammer
+    symbol is wrong for negative integer arguments. This function uses the
+    definition from
+    http://functions.wolfram.com/GammaBetaErf/Pochhammer/02/
+    
+    Parameters
+    ----------
+    a : float
+        The argument.
+    n : nonnegative int
+        The order.
+    """
+    # Old form, calls gamma function:
+    # if a < 0.0 and a % 1 == 0 and n <= -a:
+    #     p = (-1.0)**n * scipy.misc.factorial(-a) / scipy.misc.factorial(-a - n)
+    # else:
+    #     p = scipy.special.poch(a, n)
+    # return p
+    if (int(n) != n) or (n < 0):
+        raise ValueError("Parameter n must be a nonnegative int!")
+    n = int(n)
+    # Direct form based on product:
+    terms = [a + k for k in range(0, n)]
+    return scipy.prod(terms)
+
+def Kn2Der(nu, y, n=0):
+    r"""Find the derivatives of :math:`K_\nu(y^{1/2})`.
+    
+    Parameters
+    ----------
+    nu : float
+        The order of the modified Bessel function of the second kind.
+    y : array of float
+        The values to evaluate at.
+    n : nonnegative int, optional
+        The order of derivative to take.
+    """
+    n = int(n)
+    y = scipy.asarray(y, dtype=float)
+    sqrty = scipy.sqrt(y)
+    if n == 0:
+        K = scipy.special.kv(nu, sqrty)
+    else:
+        K = scipy.zeros_like(y)
+        x = scipy.asarray(
+            [
+                fixed_poch(1.5 - j, j) * y**(0.5 - j)
+                for j in scipy.arange(1.0, n + 1.0, dtype=float)
+            ]
+        ).T
+        for k in scipy.arange(1.0, n + 1.0, dtype=float):
+            K += (
+                scipy.special.kvp(nu, sqrty, n=int(k)) *
+                incomplete_bell_poly(n, int(k), x)
+            )
+    return K
+
+def yn2Kn2Der(nu, y, n=0, tol=5e-4, nterms=1, nu_step=0.001):
+    r"""Computes the function :math:`y^{\nu/2} K_{\nu}(y^{1/2})` and its derivatives.
+    
+    Care has been taken to handle the conditions at :math:`y=0`.
+    
+    For `n=0`, uses a direct evaluation of the expression, replacing points
+    where `y=0` with the appropriate value. For `n>0`, uses a general sum
+    expression to evaluate the expression, and handles the value at `y=0` using
+    a power series expansion. Where it becomes infinite, the infinities will
+    have the appropriate sign for a limit approaching zero from the right.
+    
+    Uses a power series expansion around :math:`y=0` to avoid numerical issues.
+    
+    Handles integer `nu` by performing a linear interpolation between values of
+    `nu` slightly above and below the requested value.
+    
+    Parameters
+    ----------
+    nu : float
+        The order of the modified Bessel function and the exponent of `y`.
+    y : array of float
+        The points to evaluate the function at. These are assumed to be
+        nonegative.
+    n : nonnegative int, optional
+        The order of derivative to take. Set to zero (the default) to get the
+        value.
+    tol : float, optional
+        The distance from zero for which the power series is used. Default is
+        5e-4.
+    nterms : int, optional
+        The number of terms to include in the power series. Default is 1.
+    nu_step : float, optional
+        The amount to vary `nu` by when handling integer values of `nu`. Default
+        is 0.001.
+    """
+    n = int(n)
+    y = scipy.asarray(y, dtype=float)
+    
+    if n == 0:
+        K = y**(nu / 2.0) * scipy.special.kv(nu, scipy.sqrt(y))
+        K[y == 0.0] = scipy.special.gamma(nu) / 2.0**(1.0 - nu)
+    else:
+        K = scipy.zeros_like(y)
+        for k in scipy.arange(0.0, n + 1.0, dtype=float):
+            K += (
+                scipy.special.binom(n, k) * fixed_poch(1.0 + nu / 2.0 - k, k) *
+                y**(nu / 2.0 - k) * Kn2Der(nu, y, n=n-k)
+            )
+        # Do the extra work to handle y == 0 only if we need to:
+        mask = (y == 0.0)
+        if (mask).any():
+            if int(nu) == nu:
+                K[mask] = 0.5 * (
+                    yn2Kn2Der(nu - nu_step, y[mask], n=n, tol=tol, nterms=nterms, nu_step=nu_step) +
+                    yn2Kn2Der(nu + nu_step, y[mask], n=n, tol=tol, nterms=nterms, nu_step=nu_step)
+                )
+            else:
+                if n > nu:
+                    K[mask] = scipy.special.gamma(-nu) * fixed_poch(1 + nu - n, n) * scipy.inf
+                else:
+                    K[mask] = scipy.special.gamma(nu) * scipy.special.gamma(n + 1.0) / (
+                        2.0**(1.0 - nu + 2.0 * n) * fixed_poch(1.0 - nu, n) *
+                        scipy.special.factorial(n)
+                    )
+    if tol > 0.0:
+        # Replace points within tol (absolute distance) of zero with the power
+        # series approximation:
+        mask = (y <= tol) & (y > 0.0)
+        K[mask] = 0.0
+        if int(nu) == nu:
+            K[mask] = 0.5 * (
+                yn2Kn2Der(nu - nu_step, y[mask], n=n, tol=tol, nterms=nterms, nu_step=nu_step) +
+                yn2Kn2Der(nu + nu_step, y[mask], n=n, tol=tol, nterms=nterms, nu_step=nu_step)
+            )
+        else:
+            for k in scipy.arange(n, n + nterms, dtype=float):
+                K[mask] += (
+                    scipy.special.gamma(nu) * fixed_poch(1.0 + k - n, n) * y[mask]**(k - n) / (
+                        2.0**(1.0 - nu + 2 * k) * fixed_poch(1.0 - nu, k) * scipy.special.factorial(k))
+                    )
+            for k in scipy.arange(0, nterms, dtype=float):
+                K[mask] += (
+                    scipy.special.gamma(-nu) * fixed_poch(1.0 + nu + k - n, n) *
+                    y[mask]**(nu + k - n) / (
+                        2.0**(1.0 + nu + 2.0 * k) * fixed_poch(1.0 + nu, k) *
+                        scipy.special.factorial(k)
+                    )
+                )
+    
+    return K
+
 def incomplete_bell_poly(n, k, x):
     r"""Recursive evaluation of the incomplete Bell polynomial :math:`B_{n, k}(x)`.
     
@@ -1366,7 +1630,7 @@ def generate_set_partitions(set_):
 def powerset(iterable):
     """powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)
     
-    From itertools documentation.
+    From itertools documentation, https://docs.python.org/2/library/itertools.html.
     """
     s = list(iterable)
     return itertools.chain.from_iterable(itertools.combinations(s, r) for r in range(len(s) + 1))
@@ -1606,7 +1870,7 @@ def compute_stats(vals, check_nan=False, robust=False, axis=1, plot_QQ=False, bi
     
     return (mean, std)
 
-def univariate_envelope_plot(x, mean, std, ax=None, base_alpha=0.375, envelopes=[1, 3], **kwargs):
+def univariate_envelope_plot(x, mean, std, ax=None, base_alpha=0.375, envelopes=[1, 3], lb=None, ub=None, expansion=10, **kwargs):
     """Make a plot of a mean curve with uncertainty envelopes.
     """
     if ax is None:
@@ -1615,19 +1879,32 @@ def univariate_envelope_plot(x, mean, std, ax=None, base_alpha=0.375, envelopes=
     elif ax == 'gca':
         ax = plt.gca()
     
+    mean = scipy.asarray(mean, dtype=float).copy()
+    std = scipy.asarray(std, dtype=float).copy()
+    
+    # Truncate the data so matplotlib doesn't die:
+    if lb is not None and ub is not None and expansion != 1.0:
+        expansion *= ub - lb
+        ub = ub + expansion
+        lb = lb - expansion
+    if ub is not None:
+        mean[mean > ub] = ub
+    if lb is not None:
+        mean[mean < lb] = lb
+    
     l = ax.plot(x, mean, **kwargs)
     color = plt.getp(l[0], 'color')
     e = []
     for i in envelopes:
-        e.append(
-            ax.fill_between(
-                x,
-                mean - i * std,
-                mean + i * std,
-                facecolor=color,
-                alpha=base_alpha / i
-            )
-        )
+        lower = mean - i * std
+        upper = mean + i * std
+        if ub is not None:
+            lower[lower > ub] = ub
+            upper[upper > ub] = ub
+        if lb is not None:
+            lower[lower < lb] = lb
+            upper[upper < lb] = lb
+        e.append(ax.fill_between(x, lower, upper, facecolor=color, alpha=base_alpha / i))
     return (l, e)
 
 def summarize_sampler(sampler, burn=0, thin=1, ci=0.95):
@@ -1667,10 +1944,17 @@ def summarize_sampler(sampler, burn=0, thin=1, ci=0.95):
     
     return (mean, ci_l, ci_u)
 
-def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50, points=None, plot_samples=False, plot_hist=True, chain_alpha=0.1, temp_idx=0):
+def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50,
+                 points=None, plot_samples=False, plot_hist=True,
+                 chain_alpha=0.1, temp_idx=0, label_fontsize=14,
+                 ticklabel_fontsize=9, chain_label_fontsize=9,
+                 chain_ticklabel_fontsize=7, suptitle=None, bottom_sep=0.075,
+                 label_chain_y=False, max_chain_ticks=6, max_hist_ticks=None,
+                 chain_ytick_pad=2.0, suptitle_space=0.1, fixed_width=None,
+                 fixed_height=None, ax_space=0.1):
     """Plot the results of MCMC sampler (posterior and chains).
     
-    Loosely based on triangle.py.
+    Loosely based on triangle.py. Provides extensive options to format the plot.
     
     Parameters
     ----------
@@ -1698,6 +1982,40 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50, points=
     temp_idx : int, optional
         Index of the temperature to plot when plotting a
         :py:class:`emcee.PTSampler`. Default is 0 (samples from the posterior).
+    label_fontsize : float, optional
+        The font size (in points) to use for the axis labels. Default is 16.
+    ticklabel_fontsize : float, optional
+        The font size (in points) to use for the axis tick labels. Default is 10.
+    chain_label_fontsize : float, optional
+        The font size (in points) to use for the labels of the chain axes.
+        Default is 10.
+    chain_ticklabel_fontsize : float, optional
+        The font size (in points) to use for the chain axis tick labels. Default
+        is 6.
+    suptitle : str, optional
+        The figure title to place at the top. Default is no title.
+    bottom_sep : float, optional
+        The separation (in relative figure units) between the chains and the
+        marginals. Default is 0.075.
+    label_chain_y : bool, optional
+        If True, the chain plots will have y axis labels. Default is False.
+    max_chain_ticks : int, optional
+        The maximum number of y-axis ticks for the chain plots. Default is 6.
+    max_hist_ticks : int, optional
+        The maximum number of ticks for the histogram plots. Default is None
+        (no limit).
+    chain_ytick_pad : float, optional
+        The padding (in points) between the y-axis tick labels and the axis for
+        the chain plots. Default is 2.0.
+    suptitle_space : float, optional
+        The amount of space (in relative figure units) to leave for a figure
+        title. Default is 0.1.
+    fixed_width : float, optional
+        The desired figure width (in inches). Conflicts with `fixed_height`.
+    fixed_height : float, optional
+        The desired figure height (in inches). Conflicts with `fixed_width`.
+    ax_space : float, optional
+        The `w_space` and `h_space` to use. Default is 0.1.
     """
     
     # Create axes:
@@ -1710,11 +2028,21 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50, points=
     if labels is None:
         labels = [''] * k
     
-    f = plt.figure()
+    fw = 2.0 * (1.0 - suptitle_space - 0.2 - bottom_sep - ax_space) / (0.9 - 2.0 * ax_space) * k
+    fh = 2.0 * k
+    if fixed_width is not None and fixed_height is not None:
+        raise ValueError("Can only pass one of fixed_width and fixed_height!")
+    if fixed_width is not None:
+        fh = fh / fw * fixed_width
+        fw = fixed_width
+    elif fixed_height is not None:
+        fw = fw / fh * fixed_height
+        fh = fixed_height
+    f = plt.figure(figsize=(fw, fh))
     gs1 = mplgs.GridSpec(k, k)
     gs2 = mplgs.GridSpec(1, k)
-    gs1.update(bottom=0.275, top=0.98)
-    gs2.update(bottom=0.1, top=0.2)
+    gs1.update(bottom=0.2 + bottom_sep, top=1.0 - suptitle_space, left=0.1, right=0.9, wspace=ax_space, hspace=ax_space)
+    gs2.update(bottom=0.1, top=0.2, left=0.1, right=0.9, wspace=ax_space, hspace=ax_space)
     axes = []
     # j is the row, i is the column.
     for j in xrange(0, k + 1):
@@ -1728,6 +2056,7 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50, points=
                     (row[-1] if i > 0 and j == k else None)
                 gs = gs1[j, i] if j < k else gs2[:, i]
                 row.append(f.add_subplot(gs, sharey=sharey, sharex=sharex))
+                row[-1].tick_params(labelsize=ticklabel_fontsize if j < k else chain_ticklabel_fontsize)
         axes.append(row)
     axes = scipy.asarray(axes)
     
@@ -1770,13 +2099,11 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50, points=
             except TypeError:
                 axes[i, i].axvline(x=points[i], linewidth=3)
         if i == k - 1:
-            axes[i, i].set_xlabel(labels[i])
+            axes[i, i].set_xlabel(labels[i], fontsize=label_fontsize)
+            plt.setp(axes[i, i].xaxis.get_majorticklabels(), rotation=90)
         if i < k - 1:
             plt.setp(axes[i, i].get_xticklabels(), visible=False)
         plt.setp(axes[i, i].get_yticklabels(), visible=False)
-        # for j in xrange(0, i):
-        #     axes[j, i].set_visible(False)
-        #     axes[j, i].set_frame_on(False)
         for j in xrange(i + 1, k):
             axes[j, i].clear()
             if plot_hist:
@@ -1798,9 +2125,10 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50, points=
             if i != 0:
                 plt.setp(axes[j, i].get_yticklabels(), visible=False)
             if i == 0:
-                axes[j, i].set_ylabel(labels[j])
+                axes[j, i].set_ylabel(labels[j], fontsize=label_fontsize)
             if j == k - 1:
-                axes[j, i].set_xlabel(labels[i])
+                axes[j, i].set_xlabel(labels[i], fontsize=label_fontsize)
+                plt.setp(axes[j, i].xaxis.get_majorticklabels(), rotation=90)
         axes[-1, i].clear()
         if isinstance(sampler, emcee.EnsembleSampler):
             axes[-1, i].plot(sampler.chain[:, :, i].T, alpha=chain_alpha)
@@ -1817,7 +2145,21 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50, points=
                 [axes[-1, i].axhline(y=pt, linewidth=3) for pt in points[i]]
             except TypeError:
                 axes[-1, i].axhline(y=points[i], linewidth=3)
-        axes[-1, i].set_ylabel(labels[i])
-        axes[-1, i].set_xlabel('step')
+        if label_chain_y:
+            axes[-1, i].set_ylabel(labels[i], fontsize=chain_label_fontsize)
+        axes[-1, i].set_xlabel('step', fontsize=chain_label_fontsize)
+        plt.setp(axes[-1, i].xaxis.get_majorticklabels(), rotation=90)
+        for tick in axes[-1, i].get_yaxis().get_major_ticks():
+            tick.set_pad(chain_ytick_pad)
+            tick.label1 = tick._get_text1()
     
+    for i in xrange(0, k):
+        if max_hist_ticks is not None:
+            axes[k - 1, i].xaxis.set_major_locator(plt.MaxNLocator(nbins=max_hist_ticks - 1))
+            axes[i, 0].yaxis.set_major_locator(plt.MaxNLocator(nbins=max_hist_ticks - 1))
+        if max_chain_ticks is not None:
+            axes[k, i].yaxis.set_major_locator(plt.MaxNLocator(nbins=max_chain_ticks - 1))
+    
+    if suptitle is not None:
+        f.suptitle(suptitle)
     f.canvas.draw()
