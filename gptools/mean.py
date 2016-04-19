@@ -98,6 +98,10 @@ class MeanFunction(object):
                 argspec = inspect.getargspec(fun.__call__)
                 offset = 3
             
+            # Account for any keyword arguments:
+            if argspec[3] is not None:
+                offset += len(argspec[3])
+            
             if argspec[1] is None:
                 self.num_params = len(argspec[0]) - offset
             else:
@@ -124,7 +128,7 @@ class MeanFunction(object):
             param_names = [''] * self.num_params
         elif len(param_names) != self.num_params:
             raise ValueError("param_names must be a list of length num_params!")
-        self.param_names = param_names
+        self.param_names = scipy.asarray(param_names, dtype=str)
         
         self.enforce_bounds = enforce_bounds
         
@@ -173,14 +177,25 @@ class MeanFunction(object):
         self.fixed_params = scipy.asarray(fixed_params, dtype=bool)
         self.hyperprior = hyperprior
     
-    def __call__(self, X, n):
+    def __call__(self, X, n, hyper_deriv=None):
+        """Evaluate the mean function at the given points with the current parameters.
+        
+        Parameters
+        ----------
+        X : array, (`N`,) or (`N`, `D`)
+            Points to evaluate the mean function at.
+        n : array, (`N`,) or (`N`, `D`)
+            Derivative orders for each point.
+        hyper_deriv : int or None, optional
+            Index of parameter to take derivative with respect to.
+        """
         n = scipy.atleast_2d(scipy.asarray(n, dtype=int))
         X = scipy.atleast_2d(scipy.asarray(X))
         n_unique = unique_rows(n)
         mu = scipy.zeros(X.shape[0])
         for nn in n_unique:
             idxs = (n == nn).all(axis=1)
-            mu[idxs] = self.fun(X[idxs, :], nn, *self.params)
+            mu[idxs] = self.fun(X[idxs, :], nn, *self.params, hyper_deriv=hyper_deriv)
         
         return mu
     
@@ -275,11 +290,14 @@ class MeanFunction(object):
         self.param_names = scipy.asarray(self.param_names, dtype=str)
         self.param_names[~self.fixed_params] = value
 
-def constant(X, n, mu):
+def constant(X, n, mu, hyper_deriv=None):
     """Function implementing a constant mean suitable for use with :py:class:`MeanFunction`.
     """
     if (n == 0).all():
-        return mu * scipy.ones(X.shape[0])
+        if hyper_deriv is not None:
+            return scipy.ones(X.shape[0])
+        else:
+            return mu * scipy.ones(X.shape[0])
     else:
         return scipy.zeros(X.shape[0])
 
@@ -311,9 +329,11 @@ def mtanh(alpha, z):
         The coordinate of the mtanh.
     """
     z = scipy.asarray(z)
-    return ((1 + alpha * z) * scipy.exp(z) - scipy.exp(-z)) / (scipy.exp(z) + scipy.exp(-z))
+    ez = scipy.exp(z)
+    enz = 1.0 / ez
+    return ((1 + alpha * z) * ez - enz) / (ez + enz)
 
-def mtanh_profile(X, n, x0, delta, alpha, h, b):
+def mtanh_profile(X, n, x0, delta, alpha, h, b, hyper_deriv=None):
     """Profile used with the mtanh function to fit profiles, suitable for use with :py:class:`MeanFunction`.
     
     Only supports univariate data!
@@ -335,13 +355,66 @@ def mtanh_profile(X, n, x0, delta, alpha, h, b):
         Pedestal height
     b : float
         Pedestal foot
+    hyper_deriv : int or None, optional
+        The index of the parameter to take a derivative with respect to.
     """
     X = X[:, 0]
     z = (x0 - X) / delta
     if n[0] == 0:
-        return (h + b) / 2.0 + (h - b) * mtanh(alpha, z) / 2.0
+        if hyper_deriv is not None:
+            if hyper_deriv == 0:
+                return (h - b) / (2.0 * delta * (scipy.cosh(z))**2) * (
+                    1.0 + alpha / 4.0 * (1.0 + 2.0 * z + scipy.exp(2.0 * z))
+                )
+            elif hyper_deriv == 1:
+                return -(h - b) * z / (2.0 * delta * (scipy.cosh(z))**2) * (
+                    1.0 + alpha / 4.0 * (1.0 + 2.0 * z + scipy.exp(2.0 * z))
+                )
+            elif hyper_deriv == 2:
+                ez = scipy.exp(z)
+                enz = 1.0 / ez
+                return (h - b) / 2.0 * z * ez / (ez + enz)
+            elif hyper_deriv == 3:
+                ez = scipy.exp(z)
+                enz = 1.0 / ez
+                return  0.5 * (1.0 + ((1.0 + alpha * z) * ez - enz) / (ez + enz))
+            elif hyper_deriv == 4:
+                ez = scipy.exp(z)
+                enz = 1.0 / ez
+                return  0.5 * (1.0 - ((1.0 + alpha * z) * ez - enz) / (ez + enz))
+            else:
+                raise ValueError("Invalid value for hyper_deriv, " + str(hyper_deriv))
+        else:
+            return (h + b) / 2.0 + (h - b) * mtanh(alpha, z) / 2.0
     elif n[0] == 1:
-        return -(h - b) / (2.0 * delta) * (1 + alpha / 4.0 * (1 + 2 * z + scipy.exp(2 * z))) / (scipy.cosh(z))**2
+        if hyper_deriv is not None:
+            if hyper_deriv == 0:
+                return -(h - b) / (2.0 * delta**2.0 * (scipy.cosh(z))**2.0) * (
+                    alpha - (alpha * z + 2) * scipy.tanh(z)
+                )
+            elif hyper_deriv == 1:
+                return (h - b) / (2.0 * delta**2.0 * (scipy.cosh(z))**2.0) * (
+                    1.0 + alpha / 4.0 * (1.0 + 2.0 * z + scipy.exp(2.0 * z)) +
+                    z * (alpha - (alpha * z + 2) * scipy.tanh(z))
+                )
+            elif hyper_deriv == 2:
+                return -(h - b) / (8.0 * delta * (scipy.cosh(z))**2.0) * (
+                    1.0 + 2.0 * z + scipy.exp(2.0 * z)
+                )
+            elif hyper_deriv == 3:
+                return -1.0 / (2.0 * delta * (scipy.cosh(z))**2.0) * (
+                    1.0 + alpha / 4.0 * (1.0 + 2.0 * z + scipy.exp(2.0 * z))
+                )
+            elif hyper_deriv == 4:
+                return 1.0 / (2.0 * delta * (scipy.cosh(z))**2.0) * (
+                    1.0 + alpha / 4.0 * (1.0 + 2.0 * z + scipy.exp(2.0 * z))
+                )
+            else:
+                raise ValueError("Invalid value for hyper_deriv, " + str(hyper_deriv))
+        else:
+            return -(h - b) / (2.0 * delta * (scipy.cosh(z))**2) * (
+                1 + alpha / 4.0 * (1 + 2 * z + scipy.exp(2 * z))
+            )
     else:
         raise NotImplementedError("Derivatives of order greater than 1 are not supported!")
 
@@ -370,7 +443,7 @@ class MtanhMeanFunction1d(MeanFunction):
             **kwargs
         )
 
-def linear(X, n, *args):
+def linear(X, n, *args, **kwargs):
     """Linear mean function of arbitrary dimension, suitable for use with :py:class:`MeanFunction`.
     
     The form is :math:`m_0 * X[:, 0] + m_1 * X[:, 1] + \dots + b`.
@@ -386,14 +459,28 @@ def linear(X, n, *args):
         The slopes for each dimension, plus the constant term. Must be of the
         form `m0, m1, ..., b`.
     """
+    hyper_deriv = kwargs.pop('hyper_deriv', None)
     m = scipy.asarray(args[:-1])
     b = args[-1]
     if sum(n) > 1:
         return scipy.zeros(X.shape[0])
     elif sum(n) == 0:
-        return (m * X).sum(axis=1) + b
+        if hyper_deriv is not None:
+            if hyper_deriv < len(m):
+                return X[:, hyper_deriv]
+            elif hyper_deriv == len(m):
+                return scipy.ones(X.shape[0])
+            else:
+                raise ValueError("Invalid value for hyper_deriv, " + str(hyper_deriv))
+        else:
+            return (m * X).sum(axis=1) + b
     else:
         # sum(n) == 1:
+        if hyper_deriv is not None:
+            if n[hyper_deriv] == 1:
+                return scipy.ones(X.shape[0])
+            else:
+                return scipy.zeros(X.shape[0])
         return m[n == 1] * scipy.ones(X.shape[0])
 
 class LinearMeanFunction(MeanFunction):
