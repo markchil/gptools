@@ -27,12 +27,14 @@ from ..error_handling import GPArgumentError
 import scipy
 import scipy.special
 import scipy.stats
+import warnings
 try:
     import mpmath
 except ImportError:
-    import warnings
-    warnings.warn("Could not import mpmath. ArbitraryKernel class will not work.",
-                  ImportWarning)
+    warnings.warn(
+        "Could not import mpmath. ArbitraryKernel class will not work.",
+        ImportWarning
+    )
 import inspect
 import multiprocessing
 
@@ -40,6 +42,9 @@ class Kernel(object):
     """Covariance kernel base class. Not meant to be explicitly instantiated!
     
     Initialize the kernel with the given number of input dimensions.
+    
+    When implementing an isotropic covariance kernel, the covariance length
+    scales should be the last `num_dim` elements in `params`.
     
     Parameters
     ----------
@@ -70,7 +75,7 @@ class Kernel(object):
         result in the hyperparameter being set right at its bound. If False,
         bounds are not enforced inside the kernel. Default is False (do not
         enforce bounds).
-    hyperprior : :py:class:`JointPrior` instance or list, optional
+    hyperprior : :py:class:`~gptools.utils.JointPrior` instance or list, optional
         Joint prior distribution for all hyperparameters. Can either be given
         as a :py:class:`JointPrior` instance or a list of `num_params`
         callables or py:class:`rv_frozen` instances from :py:mod:`scipy.stats`,
@@ -81,17 +86,31 @@ class Kernel(object):
     Attributes
     ----------
     num_params : int
-        Number of parameters
+        Number of parameters.
     num_dim : int
-        Number of dimensions
+        Number of dimensions.
+    param_names : list of str, (`num_params`,)
+        List of the labels for the hyperparameters.
+    enforce_bounds : bool
+        If True, do not allow hyperparameters to be set outside of their bounds.
     params : :py:class:`Array` of float, (`num_params`,)
         Array of parameters.
     fixed_params : :py:class:`Array` of bool, (`num_params`,)
-        Array of booleans indicated which parameters in params are fixed.
-    param_names : list of str, (`num_params`,)
-        List of the labels for the hyperparameters.
-    hyperprior : :py:class:`JointPrior` instance
+        Array of booleans indicated which parameters in :py:attr:`params` are fixed.
+    hyperprior : :py:class:`~gptools.utils.JointPrior` instance
         Joint prior distribution for the hyperparameters.
+    param_bounds : :py:class:`~gptools.utils.CombinedBounds`
+        The bounds on the hyperparameters. Actually a getter method with a property decorator.
+    num_free_params : int
+        Number of free hyperparameters. Actually a getter method with a property decorator.
+    free_param_idxs : :py:class:`Array` of int, (`num_free_params`,)
+        The indices of the free hyperparameters in :py:attr:`params`. Actually a getter method with a property decorator.
+    free_params : :py:class:`~gptools.utils.MaskedBounds`
+        Array of free parameters. Actually a getter method with a property decorator to permit modification in-place.
+    free_param_bounds : :py:class:`~gptools.utils.MaskedBounds`
+        The bounds on the free hyperparameters. Actually a getter method with a property decorator.
+    free_param_names : :py:class:`~gptools.utils.MaskedBounds`
+        List of the labels for the free hyperparameters. Actually a getter method with a property decorator.
     
     Raises
     ------
@@ -112,7 +131,7 @@ class Kernel(object):
             param_names = [''] * self.num_params
         elif len(param_names) != self.num_params:
             raise ValueError("param_names must be a list of length num_params!")
-        self.param_names = param_names
+        self.param_names = scipy.asarray(param_names, dtype=str)
         
         if num_dim < 1 or not isinstance(num_dim, (int, long)):
             raise ValueError("num_dim must be an integer > 0!")
@@ -124,8 +143,9 @@ class Kernel(object):
         if initial_params is None:
             # Only accept fixed_params if initial_params is given:
             if fixed_params is not None:
-                raise GPArgumentError("Must pass explicit parameter values "
-                                      "if fixing parameters!")
+                raise GPArgumentError(
+                    "Must pass explicit parameter values if fixing parameters!"
+                )
             initial_params = scipy.ones(num_params, dtype=float)
             fixed_params = scipy.zeros(num_params, dtype=float)
         else:
@@ -137,12 +157,19 @@ class Kernel(object):
             else:
                 if len(fixed_params) != num_params:
                     raise ValueError("Length of fixed_params must be equal to num_params!")
+        self.fixed_params = scipy.asarray(fixed_params, dtype=bool)
         
         # Handle default case for parameter bounds -- set them all to (0, 1e16):
-        if param_bounds is None:
+        if param_bounds is None and hyperprior is None:
+            # Only warn if there are any free params:
+            if (~self.fixed_params).any():
+                warnings.warn(
+                    "Neither param_bounds nor hyperprior were specified when "
+                    "creating the kernel, defaults may not be appropriate for your data."
+                )
             param_bounds = num_params * [(0.0, 1e16)]
         else:
-            if len(param_bounds) != num_params:
+            if param_bounds is not None and len(param_bounds) != num_params:
                 raise ValueError("Length of param_bounds must be equal to num_params!")
         
         # Handle default case for hyperpriors -- set them all to be uniform:
@@ -159,7 +186,6 @@ class Kernel(object):
                 pass
         
         self.params = scipy.asarray(initial_params, dtype=float)
-        self.fixed_params = scipy.asarray(fixed_params, dtype=bool)
         self.hyperprior = hyperprior
     
     @property
@@ -203,15 +229,16 @@ class Kernel(object):
         -----
         THIS IS ONLY A METHOD STUB TO DEFINE THE NEEDED CALLING FINGERPRINT!
         """
-        raise NotImplementedError("This is an abstract method -- please use "
-                                  "one of the implementing subclasses!")
+        raise NotImplementedError(
+            "This is an abstract method -- please use one of the implementing subclasses!"
+        )
     
     def set_hyperparams(self, new_params):
         """Sets the free hyperparameters to the new parameter values in new_params.
         
         Parameters
         ----------
-        new_params : :py:class:`Array` or other Array-like, (len(:py:attr:`self.params`),)
+        new_params : :py:class:`Array` or other Array-like, (len(:py:attr:`self.free_params`),)
             New parameter values, ordered as dictated by the docstring for the
             class.
         """
@@ -324,7 +351,9 @@ class Kernel(object):
         
         Here, :math:`\tau=X_i-X_j` is the difference vector. Computes
         .. math::
+            
             \frac{r^2}{l^2} = \sum_i\frac{\tau_i^2}{l_{i}^{2}}
+        
         Assumes that the length parameters are the last `num_dim` elements of
         :py:attr:`self.params`.
         
@@ -487,16 +516,15 @@ class SumKernel(BinaryKernel):
         -------
         Kij : :py:class:`Array`, (`M`,)
             Covariances for each of the `M` `Xi`, `Xj` pairs.
-        
-        Raises
-        ------
-        NotImplementedError
-            If the `hyper_deriv` keyword is given and is not None.
         """
-        if 'hyper_deriv' in kwargs and kwargs['hyper_deriv'] is not None:
-            raise NotImplementedError("Keyword hyper_deriv is not presently "
-                                      "supported for SumKernel!")
-        return self.k1(*args, **kwargs) + self.k2(*args, **kwargs)
+        hd = kwargs.pop('hyper_deriv', None)
+        if hd is not None:
+            if hd < len(self.k1.params):
+                return self.k1(*args, hyper_deriv=hd, **kwargs)
+            else:
+                return self.k2(*args, hyper_deriv=hd - len(self.k1.params), **kwargs)
+        else:
+            return self.k1(*args, **kwargs) + self.k2(*args, **kwargs)
 
 class ProductKernel(BinaryKernel):
     """The product of two kernels.
@@ -528,6 +556,8 @@ class ProductKernel(BinaryKernel):
         NotImplementedError
             If the `hyper_deriv` keyword is given and is not None.
         """
+        if kwargs.get('hyper_deriv', None) is not None:
+            raise NotImplementedError("hyper_deriv keyword not yet supported!")
         # Need to process ni, nj to handle the product rule properly.
         nij = scipy.hstack((ni, nj))
         nij_unique = unique_rows(nij)
@@ -568,6 +598,19 @@ class ProductKernel(BinaryKernel):
 
 class ChainRuleKernel(Kernel):
     """Abstract class for the common methods in creating kernels that require application of Faa di Bruno's formula.
+    
+    Implementing classes should provide the following methods:
+    
+    - `_compute_k(self, tau)`: Should return the value of `k(tau)` at the given
+      values of `tau`, but without multiplying by `sigma_f`. This is done
+      separately for efficiency.
+    - `_compute_y(self, tau, return_r2l2=False)`: Should return the "inner form"
+      `y(tau)` to use with Faa di Bruno's formula. If `return_r2l2` is True,
+      should also return the `r2l2` matrix from `self._compute_r2l2(tau)`.
+    - `_compute_dk_dy(self, y, n)`: Should compute the `n`th derivative of the
+      kernel `k` with respect to `y` at the locations `y`.
+    - `_compute_dy_dtau(self, tau, b, r2l2)`: Should compute the derivatives of
+      `y` with respect to the elements of `tau` as indicated in `b`.
     """
     def __call__(self, Xi, Xj, ni, nj, hyper_deriv=None, symmetric=False):
         """Evaluate the covariance between points `Xi` and `Xj` with derivative order `ni`, `nj`.
@@ -602,15 +645,15 @@ class ChainRuleKernel(Kernel):
         """
         if hyper_deriv is not None:
             raise NotImplementedError("Hyperparameter derivatives have not been implemented!")
-
+        
         tau = scipy.asarray(Xi - Xj, dtype=float)
-
+        
         # Account for derivatives:
         # Get total number of differentiations:
         n_tot_j = scipy.asarray(scipy.sum(nj, axis=1), dtype=int).flatten()
         n_combined = scipy.asarray(ni + nj, dtype=int)
         n_combined_unique = unique_rows(n_combined)
-
+        
         # Evaluate the kernel:
         k = scipy.zeros(Xi.shape[0], dtype=float)
         # First compute dk/dtau
@@ -627,14 +670,14 @@ class ChainRuleKernel(Kernel):
     
     def _compute_dk_dtau(self, tau, n):
         r"""Evaluate :math:`dk/d\tau` at the specified locations with the specified derivatives.
-
+        
         Parameters
         ----------
         tau : :py:class:`Matrix`, (`M`, `D`)
             `M` inputs with dimension `D`.
         n : :py:class:`Array`, (`D`,)
             Degree of derivative with respect to each dimension.
-
+        
         Returns
         -------
             dk_dtau : :py:class:`Array`, (`M`,)
@@ -665,7 +708,7 @@ class ChainRuleKernel(Kernel):
     
     def _compute_dk_dtau_on_partition(self, tau, p):
         """Evaluate the term inside the sum of Faa di Bruno's formula for the given partition.
-
+        
         Parameters
         ----------
         tau : :py:class:`Matrix`, (`M`, `D`)
@@ -740,10 +783,12 @@ class ArbitraryKernel(Kernel):
                 num_params = len(argspec) - 3
                 param_names = argspec[3:]
         self.cov_func = cov_func
-        super(ArbitraryKernel, self).__init__(num_dim=num_dim,
-                                              num_params=num_params,
-                                              param_names=kwargs.pop('param_names', None),
-                                              **kwargs)
+        super(ArbitraryKernel, self).__init__(
+            num_dim=num_dim,
+            num_params=num_params,
+            param_names=kwargs.pop('param_names', None),
+            **kwargs
+        )
     
     def __call__(self, Xi, Xj, ni, nj, hyper_deriv=None, symmetric=False):
         """Evaluate the covariance between points `Xi` and `Xj` with derivative order `ni`, `nj`.
@@ -797,10 +842,14 @@ class ArbitraryKernel(Kernel):
                     )
                 else:
                     for idx in idxs:
-                        k[idx] = mpmath.chop(mpmath.diff(self._mask_cov_func,
-                                                         X_cat[idx, :],
-                                                         n=n_cat_state,
-                                                         singular=True))
+                        k[idx] = mpmath.chop(
+                            mpmath.diff(
+                                self._mask_cov_func,
+                                X_cat[idx, :],
+                                n=n_cat_state,
+                                singular=True
+                            )
+                        )
         
         if self.num_proc > 0:
             pool.close()
