@@ -21,6 +21,7 @@
 from __future__ import division
 
 from .core import ChainRuleKernel
+from ..utils import fixed_poch
 
 import scipy
 import scipy.special
@@ -127,15 +128,7 @@ class RationalQuadraticKernel(ChainRuleKernel):
         dk_dy : :py:class:`Array`, (`M`,)
             Specified derivative at specified locations.
         """
-        # Need conditional statement because scipy's impelementation of the
-        # Pochhammer symbol is wrong for negative integer arguments:
-        # Uses the definition from
-        # http://functions.wolfram.com/GammaBetaErf/Pochhammer/02/
-        a = 1.0 - self.params[1] - n
-        if a < 0.0 and a % 1 == 0 and n <= -a:
-            p = (-1.0)**n * scipy.misc.factorial(-a) / scipy.misc.factorial(-a - n)
-        else:
-            p = scipy.special.poch(a, n)
+        p = fixed_poch(1.0 - self.params[1] - n, n)
         return p * y**(-self.params[1] - n)
     
     def _compute_dy_dtau(self, tau, b, r2l2):
