@@ -23,7 +23,7 @@ from __future__ import division
 import warnings
 
 from .core import ChainRuleKernel, ArbitraryKernel, Kernel
-from ..utils import generate_set_partitions, unique_rows
+from ..utils import generate_set_partitions, unique_rows, yn2Kn2Der, fixed_poch
 try:
     from ._matern import _matern52
 except ImportError:
@@ -251,8 +251,6 @@ class MaternKernel1d(Kernel):
 class MaternKernel(ChainRuleKernel):
     r"""Matern covariance kernel. Supports arbitrary derivatives. Treats order as a hyperparameter.
     
-    EXPERIMENTAL IMPLEMENTATION! DO NOT TRUST FOR HIGHER DERIVATIVES!
-    
     The Matern kernel has the following hyperparameters, always referenced in
     the order listed:
     
@@ -270,7 +268,7 @@ class MaternKernel(ChainRuleKernel):
         k_M = \sigma^2 \frac{2^{1-\nu}}{\Gamma(\nu)}
         \left (\sqrt{2\nu \sum_i\left (\frac{\tau_i^2}{l_i^2}\right )}\right )^\nu
         K_\nu\left(\sqrt{2\nu \sum_i\left(\frac{\tau_i^2}{l_i^2}\right)}\right)
-
+    
     Parameters
     ----------
     num_dim : int
@@ -279,7 +277,7 @@ class MaternKernel(ChainRuleKernel):
         you wish to use the covariance kernel with.
     **kwargs
         All keyword parameters are passed to :py:class:`~gptools.kernel.core.ChainRuleKernel`.
-
+    
     Raises
     ------
     ValueError
@@ -309,12 +307,12 @@ class MaternKernel(ChainRuleKernel):
             :math:`k(\tau)` (less the :math:`\sigma^2` prefactor).
         """
         y, r2l2 = self._compute_y(tau, return_r2l2=True)
-        k = 2.0**(1 - self.nu) / scipy.special.gamma(self.nu) * y**self.nu * scipy.special.kv(self.nu, y)
-        k[r2l2 == 0] = 1
+        k = 2.0**(1.0 - self.nu) / scipy.special.gamma(self.nu) * y**(self.nu / 2.0) * scipy.special.kv(self.nu, scipy.sqrt(y))
+        k[r2l2 == 0] = 1.0
         return k
     
     def _compute_y(self, tau, return_r2l2=False):
-        r"""Covert tau to :math:`y=\sqrt{2\nu\sum_i(\tau_i^2/l_i^2)}`.
+        r"""Covert tau to :math:`y=2\nu\sum_i(\tau_i^2/l_i^2)`.
         
         Parameters
         ----------
@@ -332,7 +330,7 @@ class MaternKernel(ChainRuleKernel):
             Anisotropically scaled distances. Only returned if `return_r2l2` is True.
         """
         r2l2 = self._compute_r2l2(tau)
-        y = scipy.sqrt(2.0 * self.nu * r2l2)
+        y = 2.0 * self.nu * r2l2
         if return_r2l2:
             return (y, r2l2)
         else:
@@ -363,12 +361,7 @@ class MaternKernel(ChainRuleKernel):
         
         .. math::
         
-            f(y) = \frac{2^{1-\nu}}{\Gamma(\nu)} y^\nu K_\nu(y)
-        
-        Notice that this is very poorly-behaved at :math:`x=0`. There, the
-        value is approximated using :py:func:`mpmath.diff` with the `singular`
-        keyword. This is rather slow, so if you require a fixed value of `nu`
-        you may wish to consider implementing the appropriate kernel separately.
+            f(y) = \frac{2^{1-\nu}}{\Gamma(\nu)} y^{\nu/2} K_\nu(y^{1/2})
         
         Parameters
         ----------
@@ -382,54 +375,16 @@ class MaternKernel(ChainRuleKernel):
         dk_dy : :py:class:`Array`, (`M`,)
             Specified derivative at specified locations.
         """
-        warnings.warn("The Matern kernel has not been verified for derivatives. Consider using MaternKernelArb.")
-        
-        dk_dy = scipy.zeros_like(y, dtype=float)
-        non_zero_idxs = (y != 0)
-        for k in xrange(0, n + 1):
-            dk_dy[non_zero_idxs] += (scipy.special.binom(n, k) *
-                                     scipy.special.poch(1 - k + self.nu, k) *
-                                     (y[non_zero_idxs])**(-k + self.nu) *
-                                     scipy.special.kvp(self.nu, y[non_zero_idxs], n=n-k))
-        
-        # Handle the cases at y=0.
-        # Compute the appropriate value using mpmath's arbitrary precision
-        # arithmetic. This is potentially slow, but seems to behave pretty
-        # well. In cases where the value should be infinite, very large
-        # (but still finite) floats are returned with the appropriate sign.
-        if n >= 2 * self.nu:
-            warnings.warn("n >= 2*nu can yield inaccurate results.", RuntimeWarning)
-        
-        # Use John Wright's expression for n < 2 * nu:
-        if n < 2.0 * self.nu:
-            if n % 2 == 1:
-                dk_dy[~non_zero_idxs] = 0.0
-            else:
-                m = n / 2.0
-                dk_dy[~non_zero_idxs] = (
-                    (-1.0)**m *
-                    2.0**(self.nu - 1.0 - n) *
-                    scipy.special.gamma(self.nu - m) *
-                    scipy.misc.factorial(n) / scipy.misc.factorial(m)
-                )
-        else:
-            # Fall back to mpmath to handle n >= 2 * nu:
-            core_expr = lambda x: x**self.nu * mpmath.besselk(self.nu, x)
-            deriv = mpmath.chop(mpmath.diff(core_expr, 0, n=n, singular=True, direction=1))
-            dk_dy[~non_zero_idxs] = deriv
-        
-        dk_dy *= 2.0**(1 - self.nu) / (scipy.special.gamma(self.nu))
-        
-        return dk_dy  
+        return 2.0**(1 - self.nu) / (scipy.special.gamma(self.nu)) * yn2Kn2Der(self.nu, y, n=n)
     
     def _compute_dy_dtau(self, tau, b, r2l2):
         r"""Evaluate the derivative of the inner argument of the Matern kernel.
         
-        Uses Faa di Bruno's formula to take the derivative of
+        Take the derivative of
         
         .. math::
         
-            y = \sqrt{2 \nu \sum_i(\tau_i^2 / l_i^2)}
+            y = 2 \nu \sum_i(\tau_i^2 / l_i^2)
         
         Parameters
         ----------
@@ -445,84 +400,63 @@ class MaternKernel(ChainRuleKernel):
         dy_dtau: :py:class:`Array`, (`M`,)
             Specified derivative at specified locations.
         """
-        deriv_partitions = generate_set_partitions(b)
-        dy_dtau = scipy.zeros_like(r2l2, dtype=float)
-        non_zero_idxs = (r2l2 != 0)
-        for p in deriv_partitions:
-            dy_dtau[non_zero_idxs] += self._compute_dy_dtau_on_partition(tau[non_zero_idxs], p, r2l2[non_zero_idxs])
-        
-        # Case at tau=0 is handled with mpmath for now.
-        # TODO: This is painfully slow! Figure out how to do this analytically!
-        derivs = scipy.zeros(tau.shape[1], dtype=int)
-        for d in b:
-            derivs[d] += 1
-        dy_dtau[~non_zero_idxs] = mpmath.chop(
-            mpmath.diff(
-                self._compute_y_wrapper,
-                scipy.zeros(tau.shape[1], dtype=float),
-                n=derivs,
-                singular=True,
-                direction=1
-            )
-        )
-        return dy_dtau
+        if len(b) == 0:
+            return self._compute_y(tau)
+        elif len(b) == 1:
+            return 4.0 * self.nu * tau[:, b[0]] / (self.params[2 + b[0]])**2.0
+        elif (len(b) == 2) and (b[0] == b[1]):
+            return 4.0 * self.nu / (self.params[2 + b[0]])**2.0
+        else:
+            return scipy.zeros_like(r2l2)
     
-    def _compute_dy_dtau_on_partition(self, tau, p, r2l2):
+    def _compute_dk_dtau_on_partition(self, tau, p):
         """Evaluate the term inside the sum of Faa di Bruno's formula for the given partition.
+        
+        Overrides the version from :py:class:`gptools.kernel.core.ChainRuleKernel`
+        in order to get the correct behavior at the origin.
         
         Parameters
         ----------
         tau : :py:class:`Matrix`, (`M`, `D`)
             `M` inputs with dimension `D`.
         p : list of :py:class:`Array`
-            Each element is a block of the partition representing the derivative
-            orders to use.    
-        r2l2 : :py:class:`Array`, (`M`,)
-            Precomputed anisotropically scaled distance.
+            Each element is a block of the partition representing the
+            derivative orders to use.
         
         Returns
         -------
-        dy_dtau : :py:class:`Array`, (`M`,)
+        dk_dtau : :py:class:`Array`, (`M`,)
             The specified derivatives over the given partition at the specified
             locations.
         """
+        # Find the derivative order:
         n = len(p)
-        dy_dtau = scipy.zeros_like(r2l2)
-        dy_dtau = (scipy.sqrt(2.0 * self.nu) *
-                   scipy.special.poch(1 - n + 0.5, n) *
-                   (r2l2)**(-n + 0.5))
+        y, r2l2 = self._compute_y(tau, return_r2l2=True)
+        # Keep track of how many times a given variable has a block of length 1:
+        n1 = 0
+        # Build the dy/dtau factor up iteratively:
+        dy_dtau_factor = scipy.ones_like(y)
         for b in p:
-            dy_dtau *= self._compute_dT_dtau(tau, b)
-        
-        return dy_dtau
-    
-    def _compute_dT_dtau(self, tau, b):
-        r"""Evaluate the derivative of the :math:`\tau^2` sum term.
-        
-        Parameters
-        ----------
-            tau : :py:class:`Matrix`, (`M`, `D`)
-                `M` inputs with dimension `D`.
-            b : :py:class:`Array`, (`P`,)
-                Block specifying derivatives to be evaluated.
-        
-        Returns
-        -------
-        dT_dtau : :py:class:`Array`, (`M`,)
-            Specified derivative at specified locations.
-        """
-        unique_d = scipy.unique(b)
-        # Derivatives of order 3 and up are zero, mixed derivatives are zero.
-        if len(b) >= 3 or len(unique_d) > 1:
-            return scipy.zeros(tau.shape[0])
-        else:
-            tau_idx = unique_d[0]
+            # If the partial derivative is exactly zero there is no sense in
+            # continuing the computation:
+            if (len(b) > 2) or ((len(b) == 2) and (b[0] != b[1])):
+                return scipy.zeros_like(y)
+            dy_dtau_factor *= self._compute_dy_dtau(tau, b, r2l2)
+            # Count the number of blocks of length 1:
             if len(b) == 1:
-                return 2.0 * tau[:, tau_idx] / (self.params[2 + tau_idx])**2.0
-            else:
-                # len(b) == 2 is the only other possibility here because of
-                # the first test.
-                return 2.0 / (self.params[2 + tau_idx])**2.0 * scipy.ones(tau.shape[0])
+                n1 += 1.0
+        # Compute d^(|pi|)f/dy^(|pi|) term:
+        dk_dy = self._compute_dk_dy(y, n)
+        if n1 > 0:
+            mask = (y == 0.0)
+            tau_pow = 2 * (self.nu - n) + n1
+            if tau_pow == 0:
+                # In this case the limit does not exist, so it is set to NaN:
+                dk_dy[mask] = scipy.nan
+            elif tau_pow > 0:
+                dk_dy[mask] = 0.0
+                
+        return dk_dy * dy_dtau_factor
     
     @property
     def nu(self):
