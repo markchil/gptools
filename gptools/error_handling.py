@@ -24,3 +24,8 @@ class GPArgumentError(Exception):
     """Exception class raised when an incorrect combination of keyword arguments is given.
     """
     pass
+
+class GPImpossibleParamsError(Exception):
+    """Exception class raised when parameters are not possible.
+    """
+    pass
