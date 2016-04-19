@@ -20,9 +20,9 @@
 
 from __future__ import division
 
-from .error_handling import GPArgumentError
-from .kernel import Kernel, ZeroKernel
-from .utils import wrap_fmin_slsqp, univariate_envelope_plot, CombinedBounds, unique_rows, plot_sampler
+from .error_handling import GPArgumentError, GPImpossibleParamsError
+from .kernel import Kernel, ZeroKernel, DiagonalNoiseKernel
+from .utils import wrap_fmin_slsqp, univariate_envelope_plot, CombinedBounds, unique_rows, plot_sampler, summarize_sampler
 
 import scipy
 import scipy.linalg
@@ -32,6 +32,7 @@ import numpy.random
 import numpy.linalg
 import sys
 import warnings
+import traceback
 import multiprocessing
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -90,14 +91,14 @@ class GaussianProcess(object):
         The following are all passed to :py:meth:`add_data`, refer to its
         docstring.
     
-    X : array, (`M`, `D`), optional
+    X : array, (`N`, `D`), optional
         `M` input values of dimension `D`. Default value is None (no data).
     y : array, (`M`,), optional
         `M` data target values. Default value is None (no data).
     err_y : array, (`M`,), optional
         Error (given as standard deviation) in the `M` training target values.
         Default value is 0 (noiseless observations).
-    n : array, (`M`, `D`) or scalar float, optional
+    n : array, (`N`, `D`) or scalar float, optional
         Non-negative integer values only. Degree of derivative for each target.
         If `n` is a scalar it is taken to be the value for all points in `y`.
         Otherwise, the length of n must equal the length of `y`. Default value
@@ -112,43 +113,77 @@ class GaussianProcess(object):
         enter into the transformation. When `T` is `M`-by-`N` and `y` has `M`
         elements, `X` and `n` will both be `N`-by-`D`. Default is None (no
         transformation).
+    use_hyper_deriv : bool, optional
+        If True, the elements needed to compute the derivatives of the
+        log-likelihood with respect to the hyperparameters will be computed.
+        Default is False (do not compute these elements). Derivatives with
+        respect to hyperparameters are currently only supported for the squared
+        exponential covariance kernel.
+    verbose : bool, optional
+        If True, warnings which are produced internally but are not critical
+        will not be generated. This does not control when a warning happens in a
+        routine which is called, however. Default is False (do not produce
+        warnings).
     
     Attributes
     ----------
+    num_dim : int
+        Number of dimensions, `D`. This is actually a getter method with a property decorator which retrieves the value from :py:attr:`k`.
     k : :py:class:`~gptools.kernel.core.Kernel` instance
         The non-noise portion of the covariance kernel.
     noise_k : :py:class:`~gptools.kernel.core.Kernel` instance
         The noise portion of the covariance kernel.
+    mu : :py:class:`~gptools.mean.MeanFunction` instance
+        Parametric mean function.
+    hyperprior : :py:class:`~gptools.utils.JointPrior` instance
+        Prior distribution for the hyperparameters. This is actually a getter method with a property decorator which combines the prior distributions from :py:attr:`k`, :py:attr:`noise_k` and :py:attr:`mu`.
     X : array, (`M`, `D`)
         The `M` training input values, each of which is of dimension `D`.
-    y : array, (`M`,)
-        The `M` training target values.
-    err_y : array, (`M`,)
-        The error in the `M` training input values.
     n : array, (`M`, `D`)
         The orders of derivatives that each of the `M` training points represent, indicating the order of derivative with respect to each of the `D` dimensions.
     T : array, (`M`, `N`)
-        The transformation matrix applied to the data. If this is not None, `X` and `n` will be `N`-by-`D`.
-    K_up_to_date : bool
-        True if no data have been added since the last time the internal state was updated with a call to :py:meth:`compute_K_L_alpha_ll`.
+        The transformation matrix applied to the training data. If this is not None, `X` and `n` will be `N`-by-`D`.
+    y : array, (`M`,)
+        The `M` training target values.
+    err_y : array, (`M`,)
+        The uncorrelated, possibly heteroscedastic uncertainty in the `M` training input values.
     K : array, (`M`, `M`)
         Covariance matrix between all of the training inputs.
     noise_K : array, (`M`, `M`)
-        Noise portion of the covariance matrix between all of the training inputs. Only includes the noise from :py:attr:`noise_k`, not from :py:attr:`err_y`.
+        Noise portion of the covariance matrix between all of the training inputs. Note that if :py:attr:`T` is present this is applied between all of the training quadrature points, so additional noise on the transformed observations cannot be inferred.
     L : array, (`M`, `M`)
-        Cholesky decomposition of the combined covariance matrix between all of the training inputs.
+        Lower-triangular Cholesky decomposition of the total covariance matrix between all of the training inputs.
     alpha : array, (`M`, 1)
-        Solution to :math:`K\alpha=y`.
+        Solution to :math:`K\alpha = y`.
     ll : float
-        Log-likelihood of the data given the model.
+        Log-posterior density of the model.
     diag_factor : float
-        The factor of :py:attr:`sys.float_info.epsilon` which is added to the diagonal of the `K` matrix to improve stability.
-    mu : :py:class:`~gptools.mean.MeanFunction` instance
-        The mean function.
-        
+        The factor of :py:attr:`sys.float_info.epsilon` which is added to the diagonal of the :py:attr:`K` matrix to improve stability.
+    K_up_to_date : bool
+        True if no data have been added since the last time the internal state was updated with a call to :py:meth:`compute_K_L_alpha_ll`.
+    use_hyper_deriv : bool
+         Whether or not the derivative of the log-posterior with respect to the hyperparameters should be computed/used.
+    verbose : bool
+        Whether or not to print non-critical, internally-generated warnings.
+    params : :py:class:`~gptools.utils.CombinedBounds`
+        The current values of the hyperparameters for the covariance kernel, noise covariance kernel and mean function (in that order). This is actually a getter method with a property decorator which returns a :py:class:`~gptools.utils.CombinedBounds` instance. This permits the hyperparameters to be modified in place.
+    param_bounds : :py:class:`~gptools.utils.CombinedBounds`
+        The current bounds on the hyperparameters for the covariance kernel, noise covariance kernel and mean function (in that order). This is actually a getter method with a property decorator which returns a :py:class:`~gptools.utils.CombinedBounds` instance. This permits the bounds to be modified in place, assuming the hyperprior supports it.
+    param_names : :py:class:`~gptools.utils.CombinedBounds`
+        The names of the hyperparameters for the covariance kernel, noise covariance kernel and mean function (in that order). This is actually a getter method with a property decorator which returns a :py:class:`~gptools.utils.CombinedBounds` instance. This permits the names to be modified in place.
+    fixed_params : :py:class:`~gptools.utils.CombinedBounds`
+        A list of boolean flags indicating which of the hyperparameters of the covariance kernel, noise covariance kernel and mean function (in that order) are to be held fixed while optimizing or sampling the hyperparameters. This is actually a getter method with a property decorator which returns a :py:class:`~gptools.utils.CombinedBounds` instance. This permits the flags to be modified in place.
+    free_params : :py:class:`~gptools.utils.CombinedBounds`
+        The current values of the free hyperparameters for the covariance kernel, noise covariance kernel and mean function (in that order). This is actually a getter method with a property decorator which returns a :py:class:`~gptools.utils.CombinedBounds` instance. This permits the hyperparameters to be modified in place.
+    free_param_bounds : :py:class:`~gptools.utils.CombinedBounds`
+        The current bounds on the free hyperparameters for the covariance kernel, noise covariance kernel and mean function (in that order). This is actually a getter method with a property decorator which returns a :py:class:`~gptools.utils.CombinedBounds` instance. This permits the bounds to be modified in place, assuming the hyperprior supports it.
+    free_param_names : :py:class:`~gptools.utils.CombinedBounds`
+        The names of the free hyperparameters for the covariance kernel, noise covariance kernel and mean function (in that order). This is actually a getter method with a property decorator which returns a :py:class:`~gptools.utils.CombinedBounds` instance. This permits the names to be modified in place.
     
     Raises
     ------
+    TypeError
+        `k` or `noise_k` is not an instance of :py:class:`~gptools.kernel.core.Kernel`.
     GPArgumentError
         Gave `X` but not `y` (or vice versa).
     ValueError
@@ -156,10 +191,10 @@ class GaussianProcess(object):
     
     See Also
     --------
-    add_data : Used to process `X`, `y`, `err_y` and to add data to the process.
+    add_data : Used to process `X`, `y`, `err_y` and to add data.
     """
     def __init__(self, k, noise_k=None, X=None, y=None, err_y=0, n=0, T=None,
-                 diag_factor=1e2, mu=None):
+                 diag_factor=1e2, mu=None, use_hyper_deriv=False, verbose=False):
         if not isinstance(k, Kernel):
             raise TypeError(
                 "Argument k must be an instance of Kernel when constructing "
@@ -178,6 +213,10 @@ class GaussianProcess(object):
         self.diag_factor = diag_factor
         self.k = k
         self.noise_k = noise_k
+        self.use_hyper_deriv = use_hyper_deriv
+        self.verbose = verbose
+        
+        # Set the placeholder shapes:
         self.y = scipy.array([], dtype=float)
         self.X = None
         self.err_y = scipy.array([], dtype=float)
@@ -220,6 +259,8 @@ class GaussianProcess(object):
     
     @property
     def fixed_params(self):
+        """Combined fixed hyperparameter flags for the kernel, noise kernel and (if present) mean function.
+        """
         fp = CombinedBounds(self.k.fixed_params, self.noise_k.fixed_params)
         if self.mu is not None:
             fp = CombinedBounds(fp, self.mu.fixed_params)
@@ -235,6 +276,8 @@ class GaussianProcess(object):
     
     @property
     def params(self):
+        """Combined hyperparameters for the kernel, noise kernel and (if present) mean function.
+        """
         p = CombinedBounds(self.k.params, self.noise_k.params)
         if self.mu is not None:
             p = CombinedBounds(p, self.mu.params)
@@ -251,6 +294,8 @@ class GaussianProcess(object):
     
     @property
     def param_bounds(self):
+        """Combined bounds for the hyperparameters for the kernel, noise kernel and (if present) mean function.
+        """
         return self.hyperprior.bounds
     
     @param_bounds.setter
@@ -259,6 +304,8 @@ class GaussianProcess(object):
     
     @property
     def param_names(self):
+        """Combined names for the hyperparameters for the kernel, noise kernel and (if present) mean function.
+        """
         pn = CombinedBounds(self.k.param_names, self.noise_k.param_names)
         if self.mu is not None:
             pn = CombinedBounds(pn, self.mu.param_names)
@@ -273,6 +320,8 @@ class GaussianProcess(object):
     
     @property
     def free_params(self):
+        """Combined free hyperparameters for the kernel, noise kernel and (if present) mean function.
+        """
         p = CombinedBounds(self.k.free_params, self.noise_k.free_params)
         if self.mu is not None:
             p = CombinedBounds(p, self.mu.free_params)
@@ -291,6 +340,8 @@ class GaussianProcess(object):
     
     @property
     def free_param_bounds(self):
+        """Combined free hyperparameter bounds for the kernel, noise kernel and (if present) mean function.
+        """
         fpb = CombinedBounds(self.k.free_param_bounds, self.noise_k.free_param_bounds)
         if self.mu is not None:
             fpb = CombinedBounds(fpb, self.mu.free_param_bounds)
@@ -306,6 +357,8 @@ class GaussianProcess(object):
     
     @property
     def free_param_names(self):
+        """Combined free hyperparameter names for the kernel, noise kernel and (if present) mean function.
+        """
         p = CombinedBounds(self.k.free_param_names, self.noise_k.free_param_names)
         if self.mu is not None:
             p = CombinedBounds(p, self.mu.free_param_names)
@@ -357,16 +410,12 @@ class GaussianProcess(object):
             Bad shapes for any of the inputs, negative values for `err_y` or `n`.
         """
         # Verify y has only one non-trivial dimension:
-        try:
-            iter(y)
-        except TypeError:
-            y = scipy.asarray([y], dtype=float)
-        else:
-            y = scipy.asarray(y, dtype=float)
-            if len(y.shape) != 1:
-                raise ValueError("Training targets y must have only one "
-                                 "dimension with length greater than one! Shape "
-                                 "of y given is %s" % (y.shape,))
+        y = scipy.atleast_1d(scipy.asarray(y, dtype=float))
+        if len(y.shape) != 1:
+            raise ValueError(
+                "Training targets y must have only one dimension with length "
+                "greater than one! Shape of y given is %s" % (y.shape,)
+            )
         
         # Handle scalar error or verify shape of array error matches shape of y:
         try:
@@ -376,26 +425,23 @@ class GaussianProcess(object):
         else:
             err_y = scipy.asarray(err_y, dtype=float)
             if err_y.shape != y.shape:
-                raise ValueError("When using array-like err_y, shape must match "
-                                 "shape of y! Shape of err_y given is %s, shape "
-                                 "of y given is %s." % (err_y.shape, y.shape))
+                raise ValueError(
+                    "When using array-like err_y, shape must match shape of y! "
+                    "Shape of err_y given is %s, shape of y given is %s." % (err_y.shape, y.shape)
+                )
         if (err_y < 0).any():
             raise ValueError("All elements of err_y must be non-negative!")
         
         # Handle scalar training input or convert array input into 2d.
-        try:
-            iter(X)
-        except TypeError:
-            X = [X]
         X = scipy.atleast_2d(scipy.asarray(X, dtype=float))
         # Correct single-dimension inputs:
         if self.num_dim == 1 and X.shape[0] == 1:
             X = X.T
         if T is None and X.shape != (len(y), self.num_dim):
-            raise ValueError("Shape of training inputs must be (len(y), "
-                             "k.num_dim)! X given has shape %s, shape of y is "
-                             "%s and num_dim=%d."
-                             % (X.shape, y.shape, self.num_dim))
+            raise ValueError(
+                "Shape of training inputs must be (len(y), k.num_dim)! X given "
+                "has shape %s, shape of y is %s and num_dim=%d." % (X.shape, y.shape, self.num_dim)
+            )
         
         # Handle scalar derivative orders or verify shape of array derivative
         # orders matches shape of y:
@@ -409,10 +455,11 @@ class GaussianProcess(object):
             if self.num_dim == 1 and n.shape[1] != 1:
                 n = n.T
             if n.shape != X.shape:
-                raise ValueError("When using array-like n, shape must be "
-                                 "(len(y), k.num_dim)! Shape of n given is %s, "
-                                 "shape of y given is %s and num_dim=%d."
-                                 % (n.shape, y.shape, self.num_dim))
+                raise ValueError(
+                    "When using array-like n, shape must be (len(y), k.num_dim)! "
+                    "Shape of n given is %s, shape of y given is %s and num_dim=%d."
+                    % (n.shape, y.shape, self.num_dim)
+                )
         if (n < 0).any():
             raise ValueError("All elements of n must be non-negative integers!")
         
@@ -490,7 +537,7 @@ class GaussianProcess(object):
             self.n = self.n[good_cols, :]
     
     def remove_outliers(self, thresh=3, **predict_kwargs):
-        """Remove outliers from the GP.
+        """Remove outliers from the GP with very simplistic outlier detection.
         
         Removes points that are more than `thresh` * `err_y` away from the GP
         mean. Note that this is only very rough in that it ignores the
@@ -522,16 +569,12 @@ class GaussianProcess(object):
         n_bad : array
             Derivative order of the bad values.
         bad_idxs : array
-            Array of booleans with the original shape of X with True wherever
-            a point was taken to be bad and subsequently removed.
+            Array of booleans with the original shape of X with True wherever a
+            point was taken to be bad and subsequently removed.
         T_bad : array
             Transformation matrix of returned points. Only returned if
             :py:attr:`T` is not None for the instance.
         """
-        # Find where a point lies more than thresh*err_y away from the mean:
-        # This is naive as it does not account for the posterior variance in the
-        # GP itself, but should work as a first-cut approach to deleting
-        # outliers.
         mean = self.predict(
             self.X, n=self.n, noise=False, return_std=False,
             output_transform=self.T, **predict_kwargs
@@ -574,15 +617,20 @@ class GaussianProcess(object):
             return (X_bad, y_bad, err_y_bad, n_bad, bad_idxs, T_bad)
     
     def optimize_hyperparameters(self, method='SLSQP', opt_kwargs={},
-                                 verbose=False, random_starts=None, num_proc=None,
-                                 max_tries=1):
-        r"""Optimize the hyperparameters by maximizing the log likelihood.
+                                 verbose=False, random_starts=None,
+                                 num_proc=None, max_tries=1):
+        r"""Optimize the hyperparameters by maximizing the log-posterior.
         
         Leaves the :py:class:`GaussianProcess` instance in the optimized state.
         
         If :py:func:`scipy.optimize.minimize` is not available (i.e., if your
         :py:mod:`scipy` version is older than 0.11.0) then :py:func:`fmin_slsqp`
         is used independent of what you set for the `method` keyword.
+        
+        If :py:attr:`use_hyper_deriv` is True the optimizer will attempt to use
+        the derivatives of the log-posterior with respect to the hyperparameters
+        to speed up the optimization. Note that only the squared exponential
+        covariance kernel supports hyperparameter derivatives at present.
         
         Parameters
         ----------
@@ -594,10 +642,7 @@ class GaussianProcess(object):
         opt_kwargs : dict, optional
             Dictionary of extra keywords to pass to
             :py:func:`scipy.optimize.minimize`. Refer to that function's
-            docstring for valid options. Note that if you use `jac` = True (i.e.,
-            optimization function returns Jacobian) you should also set `args`
-            = (True,) to tell :py:meth:`update_hyperparameters` to compute and
-            return the Jacobian. Default is: {}.
+            docstring for valid options. Default is: {}.
         verbose : bool, optional
             Whether or not the output should be verbose. If True, the entire
             :py:class:`Result` object from :py:func:`scipy.optimize.minimize` is
@@ -605,16 +650,16 @@ class GaussianProcess(object):
             `success` flag from :py:func:`minimize` is False. Default is False.
         random_starts : non-negative int, optional
             Number of times to randomly perturb the starting guesses
-            (distributed uniformly within their bounds) in order to seek the
+            (distributed according to the hyperprior) in order to seek the
             global minimum. If None, then `num_proc` random starts will be
             performed. Default is None (do number of random starts equal to the
             number of processors allocated). Note that for `random_starts` != 0,
-            the initial guesses provided are not actually used.
-        num_proc : non-negative int or None
+            the initial state of the hyperparameters is not actually used.
+        num_proc : non-negative int or None, optional
             Number of processors to use with random starts. If 0, processing is
             not done in parallel. If None, all available processors are used.
             Default is None (use all available processors).
-        max_tries : int
+        max_tries : int, optional
             Number of times to run through the random start procedure if a
             solution is not found. Default is to only go through the procedure
             once.
@@ -624,11 +669,12 @@ class GaussianProcess(object):
         else:
             opt_kwargs = dict(opt_kwargs)
         if 'method' in opt_kwargs:
-            warnings.warn(
-                "Key 'method' is present in opt_kwargs, will override option "
-                "specified with method kwarg.",
-                RuntimeWarning
-            )
+            if self.verbose:
+                warnings.warn(
+                    "Key 'method' is present in opt_kwargs, will override option "
+                    "specified with method kwarg.",
+                    RuntimeWarning
+                )
         else:
             opt_kwargs['method'] = method
         
@@ -639,9 +685,11 @@ class GaussianProcess(object):
         # Replace unbounded variables with something big:
         param_ranges[scipy.where(scipy.isnan(param_ranges[:, 0])), 0] = -1e16
         param_ranges[scipy.where(scipy.isnan(param_ranges[:, 1])), 1] = 1e16
+        param_ranges[scipy.where(scipy.isinf(param_ranges[:, 0])), 0] = -1e16
+        param_ranges[scipy.where(scipy.isinf(param_ranges[:, 1])), 1] = 1e16
         if random_starts == 0:
             num_proc = 0
-            param_samples = [self.free_params]
+            param_samples = [self.free_params[:]]
         else:
             if random_starts is None:
                 random_starts = max(num_proc, 1)
@@ -650,62 +698,37 @@ class GaussianProcess(object):
             param_samples = param_samples[:, ~self.fixed_params]
         if 'bounds' not in opt_kwargs:
             opt_kwargs['bounds'] = param_ranges
+        if self.use_hyper_deriv:
+            opt_kwargs['jac'] = True
         trial = 0
         res_min = None
         while trial < max_tries and res_min is None:
             if trial >= 1:
-                warnings.warn(
-                    "No solutions found on trial %d, retrying random starts." % (trial - 1,),
-                    RuntimeWarning
-                )
-            trial += 1
-            if num_proc <= 1:
-                res = []
-                for samp in param_samples:
-                    try:
-                        res += [
-                            scipy.optimize.minimize(
-                                self.update_hyperparameters,
-                                samp,
-                                **opt_kwargs
-                            )
-                        ]
-                    except AttributeError:
-                        warnings.warn(
-                            "scipy.optimize.minimize not available, defaulting to "
-                            "fmin_slsqp.",
-                            RuntimeWarning
-                        )
-                        res += [
-                            wrap_fmin_slsqp(
-                                self.update_hyperparameters,
-                                samp,
-                                opt_kwargs=opt_kwargs
-                            )
-                        ]
-                    except:
-                        warnings.warn(
-                            "Minimizer failed, skipping sample. Error is: %s: %s. "
-                            "State of params is: %s %s"
-                            % (
-                                sys.exc_info()[0],
-                                sys.exc_info()[1],
-                                str(self.k.free_params),
-                                str(self.noise_k.free_params)
-                            ),
-                            RuntimeWarning
-                        )
-            else:
-                pool = InterruptiblePool(processes=num_proc)
-                try:
-                    res = pool.map(
-                        _OptimizeHyperparametersEval(self, opt_kwargs),
-                        param_samples
+                if self.verbose:
+                    warnings.warn(
+                        "No solutions found on trial %d, retrying random starts." % (trial - 1,),
+                        RuntimeWarning
                     )
-                finally:
+                # Produce a new initial guess:
+                if random_starts != 0:
+                    param_samples = self.hyperprior.random_draw(size=random_starts).T
+                    param_samples = param_samples[:, ~self.fixed_params]
+            trial += 1
+            if num_proc > 1:
+                pool = InterruptiblePool(processes=num_proc)
+                map_fun = pool.map
+            else:
+                map_fun = map
+            try:
+                res = map_fun(
+                    _OptimizeHyperparametersEval(self, opt_kwargs),
+                    param_samples
+                )
+            finally:
+                if num_proc > 1:
                     pool.close()
-                # Filter out the failed convergences:
-                res = [r for r in res if r is not None]
+            # Filter out the failed convergences:
+            res = [r for r in res if r is not None]
             
             try:
                 res_min = min(res, key=lambda r: r.fun)
@@ -754,8 +777,9 @@ class GaussianProcess(object):
     
     def predict(self, Xstar, n=0, noise=False, return_std=True, return_cov=False,
                 full_output=False, return_samples=False, num_samples=1,
-                samp_kwargs={}, use_MCMC=False, full_MC=False, rejection_func=None,
-                ddof=1, output_transform=None, **kwargs):
+                samp_kwargs={}, return_mean_func=False, use_MCMC=False,
+                full_MC=False, rejection_func=None, ddof=1, output_transform=None,
+                **kwargs):
         """Predict the mean and covariance at the inputs `Xstar`.
         
         The order of the derivative is given by `n`. The keyword `noise` sets
@@ -785,12 +809,18 @@ class GaussianProcess(object):
         full_output : bool, optional
             Set to True to return the full outputs in a dictionary with keys:
             
-                ==== ==========================================================================
-                mean mean of GP at requested points
-                std  standard deviation of GP at requested points
-                cov  covariance matrix for values of GP at requested points
-                samp random samples of GP at requested points (only if `return_sample` is True)
-                ==== ==========================================================================
+                ================= ===========================================================================
+                mean              mean of GP at requested points
+                std               standard deviation of GP at requested points
+                cov               covariance matrix for values of GP at requested points
+                samp              random samples of GP at requested points (only if `return_samples` is True)
+                mean_func         mean function of GP (only if `return_mean_func` is True)
+                cov_func          covariance of mean function of GP (zero if not using MCMC)
+                std_func          standard deviation of mean function of GP (zero if not using MCMC)
+                mean_without_func mean of GP minus mean function of GP
+                cov_without_func  covariance matrix of just the GP portion of the fit
+                std_without_func  standard deviation of just the GP portion of the fit
+                ================= ===========================================================================
         
         return_samples : bool, optional
             Set to True to compute and return samples of the GP in addition to
@@ -803,13 +833,20 @@ class GaussianProcess(object):
         samp_kwargs : dict, optional
             Additional keywords to pass to :py:meth:`draw_sample` if
             `return_samples` is True. Default is {}.
+        return_mean_func : bool, optional
+            Set to True to return the evaluation of the mean function in
+            addition to computing the mean of the process itself. Only done if
+            `full_output` is True and `self.mu` is not None. Default is False.
         use_MCMC : bool, optional
-            Set to True to use :py:meth:`predict_MCMC` to evaluate the prediction
-            marginalized over the hyperparameters.
+            Set to True to use :py:meth:`predict_MCMC` to evaluate the
+            prediction marginalized over the hyperparameters.
         full_MC : bool, optional
             Set to True to compute the mean and covariance matrix using Monte
             Carlo sampling of the posterior. The samples will also be returned
-            if full_output is True. Default is False (don't use full sampling).
+            if full_output is True. The sample mean and covariance will be
+            evaluated after filtering through `rejection_func`, so conditional
+            means and covariances can be computed. Default is False (do not use
+            full sampling).
         rejection_func : callable, optional
             Any samples where this function evaluates False will be rejected,
             where it evaluates True they will be kept. Default is None (no
@@ -833,7 +870,7 @@ class GaussianProcess(object):
         cov : array, (`M`, `M`)
             Predicted covariance matrix, only returned if `return_cov` is True and `full_output` is False.
         full_output : dict
-            Dictionary with fields for mean, std, cov and possibly random samples. Only returned if `full_output` is True.
+            Dictionary with fields for mean, std, cov and possibly random samples and the mean function. Only returned if `full_output` is True.
         
         Raises
         ------
@@ -849,6 +886,7 @@ class GaussianProcess(object):
                 return_std=return_std or full_output,
                 return_cov=return_cov or full_output,
                 return_samples=full_output and (return_samples or rejection_func),
+                return_mean_func=full_output and return_mean_func,
                 num_samples=num_samples,
                 samp_kwargs=samp_kwargs,
                 full_MC=full_MC,
@@ -921,10 +959,15 @@ class GaussianProcess(object):
                 Kstar = self.T.dot(Kstar)
             mean = Kstar.T.dot(self.alpha)
             if self.mu is not None:
-                mean += scipy.atleast_2d(self.mu(Xstar, n)).T
+                mean_func = scipy.atleast_2d(self.mu(Xstar, n)).T
+                mean += mean_func
             if output_transform is not None:
                 mean = output_transform.dot(mean)
+                if return_mean_func and self.mu is not None:
+                    mean_func = output_transform.dot(mean_func)
             mean = mean.ravel()
+            if return_mean_func and self.mu is not None:
+                mean_func = mean_func.ravel()
             if return_std or return_cov or full_output or full_MC:
                 v = scipy.linalg.solve_triangular(self.L, Kstar, lower=True)
                 Kstarstar = self.compute_Kij(Xstar, None, n, None)
@@ -958,6 +1001,16 @@ class GaussianProcess(object):
                     }
                     if return_samples or full_MC:
                         out['samp'] = samps
+                    if return_mean_func and self.mu is not None:
+                        out['mean_func'] = mean_func
+                        out['cov_func'] = scipy.zeros(
+                            (len(mean_func), len(mean_func)),
+                            dtype=float
+                        )
+                        out['std_func'] = scipy.zeros_like(mean_func)
+                        out['mean_without_func'] = mean - mean_func
+                        out['cov_without_func'] = covariance
+                        out['std_without_func'] = std
                     return out
                 else:
                     if return_cov:
@@ -978,8 +1031,10 @@ class GaussianProcess(object):
         ----------
         X : array-like (`M`,) or (`M`, `num_dim`), optional
             The values to evaluate the Gaussian process at. If None, then 100
-            points between the minimum and maximum of the data's X are used.
-            Default is None (use 100 points between min and max).
+            points between the minimum and maximum of the data's X are used for
+            a univariate Gaussian process and a 50x50 grid is used for a
+            bivariate Gaussian process. Default is None (use 100 points between
+            min and max).
         n : int or list, optional
             The order of derivative to compute. For num_dim=1, this must be an
             int. For num_dim=2, this must be a list of ints of length 2.
@@ -991,8 +1046,8 @@ class GaussianProcess(object):
         envelopes: list of float, optional
             +/-n*sigma envelopes to plot. Default is [1, 3].
         base_alpha : float, optional
-            Alpha value to use for +/-1*sigma envelope. All other envelopes env
-            are drawn with base_alpha/env. Default is 0.375.
+            Alpha value to use for +/-1*sigma envelope. All other envelopes `env`
+            are drawn with `base_alpha`/`env`. Default is 0.375.
         return_prediction : bool, optional
             If True, the predicted values are also returned. Default is False.
         return_std : bool, optional
@@ -1202,12 +1257,13 @@ class GaussianProcess(object):
             try:
                 return numpy.random.multivariate_normal(mean, cov, num_samp).T
             except numpy.linalg.LinAlgError as e:
-                warnings.warn(
-                    "Failure when drawing from MVN! Falling back on eig. "
-                    "Exception was:\n%s"
-                    % (e,),
-                    RuntimeWarning
-                )
+                if self.verbose:
+                    warnings.warn(
+                        "Failure when drawing from MVN! Falling back on eig. "
+                        "Exception was:\n%s"
+                        % (e,),
+                        RuntimeWarning
+                    )
                 method = 'eig'
         
         if num_eig is None or num_eig > len(mean):
@@ -1262,16 +1318,27 @@ class GaussianProcess(object):
             raise ValueError("method %s not recognized!" % (method,))
         return scipy.atleast_2d(mean).T + L.dot(rand_vars[:num_eig, :])
     
-    def update_hyperparameters(self, new_params, exit_on_bounds=True, inf_on_error=True):
-        """Update the kernel's hyperparameters to the new parameters.
+    def update_hyperparameters(self, new_params, hyper_deriv_handling='default', exit_on_bounds=True, inf_on_error=True):
+        r"""Update the kernel's hyperparameters to the new parameters.
         
         This will call :py:meth:`compute_K_L_alpha_ll` to update the state
         accordingly.
+        
+        Note that if this method crashes and the `hyper_deriv_handling` keyword
+        was used, it may leave :py:attr:`use_hyper_deriv` in the wrong state.
         
         Parameters
         ----------
         new_params : :py:class:`Array` or other Array-like, length dictated by kernel
             New parameters to use.
+        hyper_deriv_handling : {'default', 'value', 'deriv'}, optional
+            Determines what to compute and return. If 'default' and
+            :py:attr:`use_hyper_deriv` is True then the negative log-posterior
+            and the negative gradient of the log-posterior with respect to the
+            hyperparameters is returned. If 'default' and
+            :py:attr:`use_hyper_deriv` is False or 'value' then only the negative
+            log-posterior is returned. If 'deriv' then only the negative gradient
+            of the log-posterior with respect to the hyperparameters is returned.
         exit_on_bounds : bool, optional
             If True, the method will automatically exit if the hyperparameters
             are impossible given the hyperprior, without trying to update the
@@ -1285,8 +1352,17 @@ class GaussianProcess(object):
         Returns
         -------
         -1*ll : float
-            The updated log likelihood.
+            The updated log posterior.
+        -1*ll_deriv : array of float, (`num_params`,)
+            The gradient of the log posterior. Only returned if
+            :py:attr:`use_hyper_deriv` is True or `hyper_deriv_handling` is set
+            to 'deriv'.
         """
+        use_hyper_deriv = self.use_hyper_deriv
+        if hyper_deriv_handling == 'value':
+            self.use_hyper_deriv = False
+        elif hyper_deriv_handling == 'deriv':
+            self.use_hyper_deriv = True
         self.k.set_hyperparams(new_params[:len(self.k.free_params)])
         self.noise_k.set_hyperparams(
             new_params[len(self.k.free_params):len(self.k.free_params) + len(self.noise_k.free_params)]
@@ -1296,38 +1372,36 @@ class GaussianProcess(object):
                 new_params[len(self.k.free_params) + len(self.noise_k.free_params):]
             )
         self.K_up_to_date = False
-        if exit_on_bounds:
-            if scipy.isinf(self.hyperprior(self.params)):
-                return scipy.inf
         try:
+            if exit_on_bounds:
+                if scipy.isinf(self.hyperprior(self.params)):
+                    raise GPImpossibleParamsError("Impossible values for params!")
             self.compute_K_L_alpha_ll()
-        except numpy.linalg.LinAlgError as e:
-            if inf_on_error:
-                warnings.warn(
-                    "Failure when updating GP! Exception was:\n%s\n"
-                    "State of params is: %s"
-                    % (
-                        e,
-                        str(self.free_params[:]),
-                    ),
-                    RuntimeWarning
-                )
-                return scipy.inf
-            else:
-                raise e
         except Exception as e:
             if inf_on_error:
-                warnings.warn(
-                    "Unhandled exception! Exception was:\n%s\n"
-                    "State of params is: %s"
-                    % (
-                    e,
-                    str(self.free_params[:]))
-                )
-                return scipy.inf
+                if not isinstance(e, GPImpossibleParamsError) and self.verbose:
+                    warnings.warn(
+                        "Unhandled exception when updating GP! Exception was:\n%s\n"
+                        "State of params is: %s"
+                        % (traceback.format_exc(), str(self.free_params[:]))
+                    )
+                self.use_hyper_deriv = use_hyper_deriv
+                if use_hyper_deriv and hyper_deriv_handling == 'default':
+                    return (scipy.inf, scipy.zeros(len(self.free_params)))
+                elif hyper_deriv_handling == 'deriv':
+                    return scipy.zeros(len(self.free_params))
+                else:
+                    return scipy.inf
             else:
+                self.use_hyper_deriv = use_hyper_deriv
                 raise e
-        return -1 * self.ll
+        self.use_hyper_deriv = use_hyper_deriv
+        if use_hyper_deriv and hyper_deriv_handling == 'default':
+            return (-1.0 * self.ll, -1.0 * self.ll_deriv)
+        elif hyper_deriv_handling == 'deriv':
+            return -1.0 * self.ll_deriv
+        else:
+            return -1.0 * self.ll
     
     def compute_K_L_alpha_ll(self):
         r"""Compute `K`, `L`, `alpha` and log-likelihood according to the first part of Algorithm 2.1 in R&W.
@@ -1343,16 +1417,24 @@ class GaussianProcess(object):
             y = self.y
             err_y = self.err_y
             self.K = self.compute_Kij(self.X, None, self.n, None, noise=False)
-            self.noise_K = self.compute_Kij(self.X, None, self.n, None, noise=True)
+            # If the noise kernel is meant to be strictly diagonal, it should
+            # yield a diagonal noise_K:
+            if isinstance(self.noise_k, ZeroKernel):
+                self.noise_K = scipy.zeros((self.X.shape[0], self.X.shape[0]))
+            elif isinstance(self.noise_k, DiagonalNoiseKernel):
+                self.noise_K = self.noise_k.params[0]**2.0 * scipy.eye(self.X.shape[0])
+            else:
+                self.noise_K = self.compute_Kij(self.X, None, self.n, None, noise=True)
+            
             K = self.K
             noise_K = self.noise_K
             if self.T is not None:
-                K = self.T.dot(K).dot(self.T.T)
-                noise_K = self.T.dot(noise_K).dot(self.T.T)
+                KnK = self.T.dot(K + noise_K).dot(self.T.T)
+            else:
+                KnK = K + noise_K
             K_tot = (
-                K +
+                KnK +
                 scipy.diag(err_y**2.0) +
-                noise_K +
                 self.diag_factor * sys.float_info.epsilon * scipy.eye(len(y))
             )
             self.L = scipy.linalg.cholesky(K_tot, lower=True)
@@ -1365,15 +1447,7 @@ class GaussianProcess(object):
                 y_alph = self.y - mu_alph
             else:
                 y_alph = self.y
-            self.alpha = scipy.linalg.solve_triangular(
-                self.L.T,
-                scipy.linalg.solve_triangular(
-                    self.L,
-                    scipy.atleast_2d(y_alph).T,
-                    lower=True
-                ),
-                lower=False
-            )
+            self.alpha = scipy.linalg.cho_solve((self.L, True), scipy.atleast_2d(y_alph).T)
             self.ll = (
                 -0.5 * scipy.atleast_2d(y_alph).dot(self.alpha) -
                 scipy.log(scipy.diag(self.L)).sum() - 
@@ -1381,6 +1455,58 @@ class GaussianProcess(object):
             )[0, 0]
             # Apply hyperpriors:
             self.ll += self.hyperprior(self.params)
+            
+            if self.use_hyper_deriv:
+                warnings.warn("Use of hyperparameter derivatives is experimental!")
+                
+                # Only compute for the free parameters, since that is what we
+                # want to optimize:
+                self.ll_deriv = scipy.zeros(len(self.free_params))
+                # Combine the kernel and noise kernel so we only need one loop:
+                if isinstance(self.noise_k, ZeroKernel):
+                    knk = self.k
+                elif isinstance(self.noise_k, DiagonalNoiseKernel):
+                    knk = self.k
+                    # Handle DiagonalNoiseKernel specially:
+                    if not self.noise_k.fixed_params[0]:
+                        dK_dtheta_i = 2.0 * self.noise_k.params[0] * scipy.eye(len(y))
+                        self.ll_deriv[len(self.k.free_params)] = 0.5 * (
+                            self.alpha.T.dot(dK_dtheta_i.dot(self.alpha)) -
+                            scipy.trace(scipy.linalg.cho_solve((self.L, True), dK_dtheta_i))
+                        )
+                else:
+                    knk = self.k + self.noise_k
+                
+                # Get the indices of the free params in knk.params:
+                free_param_idxs = scipy.arange(0, len(knk.params), dtype=int)[~knk.fixed_params]
+                # Handle the kernel and noise kernel:
+                for i, pi in enumerate(free_param_idxs):
+                    dK_dtheta_i = self.compute_Kij(
+                        self.X, None, self.n, None, k=knk, hyper_deriv=pi
+                    )
+                    if self.T is not None:
+                        dK_dtheta_i = self.T.dot(dK_dtheta_i).dot(self.T.T)
+                    self.ll_deriv[i] = 0.5 * (
+                        self.alpha.T.dot(dK_dtheta_i.dot(self.alpha)) -
+                        scipy.trace(scipy.linalg.cho_solve((self.L, True), dK_dtheta_i))
+                    )
+                
+                # Handle the mean function:
+                if self.mu is not None:
+                    # Get the indices of the free params in self.mu.params:
+                    free_param_idxs = scipy.arange(0, len(self.mu.params), dtype=int)[~self.mu.fixed_params]
+                    for i, pi in enumerate(free_param_idxs):
+                        dmu_dtheta_i = scipy.atleast_2d(self.mu(self.X, self.n, hyper_deriv=pi)).T
+                        if self.T is not None:
+                            dmu_dtheta_i = self.T.dot(dmu_dtheta_i)
+                        self.ll_deriv[i + len(knk.free_params)] = dmu_dtheta_i.T.dot(self.alpha)
+                
+                # Handle the hyperprior:
+                # Get the indices of the free params in self.params:
+                free_param_idxs = scipy.arange(0, len(self.params), dtype=int)[~self.fixed_params]
+                for i, pi in enumerate(free_param_idxs):
+                    self.ll_deriv[i] += self.hyperprior(self.params, hyper_deriv=pi)
+            
             self.K_up_to_date = True
     
     @property
@@ -1394,7 +1520,7 @@ class GaussianProcess(object):
         """
         return self.k.num_dim
     
-    def compute_Kij(self, Xi, Xj, ni, nj, noise=False, hyper_deriv=None):
+    def compute_Kij(self, Xi, Xj, ni, nj, noise=False, hyper_deriv=None, k=None):
         r"""Compute covariance matrix between datasets `Xi` and `Xj`.
         
         Specify the orders of derivatives at each location with the `ni`, `nj`
@@ -1414,27 +1540,30 @@ class GaussianProcess(object):
             `M` input values of dimension `D`.
         Xj : array, (`P`, `D`)
             `P` input values of dimension `D`.
-        ni : array, (`M`,), non-negative integers
+        ni : array, (`M`, `D`), non-negative integers
             `M` derivative orders with respect to the `Xi` coordinates.
-        nj : array, (`P`,), non-negative integers
+        nj : array, (`P`, `D`), non-negative integers
             `P` derivative orders with respect to the `Xj` coordinates.
         noise : bool, optional
             If True, uses the noise kernel, otherwise uses the regular kernel.
             Default is False (use regular kernel).
-        hyper_deriv : None or non-negative int
+        hyper_deriv : None or non-negative int, optional
             Index of the hyperparameter to compute the first derivative with
             respect to. If None, no derivatives are taken. Default is None (no
             hyperparameter derivatives).
+        k : :py:class:`~gptools.kernel.core.Kernel` instance, optional
+            The covariance kernel to used. Overrides `noise` if present.
                 
         Returns
         -------
         Kij : array, (`M`, `P`)
             Covariance matrix between `Xi` and `Xj`.
         """
-        if not noise:
-            k = self.k
-        else:
-            k = self.noise_k
+        if k is None:
+            if not noise:
+                k = self.k
+            else:
+                k = self.noise_k
         
         if Xj is None:
             symmetric = True
@@ -1443,9 +1572,10 @@ class GaussianProcess(object):
         else:
             symmetric = False
         
-        # This technically doesn't take advantage of the symmetric case. Might
-        # be worth trying to do that at some point, but this is vastly superior
-        # to the double for loop implementation for which using symmetry is easy.
+        # TODO: This technically doesn't take advantage of the symmetric case.
+        # Might be worth trying to do that at some point, but this is vastly
+        # superior to the double for loop implementation for which using
+        # symmetry is easy.
         Xi_tile = scipy.repeat(Xi, Xj.shape[0], axis=0)
         ni_tile = scipy.repeat(ni, Xj.shape[0], axis=0)
         Xj_tile = scipy.tile(Xj, (Xi.shape[0], 1))
@@ -1480,9 +1610,7 @@ class GaussianProcess(object):
             param_vals : List of :py:class:`Array`
                 The parameter values used.
         """
-        present_free_params = scipy.concatenate(
-            (self.k.free_params, self.noise_k.free_params)
-        )
+        present_free_params = self.free_params[:]
         bounds = scipy.atleast_2d(scipy.asarray(bounds, dtype=float))
         if bounds.shape[1] != 2:
             raise ValueError("Argument bounds must have shape (n, 2)!")
@@ -1497,8 +1625,9 @@ class GaussianProcess(object):
         else:
             num_pts = scipy.asarray(num_pts, dtype=int)
             if len(num_pts) != len(present_free_params):
-                raise ValueError("Length of num_pts must match the number of "
-                                 "free parameters of kernel!")
+                raise ValueError(
+                    "Length of num_pts must match the number of free parameters!"
+                )
         
         # Form arrays to evaluate parameters over:
         param_vals = []
@@ -1554,7 +1683,7 @@ class GaussianProcess(object):
                                         thin=1, num_proc=None, sampler=None,
                                         plot_posterior=False,
                                         plot_chains=False, sampler_type='ensemble',
-                                        ntemps=20, sampler_a=2.0):
+                                        ntemps=20, sampler_a=2.0, **plot_kwargs):
         """Produce samples from the posterior for the hyperparameters using MCMC.
         
         Returns the sampler created, because storing it stops the GP from being
@@ -1602,6 +1731,8 @@ class GaussianProcess(object):
             sampler.
         sampler_a : float, optional
             Scale of the proposal distribution.
+        plot_kwargs : additional keywords, optional
+            Extra arguments to pass to :py:func:`~gptools.utils.plot_sampler`.
         """
         if num_proc is None:
             num_proc = multiprocessing.cpu_count()
@@ -1619,6 +1750,7 @@ class GaussianProcess(object):
                     a=sampler_a
                 )
             elif sampler_type == 'pt':
+                # TODO: Finish this!
                 raise NotImplementedError("PTSampler not done yet!")
                 sampler = emcee.PTSampler(
                     ntemps,
@@ -1639,7 +1771,7 @@ class GaussianProcess(object):
         else:
             # Start from the stopping point of the previous chain:
             theta0 = sampler.chain[:, -1, :]
-
+        
         sampler.run_mcmc(theta0, nsamp)
         if plot_posterior or plot_chains:
             flat_trace = sampler.chain[:, burn::thin, :]
@@ -1649,7 +1781,8 @@ class GaussianProcess(object):
             plot_sampler(
                 sampler,
                 labels=['$%s$' % (l,) for l in self.free_param_names],
-                burn=burn
+                burn=burn,
+                **plot_kwargs
             )
         else:
             if plot_posterior:
@@ -1681,13 +1814,22 @@ class GaussianProcess(object):
                     # a.set_xlabel('sample')
                     # a.set_ylabel('$%s$' % (self.free_param_names[k],))
                     # a.set_title('$%s$ flattened, burned and thinned chain' % (self.free_param_names[k],))
-            
+        
+        # Print a summary of the sampler:
+        print("MCMC parameter summary:")
+        print("param\tmean\t95% posterior interval")
+        mean, ci_l, ci_u = summarize_sampler(sampler, burn=burn)
+        names = self.free_param_names[:]
+        for n, m, l, u in zip(names, mean, ci_l, ci_u):
+            print("%s\t%4.4g\t[%4.4g, %4.4g]" % (n, m, l, u))
+        
         return sampler
     
     def compute_from_MCMC(self, X, n=0, return_mean=True, return_std=True,
-                          return_cov=False, return_samples=False, num_samples=1,
-                          noise=False, samp_kwargs={}, sampler=None,
-                          flat_trace=None, burn=0, thin=1, **kwargs):
+                          return_cov=False, return_samples=False,
+                          return_mean_func=False, num_samples=1, noise=False,
+                          samp_kwargs={}, sampler=None, flat_trace=None, burn=0,
+                          thin=1, **kwargs):
         """Compute desired quantities from MCMC samples of the hyperparameter posterior.
         
         The return will be a list with a number of rows equal to the number of
@@ -1789,27 +1931,11 @@ class GaussianProcess(object):
         
         if num_proc > 1:
             pool = InterruptiblePool(processes=num_proc)
-            try:
-                res = pool.map(
-                    _ComputeGPWrapper(
-                        self,
-                        X,
-                        n,
-                        return_mean,
-                        return_std,
-                        return_cov,
-                        return_samples,
-                        num_samples,
-                        noise,
-                        samp_kwargs,
-                        output_transform
-                    ),
-                    flat_trace
-                )
-            finally:
-                pool.close()
+            map_fun = pool.map
         else:
-            res = map(
+            map_fun = map
+        try:
+            res = map_fun(
                 _ComputeGPWrapper(
                     self,
                     X,
@@ -1818,13 +1944,17 @@ class GaussianProcess(object):
                     return_std,
                     return_cov,
                     return_samples,
+                    return_mean_func,
                     num_samples,
                     noise,
                     samp_kwargs,
                     output_transform
-                    ),
-                    flat_trace
-                )
+                ),
+                flat_trace
+            )
+        finally:
+            if num_proc > 1:
+                pool.close()
         out = dict()
         if return_mean:
             out['mean'] = [r['mean'] for r in res if r is not None]
@@ -1834,7 +1964,170 @@ class GaussianProcess(object):
             out['cov'] = [r['cov'] for r in res if r is not None]
         if return_samples:
             out['samp'] = [r['samp'] for r in res if r is not None]
+        if return_mean_func and self.mu is not None:
+            out['mean_func'] = [r['mean_func'] for r in res if r is not None]
+            out['cov_func'] = [r['cov_func'] for r in res if r is not None]
+            out['std_func'] = [r['std_func'] for r in res if r is not None]
+            
+            out['mean_without_func'] = [r['mean_without_func'] for r in res if r is not None]
+            out['cov_without_func'] = [r['cov_without_func'] for r in res if r is not None]
+            out['std_without_func'] = [r['std_without_func'] for r in res if r is not None]
         return out
+    
+    def compute_l_from_MCMC(self, X, n=0, sampler=None, flat_trace=None, burn=0, thin=1, **kwargs):
+        """Compute desired quantities from MCMC samples of the hyperparameter posterior.
+        
+        The return will be a list with a number of rows equal to the number of
+        hyperparameter samples. The columns will contain the covariance length
+        scale function.
+        
+        Parameters
+        ----------
+        X : array-like (`M`,) or (`M`, `num_dim`)
+            The values to evaluate the Gaussian process at.
+        n : non-negative int or list, optional
+            The order of derivative to compute. For num_dim=1, this must be an
+            int. For num_dim=2, this must be a list of ints of length 2.
+            Default is 0 (don't take derivative).
+        sampler : :py:class:`Sampler` instance or None, optional
+            :py:class:`Sampler` instance that has already been run to the extent
+            desired on the hyperparameter posterior. If None, a new sampler will
+            be created with :py:meth:`sample_hyperparameter_posterior`. In this
+            case, all extra kwargs will be passed on, allowing you to set the
+            number of samples, etc. Default is None (create sampler).
+        flat_trace : array-like (`nsamp`, `ndim`) or None, optional
+            Flattened trace with samples of the free hyperparameters. If present,
+            overrides `sampler`. This allows you to use a sampler other than the
+            ones from :py:mod:`emcee`, or to specify arbitrary values you wish
+            to evaluate the curve at. Note that this WILL be thinned and burned
+            according to the following two kwargs. "Flat" refers to the fact
+            that you must have combined all chains into a single one. Default is
+            None (use `sampler`).
+        burn : int, optional
+            The number of samples to discard at the beginning of the chain.
+            Default is 0.
+        thin : int, optional
+            Every `thin`-th sample is kept. Default is 1.
+        num_proc : int, optional
+            The number of processors to use for evaluation. This is used both
+            when calling the sampler and when evaluating the Gaussian process.
+            If None, the number of available processors will be used. If zero,
+            evaluation will proceed in parallel. Default is to use all available
+            processors.
+        **kwargs : extra optional kwargs
+            All additional kwargs are passed to
+            :py:meth:`sample_hyperparameter_posterior`.
+        
+        Returns
+        -------
+        out : array of float
+            Length scale function at the indicated points.
+        """
+        if flat_trace is None:
+            if sampler is None:
+                sampler = self.sample_hyperparameter_posterior(burn=burn, **kwargs)
+                # If we create the sampler, we need to make sure we clean up
+                # its pool:
+                try:
+                    sampler.pool.close()
+                except AttributeError:
+                    # This will occur if only one thread is used.
+                    pass
+                
+            flat_trace = sampler.chain[:, burn::thin, :]
+            flat_trace = flat_trace.reshape((-1, flat_trace.shape[2]))
+        else:
+            flat_trace = flat_trace[burn::thin, :]
+        
+        num_proc = kwargs.get('num_proc', multiprocessing.cpu_count())
+        
+        if num_proc > 1:
+            pool = InterruptiblePool(processes=num_proc)
+            try:
+                res = pool.map(_ComputeLWrapper(self, X, n), flat_trace)
+            finally:
+                pool.close()
+        else:
+            res = map(_ComputeLWrapper(self, X, n), flat_trace)
+        
+        return res
+    
+    def compute_w_from_MCMC(self, X, n=0, sampler=None, flat_trace=None, burn=0, thin=1, **kwargs):
+        """Compute desired quantities from MCMC samples of the hyperparameter posterior.
+        
+        The return will be a list with a number of rows equal to the number of
+        hyperparameter samples. The columns will contain the warping function.
+        
+        Parameters
+        ----------
+        X : array-like (`M`,) or (`M`, `num_dim`)
+            The values to evaluate the Gaussian process at.
+        n : non-negative int or list, optional
+            The order of derivative to compute. For num_dim=1, this must be an
+            int. For num_dim=2, this must be a list of ints of length 2.
+            Default is 0 (don't take derivative).
+        sampler : :py:class:`Sampler` instance or None, optional
+            :py:class:`Sampler` instance that has already been run to the extent
+            desired on the hyperparameter posterior. If None, a new sampler will
+            be created with :py:meth:`sample_hyperparameter_posterior`. In this
+            case, all extra kwargs will be passed on, allowing you to set the
+            number of samples, etc. Default is None (create sampler).
+        flat_trace : array-like (`nsamp`, `ndim`) or None, optional
+            Flattened trace with samples of the free hyperparameters. If present,
+            overrides `sampler`. This allows you to use a sampler other than the
+            ones from :py:mod:`emcee`, or to specify arbitrary values you wish
+            to evaluate the curve at. Note that this WILL be thinned and burned
+            according to the following two kwargs. "Flat" refers to the fact
+            that you must have combined all chains into a single one. Default is
+            None (use `sampler`).
+        burn : int, optional
+            The number of samples to discard at the beginning of the chain.
+            Default is 0.
+        thin : int, optional
+            Every `thin`-th sample is kept. Default is 1.
+        num_proc : int, optional
+            The number of processors to use for evaluation. This is used both
+            when calling the sampler and when evaluating the Gaussian process.
+            If None, the number of available processors will be used. If zero,
+            evaluation will proceed in parallel. Default is to use all available
+            processors.
+        **kwargs : extra optional kwargs
+            All additional kwargs are passed to
+            :py:meth:`sample_hyperparameter_posterior`.
+        
+        Returns
+        -------
+        out : array of float
+            Length scale function at the indicated points.
+        """
+        if flat_trace is None:
+            if sampler is None:
+                sampler = self.sample_hyperparameter_posterior(burn=burn, **kwargs)
+                # If we create the sampler, we need to make sure we clean up
+                # its pool:
+                try:
+                    sampler.pool.close()
+                except AttributeError:
+                    # This will occur if only one thread is used.
+                    pass
+                
+            flat_trace = sampler.chain[:, burn::thin, :]
+            flat_trace = flat_trace.reshape((-1, flat_trace.shape[2]))
+        else:
+            flat_trace = flat_trace[burn::thin, :]
+        
+        num_proc = kwargs.get('num_proc', multiprocessing.cpu_count())
+        
+        if num_proc > 1:
+            pool = InterruptiblePool(processes=num_proc)
+            try:
+                res = pool.map(_ComputeWWrapper(self, X, n), flat_trace)
+            finally:
+                pool.close()
+        else:
+            res = map(_ComputeWWrapper(self, X, n), flat_trace)
+        
+        return res
     
     def predict_MCMC(self, X, ddof=1, full_MC=False, rejection_func=None, **kwargs):
         """Make a prediction using MCMC samples.
@@ -1906,6 +2199,7 @@ class GaussianProcess(object):
             means = scipy.asarray(res['mean'])
             mean = scipy.mean(means, axis=0)
             
+            # TODO: Allow use of robust estimators!
             if 'cov' in res:
                 covs = scipy.asarray(res['cov'])
                 cov = scipy.mean(covs, axis=0) + scipy.cov(means, rowvar=0, ddof=ddof)
@@ -1914,6 +2208,28 @@ class GaussianProcess(object):
                 vars_ = scipy.asarray(scipy.asarray(res['std']))**2
                 std = scipy.sqrt(scipy.mean(vars_, axis=0) +
                                  scipy.var(means, axis=0, ddof=ddof))
+            if 'mean_func' in res:
+                mean_funcs = scipy.asarray(res['mean_func'])
+                cov_funcs = scipy.asarray(res['cov_func'])
+                mean_func = scipy.mean(mean_funcs, axis=0)
+                cov_func = scipy.mean(cov_funcs, axis=0) + scipy.cov(mean_funcs, rowvar=0, ddof=ddof)
+                std_func = scipy.sqrt(scipy.diagonal(cov_func))
+                
+                mean_without_funcs = scipy.asarray(res['mean_without_func'])
+                cov_without_funcs = scipy.asarray(res['cov_without_func'])
+                mean_without_func = scipy.mean(mean_without_funcs, axis=0)
+                cov_without_func = (
+                    scipy.mean(cov_without_funcs, axis=0) +
+                    scipy.cov(mean_without_funcs, rowvar=0, ddof=ddof)
+                )
+                std_without_func = scipy.sqrt(scipy.diagonal(cov_without_func))
+                
+                out['mean_func'] = mean_func
+                out['cov_func'] = cov_func
+                out['std_func'] = std_func
+                out['mean_without_func'] = mean_without_func
+                out['cov_without_func'] = cov_without_func
+                out['std_without_func'] = std_without_func
         
         out['mean'] = mean
         if return_samples:
@@ -1954,7 +2270,8 @@ class _ComputeGPWrapper(object):
         The contents of this dictionary will be passed to :py:meth:`draw_sample`.
     """
     def __init__(self, gp, X, n, return_mean, return_std, return_cov,
-                 return_sample, num_samples, noise, samp_kwargs, output_transform):
+                 return_sample, return_mean_func, num_samples, noise,
+                 samp_kwargs, output_transform):
         self.gp = gp
         self.X = X
         self.n = n
@@ -1962,10 +2279,11 @@ class _ComputeGPWrapper(object):
         self.return_std = return_std
         self.return_cov = return_cov
         self.return_sample = return_sample
+        self.return_mean_func = return_mean_func
         self.num_samples = num_samples
         self.noise = noise
         self.samp_kwargs = samp_kwargs
-        self.full_output = return_cov or return_std or return_sample
+        self.full_output = return_cov or return_std or return_sample or return_mean_func
         self.output_transform = output_transform
     
     def __call__(self, p_case):
@@ -1981,6 +2299,7 @@ class _ComputeGPWrapper(object):
                 noise=self.noise,
                 full_output=self.full_output,
                 return_samples=self.return_sample,
+                return_mean_func=self.return_mean_func,
                 num_samples=self.num_samples,
                 output_transform=self.output_transform
             )
@@ -1997,14 +2316,92 @@ class _ComputeGPWrapper(object):
                     out.pop('cov')
         except Exception as e:
             out = None
-            warnings.warn(
-                "Encountered exception during evaluation of MCMC samples. "
-                "Exception is:\n%s\nParams are:\n%s"
-                % (
-                    e,
-                    str(list(p_case))
+            if self.gp.verbose:
+                warnings.warn(
+                    "Encountered exception during evaluation of MCMC samples. "
+                    "Exception is:\n%s\nParams are:\n%s"
+                    % (
+                        traceback.format_exc(),
+                        str(list(p_case))
+                    )
                 )
-            )
+        return out
+
+class _ComputeLWrapper(object):
+    """Wrapper to allow parallel evaluation of the covariance length scale function.
+    
+    Parameters
+    ----------
+    gp : :py:class:`GaussianProcess` instance
+        The :py:class:`GaussianProcess` to wrap.
+    X : array-like
+        The evaluation locations to use. No pre-processing is performed: `X`
+        will be passed directly to :py:attr:`l_func`.
+    n : int or array-like
+        The derivative orders to use. No pre-processing is performed: `n` will
+        be passed directly to :py:attr:`l_func`.
+    """
+    def __init__(self, gp, X, n):
+        self.gp = gp
+        self.X = X
+        self.n = n
+    
+    def __call__(self, p_case):
+        """Evaluate the covariance length scale function with free hyperparameters `p_case`.
+        """
+        try:
+            p_case = scipy.asarray(p_case)
+            p = scipy.copy(scipy.asarray(self.gp.k.params, dtype=float))
+            p[~self.gp.k.fixed_params] = p_case[:len(self.gp.k.free_params)]
+            out = self.gp.k.l_func(self.X, self.n, *p[1:])
+        except Exception as e:
+            out = None
+            if self.gp.verbose:
+                warnings.warn(
+                    "Encountered exception during evaluation of MCMC samples. "
+                    "Exception is:\n%s\nParams are:\n%s" % (traceback.format_exc(), str(list(p_case)))
+                )
+        return out
+
+class _ComputeWWrapper(object):
+    """Wrapper to allow parallel evaluation of the warping function.
+    
+    Parameters
+    ----------
+    gp : :py:class:`GaussianProcess` instance
+        The :py:class:`GaussianProcess` to wrap.
+    X : array-like
+        The evaluation locations to use. No pre-processing is performed: `X`
+        will be passed directly to :py:attr:`w`.
+    n : int or array-like
+        The derivative orders to use. No pre-processing is performed: `n` will
+        be passed directly to :py:attr:`w`.
+    """
+    def __init__(self, gp, X, n):
+        self.gp = gp
+        self.X = X
+        self.n = n
+    
+    def __call__(self, p_case):
+        """Evaluate the covariance length scale function with free hyperparameters `p_case`.
+        
+        Note that this only handles warpings nested up to two deep (i.e., if a
+        beta-CDF warp is wrapped in a linear warp).
+        """
+        try:
+            p_case = scipy.asarray(p_case)
+            p = scipy.copy(scipy.asarray(self.gp.k.params, dtype=float))
+            p[~self.gp.k.fixed_params] = p_case[:len(self.gp.k.free_params)]
+            self.gp.k.params = p
+            is_nested = hasattr(self.gp.k.k, 'w')
+            out = self.gp.k.w_func(self.X, 0, self.n)
+        except Exception as e:
+            out = None
+            if self.gp.verbose:
+                warnings.warn(
+                    "Encountered exception during evaluation of MCMC samples. "
+                    "Exception is:\n%s\nParams are:\n%s" % (traceback.format_exc(), str(list(p_case)))
+                )
         return out
 
 class _ComputeLnProbEval(object):
@@ -2051,25 +2448,27 @@ class _OptimizeHyperparametersEval(object):
                 **self.opt_kwargs
             )
         except AttributeError:
-            warnings.warn("scipy.optimize.minimize not available, defaulting "
-                          "to fmin_slsqp.",
-                          RuntimeWarning)
+            if self.gp.verbose:
+                warnings.warn(
+                    "scipy.optimize.minimize not available, defaulting to fmin_slsqp.",
+                    RuntimeWarning
+                )
             return wrap_fmin_slsqp(
                 self.gp.update_hyperparameters,
                 samp,
                 opt_kwargs=self.opt_kwargs
             )
         except:
-            warnings.warn(
-                "Minimizer failed, skipping sample. Error is: %s: %s. "
-                "State of params is: %s"
-                % (
-                    sys.exc_info()[0],
-                    sys.exc_info()[1],
-                    str(self.gp.free_params),
-                ),
-                RuntimeWarning
-            )
+            if self.gp.verbose:
+                warnings.warn(
+                    "Minimizer failed, skipping sample. Error is: %s. "
+                    "State of params is: %s"
+                    % (
+                        traceback.format_exc(),
+                        str(self.gp.free_params[:]),
+                    ),
+                    RuntimeWarning
+                )
             return None
 
 class Constraint(object):
