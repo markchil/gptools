@@ -2211,9 +2211,10 @@ def plot_sampler_fingerprint(
         If True, the samples are plotted as horizontal lines. Default is False.
     sample_color : str, optional
         The color to plot the samples in. Default is 'k', meaning black.
-    point_color : str, optional
+    point_color : str or list of str, optional
         The color to plot the individual points in. Default is to loop through
-        matplotlib's default color sequence.
+        matplotlib's default color sequence. If a list is provided, it will be
+        cycled through.
     point_lw : float, optional
         Line width to use when plotting the individual points.
     title : str, optional
@@ -2296,11 +2297,10 @@ def plot_sampler_fingerprint(
         u_points = [hyperprior.elementwise_cdf(p) for p in points]
         if point_color is None:
             c_cycle = itertools.cycle(['b', 'g', 'r', 'c', 'm', 'y', 'k'])
+        else:
+            c_cycle = itertools.cycle(scipy.atleast_1d(point_color))
         for p in u_points:
-            if point_color is None:
-                c = c_cycle.next()
-            else:
-                c = point_color
+            c = c_cycle.next()
             for i, uv in enumerate(p):
                 a.plot([i, i + 1], [uv, uv], color=c, lw=point_lw)
     
