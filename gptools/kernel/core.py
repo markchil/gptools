@@ -64,7 +64,7 @@ class Kernel(object):
         Default value is None (no hyperparameters are fixed).
     param_bounds : list of 2-tuples (`num_params`,), optional
         List of bounds for each of the hyperparameters. Each 2-tuple is of the
-        form (lower`, `upper`). If there is no bound in a given direction, it
+        form (`lower`, `upper`). If there is no bound in a given direction, it
         works best to set it to something big like 1e16. Default is (0.0, 1e16)
         for each hyperparameter. Note that this is overridden by the `hyperprior`
         keyword, if present.
