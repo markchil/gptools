@@ -1908,20 +1908,21 @@ def univariate_envelope_plot(x, mean, std, ax=None, base_alpha=0.375, envelopes=
         e.append(ax.fill_between(x, lower, upper, facecolor=color, alpha=base_alpha / i))
     return (l, e)
 
-def summarize_sampler(sampler, burn=0, thin=1, ci=0.95):
+def summarize_sampler(sampler, weights=None, burn=0, ci=0.95):
     r"""Create summary statistics of the flattened chain of the sampler.
     
     The confidence regions are computed from the quantiles of the data.
     
     Parameters
     ----------
-    sampler : :py:class:`emcee.EnsembleSampler` instance
+    sampler : :py:class:`emcee.Sampler` instance or array, (`n_temps`, `n_chains`, `n_samp`, `n_dim`), (`n_chains`, `n_samp`, `n_dim`) or (`n_samp`, `n_dim`)
         The sampler to summarize the chains of.
+    weights : array, (`n_temps`, `n_chains`, `n_samp`), (`n_chains`, `n_samp`) or (`n_samp`,), optional
+        The weight for each sample. This is useful for post-processing the
+        output from MultiNest sampling, for instance.
     burn : int, optional
         The number of samples to burn from the beginning of the chain. Default
         is 0 (no burn).
-    thin : int, optional
-        The step size to thin with. Default is 1 (no thinning).
     ci : float, optional
         A number between 0 and 1 indicating the confidence region to compute.
         Default is 0.95 (return upper and lower bounds of the 95% confidence
@@ -1936,18 +1937,71 @@ def summarize_sampler(sampler, burn=0, thin=1, ci=0.95):
     ci_u : array, (num_params,)
         Upper bounds of the `ci*100%` confidence intervals.
     """
-    flat_trace = sampler.chain[:, burn::thin, :]
-    flat_trace = flat_trace.reshape((-1, flat_trace.shape[2]))
+    try:
+        k = sampler.flatchain.shape[-1]
+    except AttributeError:
+        # Assumes array input is only case where there is no "flatchain" attribute.
+        k = sampler.shape[-1]
     
-    mean = scipy.mean(flat_trace, axis=0)
+    if isinstance(sampler, emcee.EnsembleSampler):
+        if chain_mask is None:
+            chain_mask = scipy.ones(sampler.chain.shape[0], dtype=bool)
+        flat_trace = sampler.chain[chain_mask, burn:, :]
+        flat_trace = flat_trace.reshape((-1, k))
+    elif isinstance(sampler, emcee.PTSampler):
+        if chain_mask is None:
+            chain_mask = scipy.ones(sampler.nwalkers, dtype=bool)
+        flat_trace = sampler.chain[temp_idx, chain_mask, burn:, :]
+        flat_trace = flat_trace.reshape((-1, k))
+    elif isinstance(sampler, scipy.ndarray):
+        if sampler.ndim == 4:
+            if chain_mask is None:
+                chain_mask = scipy.ones(sampler.shape[1], dtype=bool)
+            flat_trace = sampler[temp_idx, chain_mask, burn:, :]
+            flat_trace = flat_trace.reshape((-1, k))
+            if weights is not None:
+                weights = weights[temp_idx, chain_mask, burn:]
+                weights = weights.ravel()
+        elif sampler.ndim == 3:
+            if chain_mask is None:
+                chain_mask = scipy.ones(sampler.shape[0], dtype=bool)
+            flat_trace = sampler[chain_mask, burn:, :]
+            flat_trace = flat_trace.reshape((-1, k))
+            if weights is not None:
+                weights = weights[chain_mask, burn:]
+                weights = weights.ravel()
+        elif sampler.ndim == 2:
+            flat_trace = sampler[burn:, :]
+            flat_trace = flat_trace.reshape((-1, k))
+            if weights is not None:
+                weights = weights[burn:]
+                weights = weights.ravel()
+    else:
+        raise ValueError("Unknown sampler class: %s" % (type(sampler),))
+    
     cibdry = 100.0 * (1.0 - ci) / 2.0
-    ci_l, ci_u = scipy.percentile(flat_trace, [cibdry, 100.0 - cibdry], axis=0)
+    if weights is None:
+        mean = scipy.mean(flat_trace, axis=0)
+        ci_l, ci_u = scipy.percentile(flat_trace, [cibdry, 100.0 - cibdry], axis=0)
+    else:
+        mean = weights.dot(flat_trace) / weights.sum()
+        ci_l = scipy.zeros(k)
+        ci_u = scipy.zeros(k)
+        p = scipy.asarray([cibdry, 100.0 - cibdry])
+        for i in range(0, k):
+            srt = flat_trace[:, i].argsort()
+            x = flat_trace[srt, i]
+            w = weights[srt]
+            Sn = w.cumsum()
+            pn = 100.0 / Sn[-1] * (Sn - w / 2.0)
+            j = scipy.digitize(p, pn) - 1
+            ci_l[i], ci_u[i] = x[j] + (p - pn[j]) / (pn[j + 1] - pn[j]) * (x[j + 1] - x[j])
     
     return (mean, ci_l, ci_u)
 
-def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50,
-                 points=None, plot_samples=False, plot_hist=True,
-                 chain_alpha=0.1, temp_idx=0, label_fontsize=14,
+def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
+                 chain_mask=None, bins=50, points=None, plot_samples=False,
+                 plot_hist=True, chain_alpha=0.1, temp_idx=0, label_fontsize=14,
                  ticklabel_fontsize=9, chain_label_fontsize=9,
                  chain_ticklabel_fontsize=7, suptitle=None, bottom_sep=0.075,
                  label_chain_y=False, max_chain_ticks=6, max_hist_ticks=None,
@@ -1959,10 +2013,17 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50,
     
     Parameters
     ----------
-    sampler : :py:class:`emcee.Sampler` instance
+    sampler : :py:class:`emcee.Sampler` instance or array, (`n_temps`, `n_chains`, `n_samp`, `n_dim`), (`n_chains`, `n_samp`, `n_dim`) or (`n_samp`, `n_dim`)
         The sampler to plot the chains/marginals of. Can also be an array of
         samples which matches the shape of the `chain` attribute that would be
         present in a :py:class:`emcee.Sampler` instance.
+    weights : array, (`n_temps`, `n_chains`, `n_samp`), (`n_chains`, `n_samp`) or (`n_samp`,), optional
+        The weight for each sample. This is useful for post-processing the
+        output from MultiNest sampling, for instance.
+    cutoff_weight : float, optional
+        If `weights` and `cutoff_weight` are present, points with
+        `weights < cutoff_weight * weights.max()` will be excluded. Default is
+        to plot all points.
     labels : list of str, optional
         The labels to use for each of the free parameters. Default is to leave
         the axes unlabeled.
@@ -2078,11 +2139,27 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50,
                 chain_mask = scipy.ones(sampler.shape[1], dtype=bool)
             flat_trace = sampler[temp_idx, chain_mask, burn:, :]
             flat_trace = flat_trace.reshape((-1, k))
-        else:
+            if weights is not None:
+                weights = weights[temp_idx, chain_mask, burn:]
+                weights = weights.ravel()
+        elif sampler.ndim == 3:
             if chain_mask is None:
                 chain_mask = scipy.ones(sampler.shape[0], dtype=bool)
             flat_trace = sampler[chain_mask, burn:, :]
             flat_trace = flat_trace.reshape((-1, k))
+            if weights is not None:
+                weights = weights[chain_mask, burn:]
+                weights = weights.ravel()
+        elif sampler.ndim == 2:
+            flat_trace = sampler[burn:, :]
+            flat_trace = flat_trace.reshape((-1, k))
+            if weights is not None:
+                weights = weights[burn:]
+                weights = weights.ravel()
+        if cutoff_weight is not None and weights is not None:
+            mask = weights >= cutoff_weight * weights.max()
+            flat_trace = flat_trace[mask, :]
+            weights = weights[mask]
     else:
         raise ValueError("Unknown sampler class: %s" % (type(sampler),))
     
@@ -2090,7 +2167,7 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50,
     for i in xrange(0, k):
         axes[i, i].clear()
         if plot_hist:
-            axes[i, i].hist(flat_trace[:, i], bins=bins, color='black')
+            axes[i, i].hist(flat_trace[:, i], bins=bins, color='black', weights=weights)
         if plot_samples:
             axes[i, i].plot(flat_trace[:, i], scipy.zeros_like(flat_trace[:, i]), ',', alpha=0.1)
         if points is not None:
@@ -2112,7 +2189,8 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50,
                     flat_trace[:, i],
                     flat_trace[:, j],
                     bins=bins,
-                    cmap='gray_r'
+                    cmap='gray_r',
+                    weights=weights
                 )
             if plot_samples:
                 axes[j, i].plot(flat_trace[:, i], flat_trace[:, j], ',', alpha=0.1)
@@ -2136,10 +2214,13 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50,
         elif isinstance(sampler, emcee.PTSampler):
             axes[-1, i].plot(sampler.chain[temp_idx, :, :, i].T, alpha=chain_alpha)
         else:
+            # TODO: This plots ALL of the samples, even the ones which are ignored!
             if sampler.ndim == 4:
                 axes[-1, i].plot(sampler[temp_idx, :, :, i].T, alpha=chain_alpha)
-            else:
+            elif sampler.ndim == 3:
                 axes[-1, i].plot(sampler[:, :, i].T, alpha=chain_alpha)
+            elif sampler.ndim == 2:
+                axes[-1, i].plot(sampler[:, i].T, alpha=chain_alpha)
         axes[-1, i].axvline(burn, color='r', linewidth=3)
         if points is not None:
             try:
@@ -2166,9 +2247,10 @@ def plot_sampler(sampler, labels=None, burn=0, chain_mask=None, bins=50,
     f.canvas.draw()
 
 def plot_sampler_fingerprint(
-        sampler, hyperprior, nbins=None, labels=None, burn=0, chain_mask=None,
-        temp_idx=0, points=None, plot_samples=False, sample_color='k',
-        point_color=None, point_lw=3, title='', rot_x_labels=False, figsize=None
+        sampler, hyperprior, weights=None, cutoff_weight=None, nbins=None,
+        labels=None, burn=0, chain_mask=None, temp_idx=0, points=None,
+        plot_samples=False, sample_color='k', point_color=None, point_lw=3,
+        title='', rot_x_labels=False, figsize=None
     ):
     """Make a plot of the sampler's "fingerprint": univariate marginal histograms for all hyperparameters.
     
@@ -2180,7 +2262,7 @@ def plot_sampler_fingerprint(
     
     Parameters
     ----------
-    sampler : :py:class:`emcee.Sampler` instance
+    sampler : :py:class:`emcee.Sampler` instance or array, (`n_temps`, `n_chains`, `n_samp`, `n_dim`), (`n_chains`, `n_samp`, `n_dim`) or (`n_samp`, `n_dim`)
         The sampler to plot the chains/marginals of. Can also be an array of
         samples which matches the shape of the `chain` attribute that would be
         present in a :py:class:`emcee.Sampler` instance.
@@ -2188,6 +2270,13 @@ def plot_sampler_fingerprint(
         The joint prior distribution for the hyperparameters. Used to map the
         values to [0, 1] so that the hyperparameters can all be shown on the
         same axis.
+    weights : array, (`n_temps`, `n_chains`, `n_samp`), (`n_chains`, `n_samp`) or (`n_samp`,), optional
+        The weight for each sample. This is useful for post-processing the
+        output from MultiNest sampling, for instance.
+    cutoff_weight : float, optional
+        If `weights` and `cutoff_weight` are present, points with
+        `weights < cutoff_weight * weights.max()` will be excluded. Default is
+        to plot all points.
     nbins : int or array of int, (`D`,), optional
         The number of bins dividing [0, 1] to use for each histogram. If a
         single int is given, this is used for all of the hyperparameters. If an
@@ -2247,11 +2336,27 @@ def plot_sampler_fingerprint(
                 chain_mask = scipy.ones(sampler.shape[1], dtype=bool)
             flat_trace = sampler[temp_idx, chain_mask, burn:, :]
             flat_trace = flat_trace.reshape((-1, k))
-        else:
+            if weights is not None:
+                weights = weights[temp_idx, chain_mask, burn:]
+                weights = weights.ravel()
+        elif sampler.ndim == 3:
             if chain_mask is None:
                 chain_mask = scipy.ones(sampler.shape[0], dtype=bool)
             flat_trace = sampler[chain_mask, burn:, :]
             flat_trace = flat_trace.reshape((-1, k))
+            if weights is not None:
+                weights = weights[chain_mask, burn:]
+                weights = weights.ravel()
+        elif sampler.ndim == 2:
+            flat_trace = sampler[burn:, :]
+            flat_trace = flat_trace.reshape((-1, k))
+            if weights is not None:
+                weights = weights[burn:]
+                weights = weights.ravel()
+        if cutoff_weight is not None and weights is not None:
+            mask = weights >= cutoff_weight * weights.max()
+            flat_trace = flat_trace[mask, :]
+            weights = weights[mask]
     else:
         raise ValueError("Unknown sampler class: %s" % (type(sampler),))
     
@@ -2270,7 +2375,7 @@ def plot_sampler_fingerprint(
         except TypeError:
             n = nbins * scipy.ones(u.shape[0])
     
-    hist = [scipy.stats.histogram(uv, numbins=nv, defaultlimits=[0, 1]) for uv, nv in zip(u, n)]
+    hist = [scipy.stats.histogram(uv, numbins=nv, defaultlimits=[0, 1], weights=weights) for uv, nv in zip(u, n)]
     max_ct = max([max(h.count) for h in hist])
     min_ct = min([min(h.count) for h in hist])
     
@@ -2325,9 +2430,11 @@ def plot_sampler_cov(
     
     Returns the figure and axis created.
     
+    Does not support weighted samples yet.
+    
     Parameters
     ----------
-    sampler : :py:class:`emcee.Sampler` instance
+    sampler : :py:class:`emcee.Sampler` instance or array, (`n_temps`, `n_chains`, `n_samp`, `n_dim`), (`n_chains`, `n_samp`, `n_dim`) or (`n_samp`, `n_dim`)
         The sampler to plot the chains/marginals of. Can also be an array of
         samples which matches the shape of the `chain` attribute that would be
         present in a :py:class:`emcee.Sampler` instance.
@@ -2383,10 +2490,13 @@ def plot_sampler_cov(
                 chain_mask = scipy.ones(sampler.shape[1], dtype=bool)
             flat_trace = sampler[temp_idx, chain_mask, burn:, :]
             flat_trace = flat_trace.reshape((-1, k))
-        else:
+        elif sampler.ndim == 3:
             if chain_mask is None:
                 chain_mask = scipy.ones(sampler.shape[0], dtype=bool)
             flat_trace = sampler[chain_mask, burn:, :]
+            flat_trace = flat_trace.reshape((-1, k))
+        elif sampler.ndim == 2:
+            flat_trace = sampler[burn:, :]
             flat_trace = flat_trace.reshape((-1, k))
     else:
         raise ValueError("Unknown sampler class: %s" % (type(sampler),))
