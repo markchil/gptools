@@ -1908,7 +1908,7 @@ def univariate_envelope_plot(x, mean, std, ax=None, base_alpha=0.375, envelopes=
         e.append(ax.fill_between(x, lower, upper, facecolor=color, alpha=base_alpha / i))
     return (l, e)
 
-def summarize_sampler(sampler, weights=None, burn=0, ci=0.95):
+def summarize_sampler(sampler, weights=None, burn=0, ci=0.95, chain_mask=None):
     r"""Create summary statistics of the flattened chain of the sampler.
     
     The confidence regions are computed from the quantiles of the data.
@@ -1927,6 +1927,9 @@ def summarize_sampler(sampler, weights=None, burn=0, ci=0.95):
         A number between 0 and 1 indicating the confidence region to compute.
         Default is 0.95 (return upper and lower bounds of the 95% confidence
         interval).
+    chain_mask : (index) array, optional
+        Mask identifying the chains to keep before plotting, in case there are
+        bad chains. Default is to use all chains.
     
     Returns
     -------
@@ -2006,7 +2009,8 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
                  chain_ticklabel_fontsize=7, suptitle=None, bottom_sep=0.075,
                  label_chain_y=False, max_chain_ticks=6, max_hist_ticks=None,
                  chain_ytick_pad=2.0, suptitle_space=0.1, fixed_width=None,
-                 fixed_height=None, ax_space=0.1):
+                 fixed_height=None, ax_space=0.1, cmap='gray_r',
+                 hide_chain_ylabels=False):
     """Plot the results of MCMC sampler (posterior and chains).
     
     Loosely based on triangle.py. Provides extensive options to format the plot.
@@ -2033,7 +2037,7 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
     chain_mask : (index) array, optional
         Mask identifying the chains to keep before plotting, in case there are
         bad chains. Default is to use all chains.
-    points : array, (`D`,) or (`D`, `N`), optional
+    points : array, (`D`,) or (`N`, `D`), optional
         Array of point(s) to plot onto each marginal and chain. Default is None.
     plot_samples : bool, optional
         If True, the samples are plotted as individual points. Default is False.
@@ -2079,7 +2083,11 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
     ax_space : float, optional
         The `w_space` and `h_space` to use. Default is 0.1.
     """
-    
+    masked_weights = None
+    if points is not None:
+        points = scipy.atleast_2d(points)
+        c_cycle = itertools.cycle(['b', 'g', 'r', 'c', 'm', 'y', 'k'])
+        colors = [c_cycle.next() for p in points]
     # Create axes:
     try:
         k = sampler.flatchain.shape[-1]
@@ -2159,7 +2167,9 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
         if cutoff_weight is not None and weights is not None:
             mask = weights >= cutoff_weight * weights.max()
             flat_trace = flat_trace[mask, :]
-            weights = weights[mask]
+            masked_weights = weights[mask]
+        else:
+            masked_weights = weights
     else:
         raise ValueError("Unknown sampler class: %s" % (type(sampler),))
     
@@ -2167,15 +2177,13 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
     for i in xrange(0, k):
         axes[i, i].clear()
         if plot_hist:
-            axes[i, i].hist(flat_trace[:, i], bins=bins, color='black', weights=weights)
+            axes[i, i].hist(flat_trace[:, i], bins=bins, color='black', weights=masked_weights)
         if plot_samples:
             axes[i, i].plot(flat_trace[:, i], scipy.zeros_like(flat_trace[:, i]), ',', alpha=0.1)
         if points is not None:
             # axvline can only take a scalar x, so we have to loop:
-            try:
-                [axes[i, i].axvline(x=pt, linewidth=3) for pt in points[i]]
-            except TypeError:
-                axes[i, i].axvline(x=points[i], linewidth=3)
+            for p, c in zip(points, colors):
+                axes[i, i].axvline(x=p[i], linewidth=3, color=c)
         if i == k - 1:
             axes[i, i].set_xlabel(labels[i], fontsize=label_fontsize)
             plt.setp(axes[i, i].xaxis.get_majorticklabels(), rotation=90)
@@ -2189,13 +2197,15 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
                     flat_trace[:, i],
                     flat_trace[:, j],
                     bins=bins,
-                    cmap='gray_r',
-                    weights=weights
+                    cmap=cmap,
+                    weights=masked_weights
                 )
             if plot_samples:
                 axes[j, i].plot(flat_trace[:, i], flat_trace[:, j], ',', alpha=0.1)
             if points is not None:
-                axes[j, i].plot(points[i], points[j], '.')
+                for p, c in zip(points, colors):
+                    axes[j, i].plot(p[i], p[j], 'o', color=c)
+                # axes[j, i].plot(points[i], points[j], 'o')
             # xmid = 0.5 * (x[1:] + x[:-1])
             # ymid = 0.5 * (y[1:] + y[:-1])
             # axes[j, i].contour(xmid, ymid, ct.T, colors='k')
@@ -2214,19 +2224,36 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
         elif isinstance(sampler, emcee.PTSampler):
             axes[-1, i].plot(sampler.chain[temp_idx, :, :, i].T, alpha=chain_alpha)
         else:
-            # TODO: This plots ALL of the samples, even the ones which are ignored!
             if sampler.ndim == 4:
                 axes[-1, i].plot(sampler[temp_idx, :, :, i].T, alpha=chain_alpha)
             elif sampler.ndim == 3:
                 axes[-1, i].plot(sampler[:, :, i].T, alpha=chain_alpha)
             elif sampler.ndim == 2:
                 axes[-1, i].plot(sampler[:, i].T, alpha=chain_alpha)
-        axes[-1, i].axvline(burn, color='r', linewidth=3)
+        # Plot the weights on top of the chains:
+        if weights is not None:
+            a_wt = axes[-1, i].twinx()
+            a_wt.plot(weights, alpha=chain_alpha, linestyle='--', color='r')
+            plt.setp(a_wt.yaxis.get_majorticklabels(), visible=False)
+            a_wt.yaxis.set_ticks_position('none')
+            # Plot the cutoff weight as a horizontal line and the first sample
+            # which is included as a vertical bar. Note that this won't be quite
+            # the right behavior if the weights are not roughly monotonic.
+            if cutoff_weight is not None:
+                a_wt.axhline(cutoff_weight * weights.max(), linestyle='-', color='r')
+                wi, = scipy.where(weights >= cutoff_weight * weights.max())
+                a_wt.axvline(wi[0], linestyle='-', color='r')
+        if burn > 0:
+            axes[-1, i].axvline(burn, color='r', linewidth=3)
         if points is not None:
-            try:
-                [axes[-1, i].axhline(y=pt, linewidth=3) for pt in points[i]]
-            except TypeError:
-                axes[-1, i].axhline(y=points[i], linewidth=3)
+            for p, c in zip(points, colors):
+                axes[-1, i].axhline(y=p[i], linewidth=3, color=c)
+            # Reset the xlim since it seems to get messed up:
+            axes[-1, i].set_xlim(left=0)
+            # try:
+            #     [axes[-1, i].axhline(y=pt, linewidth=3) for pt in points[i]]
+            # except TypeError:
+            #     axes[-1, i].axhline(y=points[i], linewidth=3)
         if label_chain_y:
             axes[-1, i].set_ylabel(labels[i], fontsize=chain_label_fontsize)
         axes[-1, i].set_xlabel('step', fontsize=chain_label_fontsize)
@@ -2241,10 +2268,13 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
             axes[i, 0].yaxis.set_major_locator(plt.MaxNLocator(nbins=max_hist_ticks - 1))
         if max_chain_ticks is not None:
             axes[k, i].yaxis.set_major_locator(plt.MaxNLocator(nbins=max_chain_ticks - 1))
+        if hide_chain_ylabels:
+            plt.setp(axes[k, i].get_yticklabels(), visible=False)
     
     if suptitle is not None:
         f.suptitle(suptitle)
     f.canvas.draw()
+    return f
 
 def plot_sampler_fingerprint(
         sampler, hyperprior, weights=None, cutoff_weight=None, nbins=None,
@@ -2422,15 +2452,13 @@ def plot_sampler_fingerprint(
     return f, a
 
 def plot_sampler_cov(
-        sampler, method='corr', labels=None, burn=0, chain_mask=None, temp_idx=0,
-        cbar_label=None, title='', rot_x_labels=False, figsize=None,
-        xlabel_on_top=True
+        sampler, method='corr', weights=None, cutoff_weight=None, labels=None,
+        burn=0, chain_mask=None, temp_idx=0, cbar_label=None, title='',
+        rot_x_labels=False, figsize=None, xlabel_on_top=True
     ):
     """Make a plot of the sampler's correlation or covariance matrix.
     
     Returns the figure and axis created.
-    
-    Does not support weighted samples yet.
     
     Parameters
     ----------
@@ -2490,14 +2518,27 @@ def plot_sampler_cov(
                 chain_mask = scipy.ones(sampler.shape[1], dtype=bool)
             flat_trace = sampler[temp_idx, chain_mask, burn:, :]
             flat_trace = flat_trace.reshape((-1, k))
+            if weights is not None:
+                weights = weights[temp_idx, chain_mask, burn:]
+                weights = weights.ravel()
         elif sampler.ndim == 3:
             if chain_mask is None:
                 chain_mask = scipy.ones(sampler.shape[0], dtype=bool)
             flat_trace = sampler[chain_mask, burn:, :]
             flat_trace = flat_trace.reshape((-1, k))
+            if weights is not None:
+                weights = weights[chain_mask, burn:]
+                weights = weights.ravel()
         elif sampler.ndim == 2:
             flat_trace = sampler[burn:, :]
             flat_trace = flat_trace.reshape((-1, k))
+            if weights is not None:
+                weights = weights[burn:]
+                weights = weights.ravel()
+        if cutoff_weight is not None and weights is not None:
+            mask = weights >= cutoff_weight * weights.max()
+            flat_trace = flat_trace[mask, :]
+            weights = weights[mask]
     else:
         raise ValueError("Unknown sampler class: %s" % (type(sampler),))
     
@@ -2507,10 +2548,17 @@ def plot_sampler_cov(
     if cbar_label is None:
         cbar_label = r'$\mathrm{cov}(p_1, p_2)$' if method == 'cov' else r'$\mathrm{corr}(p_1, p_2)$'
     
-    if method == 'corr':
-        cov = scipy.corrcoef(flat_trace, rowvar=0, ddof=1)
+    if weights is None:
+        if method == 'corr':
+            cov = scipy.corrcoef(flat_trace, rowvar=0, ddof=1)
+        else:
+            cov = scipy.cov(flat_trace, rowvar=0, ddof=1)
     else:
-        cov = scipy.cov(flat_trace, rowvar=0, ddof=1)
+        cov = scipy.cov(flat_trace, rowvar=0, aweights=weights)
+        if method == 'corr':
+            stds = scipy.sqrt(scipy.diag(cov))
+            STD_1, STD_2 = scipy.meshgrid(stds, stds)
+            cov = cov / (STD_1 * STD_2)
     
     f_cov = plt.figure(figsize=figsize)
     a_cov = f_cov.add_subplot(1, 1, 1)
