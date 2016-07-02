@@ -41,9 +41,10 @@ try:
     import matplotlib.widgets as mplw
     import matplotlib.gridspec as mplgs
     from mpl_toolkits.axes_grid1 import make_axes_locatable
+    import matplotlib.patches as mplp
 except ImportError:
     warnings.warn(
-        "Could not import matplotlib. plot_QQ keyword for compute_stats will not function.",
+        "Could not import matplotlib. Plotting functions will not be available!",
         ImportWarning
     )
 
@@ -2003,9 +2004,9 @@ def summarize_sampler(sampler, weights=None, burn=0, ci=0.95, chain_mask=None):
     return (mean, ci_l, ci_u)
 
 def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
-                 chain_mask=None, bins=50, points=None, plot_samples=False,
-                 plot_hist=True, chain_alpha=0.1, temp_idx=0, label_fontsize=14,
-                 ticklabel_fontsize=9, chain_label_fontsize=9,
+                 chain_mask=None, bins=50, points=None, covs=None, ci=[0.95],
+                 plot_samples=False, plot_hist=True, chain_alpha=0.1, temp_idx=0,
+                 label_fontsize=14, ticklabel_fontsize=9, chain_label_fontsize=9,
                  chain_ticklabel_fontsize=7, suptitle=None, bottom_sep=0.075,
                  label_chain_y=False, max_chain_ticks=6, max_hist_ticks=None,
                  chain_ytick_pad=2.0, suptitle_space=0.1, fixed_width=None,
@@ -2039,6 +2040,14 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
         bad chains. Default is to use all chains.
     points : array, (`D`,) or (`N`, `D`), optional
         Array of point(s) to plot onto each marginal and chain. Default is None.
+    covs : array, (`D`, `D`) or (`N`, `D`, `D`), optional
+        Covariance matrix or array of covariance matrices to plot onto each
+        marginal. If you do not want to plot a covariance matrix for a specific
+        point, set its corresponding entry to `None`. Default is to not plot
+        confidence ellipses for any points.
+    ci : array, (`num_ci`,), optional
+        List of confidence intervals to plot for each non-`None` entry in `covs`.
+        Default is 0.95 (just plot the 95 percent confidence interval).
     plot_samples : bool, optional
         If True, the samples are plotted as individual points. Default is False.
     chain_alpha : float, optional
@@ -2086,6 +2095,12 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
     masked_weights = None
     if points is not None:
         points = scipy.atleast_2d(points)
+        if covs is not None and len(covs) != len(points):
+            raise ValueError(
+                "If covariance matrices are provided, len(covs) must equal len(points)!"
+            )
+        elif covs is None:
+            covs = [None,] * len(points)
         c_cycle = itertools.cycle(['b', 'g', 'r', 'c', 'm', 'y', 'k'])
         colors = [c_cycle.next() for p in points]
     # Create axes:
@@ -2177,13 +2192,25 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
     for i in xrange(0, k):
         axes[i, i].clear()
         if plot_hist:
-            axes[i, i].hist(flat_trace[:, i], bins=bins, color='black', weights=masked_weights)
+            axes[i, i].hist(flat_trace[:, i], bins=bins, color='black', weights=masked_weights, normed=True)
         if plot_samples:
             axes[i, i].plot(flat_trace[:, i], scipy.zeros_like(flat_trace[:, i]), ',', alpha=0.1)
         if points is not None:
             # axvline can only take a scalar x, so we have to loop:
-            for p, c in zip(points, colors):
+            for p, c, cov in zip(points, colors, covs):
                 axes[i, i].axvline(x=p[i], linewidth=3, color=c)
+                if cov is not None:
+                    i_grid = scipy.linspace(flat_trace[:, i].min(), flat_trace[:, i].max(), 100)
+                    axes[i, i].plot(
+                        i_grid,
+                        scipy.stats.norm.pdf(
+                            i_grid,
+                            loc=p[i],
+                            scale=scipy.sqrt(cov[i, i])
+                        ),
+                        c,
+                        linewidth=3.0
+                    )
         if i == k - 1:
             axes[i, i].set_xlabel(labels[i], fontsize=label_fontsize)
             plt.setp(axes[i, i].xaxis.get_majorticklabels(), rotation=90)
@@ -2203,8 +2230,26 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
             if plot_samples:
                 axes[j, i].plot(flat_trace[:, i], flat_trace[:, j], ',', alpha=0.1)
             if points is not None:
-                for p, c in zip(points, colors):
+                for p, c, cov in zip(points, colors, covs):
                     axes[j, i].plot(p[i], p[j], 'o', color=c)
+                    if cov is not None:
+                        Sigma = scipy.asarray([[cov[i, i], cov[i, j]], [cov[j, i], cov[j, j]]], dtype=float)
+                        lam, v = scipy.linalg.eigh(Sigma)
+                        chi2 = [-scipy.log(1.0 - cival) * 2.0 for cival in ci]
+                        a = [2.0 * scipy.sqrt(chi2val * lam[-1]) for chi2val in chi2]
+                        b = [2.0 * scipy.sqrt(chi2val * lam[-2]) for chi2val in chi2]
+                        ang = scipy.arctan2(v[1, -1], v[0, -1])
+                        for aval, bval in zip(a, b):
+                            ell = mplp.Ellipse(
+                                [p[i], p[j]],
+                                aval,
+                                bval,
+                                angle=scipy.degrees(ang),
+                                facecolor='none',
+                                edgecolor=c,
+                                linewidth=3
+                            )
+                            axes[j, i].add_artist(ell)
                 # axes[j, i].plot(points[i], points[j], 'o')
             # xmid = 0.5 * (x[1:] + x[:-1])
             # ymid = 0.5 * (y[1:] + y[:-1])
