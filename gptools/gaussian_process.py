@@ -669,6 +669,7 @@ class GaussianProcess(object):
         else:
             opt_kwargs = dict(opt_kwargs)
         if 'method' in opt_kwargs:
+            method = opt_kwargs['method']
             if self.verbose:
                 warnings.warn(
                     "Key 'method' is present in opt_kwargs, will override option "
