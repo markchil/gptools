@@ -1172,8 +1172,20 @@ class SortedUniformJointPrior(JointPrior):
             raise ValueError("q must be one-dimensional!")
         if (q < 0).any() or (q > 1).any():
             raise ValueError("q must be within [0, 1]!")
-        q = scipy.sort(q)
-        return scipy.asarray([(self.ub - self.lb) * v + self.lb for v in q])
+        
+        # Old way, not quite correct:
+        # q = scipy.sort(q)
+        # return scipy.asarray([(self.ub - self.lb) * v + self.lb for v in q])
+        
+        # New way, based on conditional marginals:
+        out = scipy.zeros_like(q, dtype=float)
+        out[0] = self.lb
+        for d in xrange(0, len(out)):
+            out[d] = (
+                (1.0 - (1.0 - q[d])**(1.0 / (self.num_var - d))) *
+                (self.ub - out[max(d - 1, 0)]) + out[max(d - 1, 0)]
+            )
+        return out
     
     def elementwise_cdf(self, p):
         r"""Convert a sample to random variates uniform on :math:`[0, 1]`.
@@ -1197,13 +1209,26 @@ class SortedUniformJointPrior(JointPrior):
         if p.ndim != 1:
             raise ValueError("p must be one-dimensional!")
         c = scipy.zeros(len(self.bounds))
-        for k in xrange(0, len(self.bounds)):
-            if p[k] <= self.bounds[k][0]:
-                c[k] = 0.0
-            elif p[k] >= self.bounds[k][1]:
-                c[k] = 1.0
+        
+        # Old way, based on sorted uniform variables:
+        # for k in xrange(0, len(self.bounds)):
+        #     if p[k] <= self.bounds[k][0]:
+        #         c[k] = 0.0
+        #     elif p[k] >= self.bounds[k][1]:
+        #         c[k] = 1.0
+        #     else:
+        #         c[k] = (p[k] - self.bounds[k][0]) / (self.bounds[k][1] - self.bounds[k][0])
+        
+        # New way, based on conditional marginals:
+        for d in xrange(0, len(c)):
+            pdm1 = p[d - 1] if d > 0 else self.lb
+            if p[d] <= pdm1:
+                c[d] = 0.0
+            elif p[d] >= self.ub:
+                c[d] = 1.0
             else:
-                c[k] = (p[k] - self.bounds[k][0]) / (self.bounds[k][1] - self.bounds[k][0])
+                c[d] = 1.0 - (1.0 - (p[d] - pdm1) / (self.ub - pdm1))**(self.num_var - d)
+        
         return c
     
     def random_draw(self, size=None):
@@ -2313,6 +2338,7 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
             axes[i, 0].yaxis.set_major_locator(plt.MaxNLocator(nbins=max_hist_ticks - 1))
         if max_chain_ticks is not None:
             axes[k, i].yaxis.set_major_locator(plt.MaxNLocator(nbins=max_chain_ticks - 1))
+            axes[k, i].xaxis.set_major_locator(plt.MaxNLocator(nbins=max_chain_ticks - 1))
         if hide_chain_ylabels:
             plt.setp(axes[k, i].get_yticklabels(), visible=False)
     
