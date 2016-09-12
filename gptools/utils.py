@@ -2036,7 +2036,7 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
                  label_chain_y=False, max_chain_ticks=6, max_hist_ticks=None,
                  chain_ytick_pad=2.0, suptitle_space=0.1, fixed_width=None,
                  fixed_height=None, ax_space=0.1, cmap='gray_r',
-                 hide_chain_ylabels=False):
+                 hide_chain_ylabels=False, plot_chains=True):
     """Plot the results of MCMC sampler (posterior and chains).
     
     Loosely based on triangle.py. Provides extensive options to format the plot.
@@ -2116,6 +2116,8 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
         The desired figure height (in inches). Conflicts with `fixed_width`.
     ax_space : float, optional
         The `w_space` and `h_space` to use. Default is 0.1.
+    plot_chains : bool, optional
+        If True, plot the sampler chains. Default is True.
     """
     masked_weights = None
     if points is not None:
@@ -2138,8 +2140,13 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
     if labels is None:
         labels = [''] * k
     
-    fw = 2.0 * (1.0 - suptitle_space - 0.2 - bottom_sep - ax_space) / (0.9 - 2.0 * ax_space) * k
-    fh = 2.0 * k
+    if plot_chains:
+        fw = 2.0 * (1.0 - suptitle_space - 0.2 - bottom_sep - ax_space) / (0.9 - 2.0 * ax_space) * k
+        fh = 2.0 * k
+    else:
+        fw = 2.0 * (1.0 - suptitle_space - bottom_sep) * k
+        fh = 2.0 * k
+    
     if fixed_width is not None and fixed_height is not None:
         raise ValueError("Can only pass one of fixed_width and fixed_height!")
     if fixed_width is not None:
@@ -2149,13 +2156,17 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
         fw = fw / fh * fixed_height
         fh = fixed_height
     f = plt.figure(figsize=(fw, fh))
-    gs1 = mplgs.GridSpec(k, k)
-    gs2 = mplgs.GridSpec(1, k)
-    gs1.update(bottom=0.2 + bottom_sep, top=1.0 - suptitle_space, left=0.1, right=0.9, wspace=ax_space, hspace=ax_space)
-    gs2.update(bottom=0.1, top=0.2, left=0.1, right=0.9, wspace=ax_space, hspace=ax_space)
+    if plot_chains:
+        gs1 = mplgs.GridSpec(k, k)
+        gs2 = mplgs.GridSpec(1, k)
+        gs1.update(bottom=0.2 + bottom_sep, top=1.0 - suptitle_space, left=0.1, right=0.9, wspace=ax_space, hspace=ax_space)
+        gs2.update(bottom=0.1, top=0.2, left=0.1, right=0.9, wspace=ax_space, hspace=ax_space)
+    else:
+        gs1 = mplgs.GridSpec(k, k)
+        gs1.update(bottom=bottom_sep, top=1.0 - suptitle_space, left=0.1, right=0.9, wspace=ax_space, hspace=ax_space)
     axes = []
     # j is the row, i is the column.
-    for j in xrange(0, k + 1):
+    for j in xrange(0, k + int(plot_chains)):
         row = []
         for i in xrange(0, k):
             if i > j:
@@ -2288,58 +2299,59 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
             if j == k - 1:
                 axes[j, i].set_xlabel(labels[i], fontsize=label_fontsize)
                 plt.setp(axes[j, i].xaxis.get_majorticklabels(), rotation=90)
-        axes[-1, i].clear()
-        if isinstance(sampler, emcee.EnsembleSampler):
-            axes[-1, i].plot(sampler.chain[:, :, i].T, alpha=chain_alpha)
-        elif isinstance(sampler, emcee.PTSampler):
-            axes[-1, i].plot(sampler.chain[temp_idx, :, :, i].T, alpha=chain_alpha)
-        else:
-            if sampler.ndim == 4:
-                axes[-1, i].plot(sampler[temp_idx, :, :, i].T, alpha=chain_alpha)
-            elif sampler.ndim == 3:
-                axes[-1, i].plot(sampler[:, :, i].T, alpha=chain_alpha)
-            elif sampler.ndim == 2:
-                axes[-1, i].plot(sampler[:, i].T, alpha=chain_alpha)
-        # Plot the weights on top of the chains:
-        if weights is not None:
-            a_wt = axes[-1, i].twinx()
-            a_wt.plot(weights, alpha=chain_alpha, linestyle='--', color='r')
-            plt.setp(a_wt.yaxis.get_majorticklabels(), visible=False)
-            a_wt.yaxis.set_ticks_position('none')
-            # Plot the cutoff weight as a horizontal line and the first sample
-            # which is included as a vertical bar. Note that this won't be quite
-            # the right behavior if the weights are not roughly monotonic.
-            if cutoff_weight is not None:
-                a_wt.axhline(cutoff_weight * weights.max(), linestyle='-', color='r')
-                wi, = scipy.where(weights >= cutoff_weight * weights.max())
-                a_wt.axvline(wi[0], linestyle='-', color='r')
-        if burn > 0:
-            axes[-1, i].axvline(burn, color='r', linewidth=3)
-        if points is not None:
-            for p, c in zip(points, colors):
-                axes[-1, i].axhline(y=p[i], linewidth=3, color=c)
-            # Reset the xlim since it seems to get messed up:
-            axes[-1, i].set_xlim(left=0)
-            # try:
-            #     [axes[-1, i].axhline(y=pt, linewidth=3) for pt in points[i]]
-            # except TypeError:
-            #     axes[-1, i].axhline(y=points[i], linewidth=3)
-        if label_chain_y:
-            axes[-1, i].set_ylabel(labels[i], fontsize=chain_label_fontsize)
-        axes[-1, i].set_xlabel('step', fontsize=chain_label_fontsize)
-        plt.setp(axes[-1, i].xaxis.get_majorticklabels(), rotation=90)
-        for tick in axes[-1, i].get_yaxis().get_major_ticks():
-            tick.set_pad(chain_ytick_pad)
-            tick.label1 = tick._get_text1()
+        if plot_chains:
+            axes[-1, i].clear()
+            if isinstance(sampler, emcee.EnsembleSampler):
+                axes[-1, i].plot(sampler.chain[:, :, i].T, alpha=chain_alpha)
+            elif isinstance(sampler, emcee.PTSampler):
+                axes[-1, i].plot(sampler.chain[temp_idx, :, :, i].T, alpha=chain_alpha)
+            else:
+                if sampler.ndim == 4:
+                    axes[-1, i].plot(sampler[temp_idx, :, :, i].T, alpha=chain_alpha)
+                elif sampler.ndim == 3:
+                    axes[-1, i].plot(sampler[:, :, i].T, alpha=chain_alpha)
+                elif sampler.ndim == 2:
+                    axes[-1, i].plot(sampler[:, i].T, alpha=chain_alpha)
+            # Plot the weights on top of the chains:
+            if weights is not None:
+                a_wt = axes[-1, i].twinx()
+                a_wt.plot(weights, alpha=chain_alpha, linestyle='--', color='r')
+                plt.setp(a_wt.yaxis.get_majorticklabels(), visible=False)
+                a_wt.yaxis.set_ticks_position('none')
+                # Plot the cutoff weight as a horizontal line and the first sample
+                # which is included as a vertical bar. Note that this won't be quite
+                # the right behavior if the weights are not roughly monotonic.
+                if cutoff_weight is not None:
+                    a_wt.axhline(cutoff_weight * weights.max(), linestyle='-', color='r')
+                    wi, = scipy.where(weights >= cutoff_weight * weights.max())
+                    a_wt.axvline(wi[0], linestyle='-', color='r')
+            if burn > 0:
+                axes[-1, i].axvline(burn, color='r', linewidth=3)
+            if points is not None:
+                for p, c in zip(points, colors):
+                    axes[-1, i].axhline(y=p[i], linewidth=3, color=c)
+                # Reset the xlim since it seems to get messed up:
+                axes[-1, i].set_xlim(left=0)
+                # try:
+                #     [axes[-1, i].axhline(y=pt, linewidth=3) for pt in points[i]]
+                # except TypeError:
+                #     axes[-1, i].axhline(y=points[i], linewidth=3)
+            if label_chain_y:
+                axes[-1, i].set_ylabel(labels[i], fontsize=chain_label_fontsize)
+            axes[-1, i].set_xlabel('step', fontsize=chain_label_fontsize)
+            plt.setp(axes[-1, i].xaxis.get_majorticklabels(), rotation=90)
+            for tick in axes[-1, i].get_yaxis().get_major_ticks():
+                tick.set_pad(chain_ytick_pad)
+                tick.label1 = tick._get_text1()
     
     for i in xrange(0, k):
         if max_hist_ticks is not None:
             axes[k - 1, i].xaxis.set_major_locator(plt.MaxNLocator(nbins=max_hist_ticks - 1))
             axes[i, 0].yaxis.set_major_locator(plt.MaxNLocator(nbins=max_hist_ticks - 1))
-        if max_chain_ticks is not None:
+        if plot_chains and max_chain_ticks is not None:
             axes[k, i].yaxis.set_major_locator(plt.MaxNLocator(nbins=max_chain_ticks - 1))
             axes[k, i].xaxis.set_major_locator(plt.MaxNLocator(nbins=max_chain_ticks - 1))
-        if hide_chain_ylabels:
+        if plot_chains and hide_chain_ylabels:
             plt.setp(axes[k, i].get_yticklabels(), visible=False)
     
     if suptitle is not None:
