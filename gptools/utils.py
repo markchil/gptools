@@ -2029,14 +2029,15 @@ def summarize_sampler(sampler, weights=None, burn=0, ci=0.95, chain_mask=None):
     return (mean, ci_l, ci_u)
 
 def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
-                 chain_mask=None, bins=50, points=None, covs=None, ci=[0.95],
-                 plot_samples=False, plot_hist=True, chain_alpha=0.1, temp_idx=0,
-                 label_fontsize=14, ticklabel_fontsize=9, chain_label_fontsize=9,
-                 chain_ticklabel_fontsize=7, suptitle=None, bottom_sep=0.075,
-                 label_chain_y=False, max_chain_ticks=6, max_hist_ticks=None,
-                 chain_ytick_pad=2.0, suptitle_space=0.1, fixed_width=None,
-                 fixed_height=None, ax_space=0.1, cmap='gray_r',
-                 hide_chain_ylabels=False, plot_chains=True):
+                 chain_mask=None, bins=50, points=None, covs=None, colors=None,
+                 ci=[0.95], plot_samples=False, plot_hist=True, chain_alpha=0.1,
+                 temp_idx=0, label_fontsize=14, ticklabel_fontsize=9,
+                 chain_label_fontsize=9, chain_ticklabel_fontsize=7,
+                 suptitle=None, bottom_sep=0.075, label_chain_y=False,
+                 max_chain_ticks=6, max_hist_ticks=None, chain_ytick_pad=2.0,
+                 suptitle_space=0.1, fixed_width=None, fixed_height=None,
+                 ax_space=0.1, cmap='gray_r', hide_chain_ylabels=False,
+                 plot_chains=True):
     """Plot the results of MCMC sampler (posterior and chains).
     
     Loosely based on triangle.py. Provides extensive options to format the plot.
@@ -2128,8 +2129,9 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
             )
         elif covs is None:
             covs = [None,] * len(points)
-        c_cycle = itertools.cycle(['b', 'g', 'r', 'c', 'm', 'y', 'k'])
-        colors = [c_cycle.next() for p in points]
+        if colors is None:
+            c_cycle = itertools.cycle(['b', 'g', 'r', 'c', 'm', 'y', 'k'])
+            colors = [c_cycle.next() for p in points]
     # Create axes:
     try:
         k = sampler.flatchain.shape[-1]
@@ -2236,7 +2238,8 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
             for p, c, cov in zip(points, colors, covs):
                 axes[i, i].axvline(x=p[i], linewidth=3, color=c)
                 if cov is not None:
-                    i_grid = scipy.linspace(flat_trace[:, i].min(), flat_trace[:, i].max(), 100)
+                    xlim = axes[i, i].get_xlim()
+                    i_grid = scipy.linspace(xlim[0], xlim[1], 100)
                     axes[i, i].plot(
                         i_grid,
                         scipy.stats.norm.pdf(
@@ -2247,6 +2250,7 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
                         c,
                         linewidth=3.0
                     )
+                    axes[i, i].set_xlim(xlim)
         if i == k - 1:
             axes[i, i].set_xlabel(labels[i], fontsize=label_fontsize)
             plt.setp(axes[i, i].xaxis.get_majorticklabels(), rotation=90)
