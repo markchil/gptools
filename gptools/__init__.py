@@ -20,7 +20,7 @@
 
 from __future__ import division
 
-__version__ = '0.2.3'
+__version__ = '0.2.4_dev'
 
 from .gaussian_process import *
 from .error_handling import *
