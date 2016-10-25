@@ -37,6 +37,7 @@ except ImportError:
         ImportWarning
     )
 try:
+    import matplotlib
     import matplotlib.pyplot as plt
     import matplotlib.widgets as mplw
     import matplotlib.gridspec as mplgs
@@ -2028,16 +2029,20 @@ def summarize_sampler(sampler, weights=None, burn=0, ci=0.95, chain_mask=None):
     
     return (mean, ci_l, ci_u)
 
-def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
-                 chain_mask=None, bins=50, points=None, covs=None, colors=None,
-                 ci=[0.95], plot_samples=False, plot_hist=True, chain_alpha=0.1,
-                 temp_idx=0, label_fontsize=14, ticklabel_fontsize=9,
-                 chain_label_fontsize=9, chain_ticklabel_fontsize=7,
-                 suptitle=None, bottom_sep=0.075, label_chain_y=False,
-                 max_chain_ticks=6, max_hist_ticks=None, chain_ytick_pad=2.0,
-                 suptitle_space=0.1, fixed_width=None, fixed_height=None,
-                 ax_space=0.1, cmap='gray_r', hide_chain_ylabels=False,
-                 plot_chains=True):
+def plot_sampler(
+        sampler, suptitle=None, labels=None, bins=50,
+        plot_samples=False, plot_hist=True, plot_chains=True,
+        burn=0, chain_mask=None, temp_idx=0, weights=None, cutoff_weight=None,
+        cmap='gray_r', hist_color='k', chain_alpha=0.1,
+        points=None, covs=None, colors=None, ci=[0.95],
+        max_hist_ticks=None, max_chain_ticks=6,
+        label_chain_y=False, hide_chain_yticklabels=False, chain_ytick_pad=2.0,
+        label_fontsize=None, ticklabel_fontsize=None, chain_label_fontsize=None,
+        chain_ticklabel_fontsize=None, xticklabel_angle=90.0,
+        bottom_sep=0.075, suptitle_space=0.1, fixed_height=None,
+        fixed_width=None, l=0.1, r=0.9, t1=None, b1=None, t2=0.2, b2=0.1,
+        ax_space=0.1
+    ):
     """Plot the results of MCMC sampler (posterior and chains).
     
     Loosely based on triangle.py. Provides extensive options to format the plot.
@@ -2048,22 +2053,44 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
         The sampler to plot the chains/marginals of. Can also be an array of
         samples which matches the shape of the `chain` attribute that would be
         present in a :py:class:`emcee.Sampler` instance.
-    weights : array, (`n_temps`, `n_chains`, `n_samp`), (`n_chains`, `n_samp`) or (`n_samp`,), optional
-        The weight for each sample. This is useful for post-processing the
-        output from MultiNest sampling, for instance.
-    cutoff_weight : float, optional
-        If `weights` and `cutoff_weight` are present, points with
-        `weights < cutoff_weight * weights.max()` will be excluded. Default is
-        to plot all points.
+    suptitle : str, optional
+        The figure title to place at the top. Default is no title.
     labels : list of str, optional
         The labels to use for each of the free parameters. Default is to leave
         the axes unlabeled.
+    bins : int, optional
+        Number of bins to use for the histograms. Default is 50.
+    plot_samples : bool, optional
+        If True, the samples are plotted as individual points. Default is False.
+    plot_hist : bool, optional
+        If True, histograms are plotted. Default is True.
+    plot_chains : bool, optional
+        If True, plot the sampler chains at the bottom. Default is True.
     burn : int, optional
         The number of samples to burn before making the marginal histograms.
         Default is zero (use all samples).
     chain_mask : (index) array, optional
         Mask identifying the chains to keep before plotting, in case there are
         bad chains. Default is to use all chains.
+    temp_idx : int, optional
+        Index of the temperature to plot when plotting a
+        :py:class:`emcee.PTSampler`. Default is 0 (samples from the posterior).
+    weights : array, (`n_temps`, `n_chains`, `n_samp`), (`n_chains`, `n_samp`) or (`n_samp`,), optional
+        The weight for each sample. This is useful for post-processing the
+        output from MultiNest sampling, for instance. Default is to not weight
+        the samples.
+    cutoff_weight : float, optional
+        If `weights` and `cutoff_weight` are present, points with
+        `weights < cutoff_weight * weights.max()` will be excluded. Default is
+        to plot all points.
+    cmap : str, optional
+        The colormap to use for the histograms. Default is 'gray_r'.
+    hist_color : str, optional
+        The color to use for the univariate histograms. Default is 'k'.
+    chain_alpha : float, optional
+        The transparency to use for the plots of the individual chains. Setting
+        this to something low lets you better visualize what is going on.
+        Default is 0.1.
     points : array, (`D`,) or (`N`, `D`), optional
         Array of point(s) to plot onto each marginal and chain. Default is None.
     covs : array, (`D`, `D`) or (`N`, `D`, `D`), optional
@@ -2071,54 +2098,72 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
         marginal. If you do not want to plot a covariance matrix for a specific
         point, set its corresponding entry to `None`. Default is to not plot
         confidence ellipses for any points.
+    colors : array of str, (`N`,), optional
+        The colors to use for the points in `points`. Default is to use the
+        standard matplotlib RGBCMYK cycle.
     ci : array, (`num_ci`,), optional
         List of confidence intervals to plot for each non-`None` entry in `covs`.
         Default is 0.95 (just plot the 95 percent confidence interval).
-    plot_samples : bool, optional
-        If True, the samples are plotted as individual points. Default is False.
-    chain_alpha : float, optional
-        The transparency to use for the plots of the individual chains. Setting
-        this to something low lets you better visualize what is going on.
-        Default is 0.1.
-    temp_idx : int, optional
-        Index of the temperature to plot when plotting a
-        :py:class:`emcee.PTSampler`. Default is 0 (samples from the posterior).
-    label_fontsize : float, optional
-        The font size (in points) to use for the axis labels. Default is 16.
-    ticklabel_fontsize : float, optional
-        The font size (in points) to use for the axis tick labels. Default is 10.
-    chain_label_fontsize : float, optional
-        The font size (in points) to use for the labels of the chain axes.
-        Default is 10.
-    chain_ticklabel_fontsize : float, optional
-        The font size (in points) to use for the chain axis tick labels. Default
-        is 6.
-    suptitle : str, optional
-        The figure title to place at the top. Default is no title.
-    bottom_sep : float, optional
-        The separation (in relative figure units) between the chains and the
-        marginals. Default is 0.075.
-    label_chain_y : bool, optional
-        If True, the chain plots will have y axis labels. Default is False.
-    max_chain_ticks : int, optional
-        The maximum number of y-axis ticks for the chain plots. Default is 6.
     max_hist_ticks : int, optional
         The maximum number of ticks for the histogram plots. Default is None
         (no limit).
+    max_chain_ticks : int, optional
+        The maximum number of y-axis ticks for the chain plots. Default is 6.
+    label_chain_y : bool, optional
+        If True, the chain plots will have y axis labels. Default is False.
+    hide_chain_yticklabels : bool, optional
+        If True, hide the y axis tick labels for the chain plots. Default is
+        False (show y tick labels).
     chain_ytick_pad : float, optional
         The padding (in points) between the y-axis tick labels and the axis for
         the chain plots. Default is 2.0.
+    label_fontsize : float, optional
+        The font size (in points) to use for the axis labels. Default is
+        `axes.labelsize`.
+    ticklabel_fontsize : float, optional
+        The font size (in points) to use for the axis tick labels. Default is
+        `xtick.labelsize`.
+    chain_label_fontsize : float, optional
+        The font size (in points) to use for the labels of the chain axes.
+        Default is `axes.labelsize`.
+    chain_ticklabel_fontsize : float, optional
+        The font size (in points) to use for the chain axis tick labels. Default
+        is `xtick.labelsize`.
+    xticklabel_angle : float, optional
+        The angle to rotate the x tick labels, in degrees. Default is 90.
+    bottom_sep : float, optional
+        The separation (in relative figure units) between the chains and the
+        marginals. Default is 0.075.
     suptitle_space : float, optional
         The amount of space (in relative figure units) to leave for a figure
         title. Default is 0.1.
-    fixed_width : float, optional
-        The desired figure width (in inches). Conflicts with `fixed_height`.
     fixed_height : float, optional
-        The desired figure height (in inches). Conflicts with `fixed_width`.
+        The desired figure height (in inches). Default is to automatically
+        adjust based on `fixed_width` to make the subplots square.
+    fixed_width : float, optional
+        The desired figure width (in inches). Default is `figure.figsize[0]`.
+    l : float, optional
+        The location (in relative figure units) of the left margin. Default is
+        0.1.
+    r : float, optional
+        The location (in relative figure units) of the right margin. Default is
+        0.9.
+    t1 : float, optional
+        The location (in relative figure units) of the top of the grid of
+        histograms. Overrides `suptitle_space` if present.
+    b1 : float, optional
+        The location (in relative figure units) of the bottom of the grid of
+        histograms. Overrides `bottom_sep` if present. Defaults to 0.1 if
+        `plot_chains` is False.
+    t2 : float, optional
+        The location (in relative figure units) of the top of the grid of chain
+        plots. Default is 0.2.
+    b2 : float, optional
+        The location (in relative figure units) of the bottom of the grid of
+        chain plots. Default is 0.1.
     ax_space : float, optional
-        The `w_space` and `h_space` to use. Default is 0.1.
-    plot_chains : bool, optional
-        If True, plot the sampler chains. Default is True.
+        The `w_space` and `h_space` to use (in relative figure units). Default
+        is 0.1.
     """
     masked_weights = None
     if points is not None:
@@ -2142,30 +2187,57 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
     if labels is None:
         labels = [''] * k
     
-    if plot_chains:
-        fw = 2.0 * (1.0 - suptitle_space - 0.2 - bottom_sep - ax_space) / (0.9 - 2.0 * ax_space) * k
-        fh = 2.0 * k
-    else:
-        fw = 2.0 * (1.0 - suptitle_space - bottom_sep) * k
-        fh = 2.0 * k
+    # Set up geometry:
+    # plot_chains =
+    #  True:         False:
+    # +-----------+ +-----------+
+    # | +-------+ | | +-------+ |
+    # | |       | | | |       | |
+    # | |       | | | |       | |
+    # | |       | | | |       | |
+    # | +-------+ | | +-------+ |
+    # | +-------+ | +-----------+
+    # | |       | |
+    # | +-------+ |
+    # +-----------+
     
-    if fixed_width is not None and fixed_height is not None:
-        raise ValueError("Can only pass one of fixed_width and fixed_height!")
-    if fixed_width is not None:
-        fh = fh / fw * fixed_width
-        fw = fixed_width
-    elif fixed_height is not None:
-        fw = fw / fh * fixed_height
-        fh = fixed_height
-    f = plt.figure(figsize=(fw, fh))
+    # We retain support for the original suptitle_space keyword, but can
+    # override with t1 as needed:
+    if t1 is None:
+        t1 = 1 - suptitle_space
+    
+    # We retain support for the original bottom_sep keyword, but can override
+    # with b1 as needed:
+    if b1 is None:
+        if plot_chains:
+            b1 = t2 + bottom_sep
+        else:
+            b1 = 0.1
+    
+    if fixed_height is None and fixed_width is None:
+        # Default: use matplotlib's default width, handle remaining parameters
+        # with the fixed width case below:
+        fixed_width = matplotlib.rcParams['figure.figsize'][0]
+    
+    if fixed_height is None and fixed_width is not None:
+        # Only width specified, compute height to yield square histograms:
+        fixed_height = fixed_width * (r - l) / (t1 - b1)
+    elif fixed_height is not None and fixed_width is None:
+        # Only height specified, compute width to yield square histograms
+        fixed_width = fixed_height * (t1 - b1) / (r - l)
+    # Otherwise width and height are fixed, and we may not have square
+    # histograms, at the user's discretion.
+    
+    wspace = ax_space
+    hspace = ax_space
+    
+    # gs1 is the histograms, gs2 is the chains:
+    f = plt.figure(figsize=(fixed_width, fixed_height))
+    gs1 = mplgs.GridSpec(k, k)
+    gs1.update(bottom=b1, top=t1, left=l, right=r, wspace=wspace, hspace=hspace)
     if plot_chains:
-        gs1 = mplgs.GridSpec(k, k)
         gs2 = mplgs.GridSpec(1, k)
-        gs1.update(bottom=0.2 + bottom_sep, top=1.0 - suptitle_space, left=0.1, right=0.9, wspace=ax_space, hspace=ax_space)
-        gs2.update(bottom=0.1, top=0.2, left=0.1, right=0.9, wspace=ax_space, hspace=ax_space)
-    else:
-        gs1 = mplgs.GridSpec(k, k)
-        gs1.update(bottom=bottom_sep, top=1.0 - suptitle_space, left=0.1, right=0.9, wspace=ax_space, hspace=ax_space)
+        gs2.update(bottom=b2, top=t2, left=l, right=r, wspace=wspace, hspace=hspace)
     axes = []
     # j is the row, i is the column.
     for j in xrange(0, k + int(plot_chains)):
@@ -2179,7 +2251,10 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
                     (row[-1] if i > 0 and j == k else None)
                 gs = gs1[j, i] if j < k else gs2[:, i]
                 row.append(f.add_subplot(gs, sharey=sharey, sharex=sharex))
-                row[-1].tick_params(labelsize=ticklabel_fontsize if j < k else chain_ticklabel_fontsize)
+                if j < k and ticklabel_fontsize is not None:
+                    row[-1].tick_params(labelsize=ticklabel_fontsize)
+                elif j >= k and chain_ticklabel_fontsize is not None:
+                    row[-1].tick_params(labelsize=chain_ticklabel_fontsize)
         axes.append(row)
     axes = scipy.asarray(axes)
     
@@ -2230,7 +2305,7 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
     for i in xrange(0, k):
         axes[i, i].clear()
         if plot_hist:
-            axes[i, i].hist(flat_trace[:, i], bins=bins, color='black', weights=masked_weights, normed=True)
+            axes[i, i].hist(flat_trace[:, i], bins=bins, color=hist_color, weights=masked_weights, normed=True)
         if plot_samples:
             axes[i, i].plot(flat_trace[:, i], scipy.zeros_like(flat_trace[:, i]), ',', alpha=0.1)
         if points is not None:
@@ -2252,8 +2327,9 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
                     )
                     axes[i, i].set_xlim(xlim)
         if i == k - 1:
-            axes[i, i].set_xlabel(labels[i], fontsize=label_fontsize)
-            plt.setp(axes[i, i].xaxis.get_majorticklabels(), rotation=90)
+            if label_fontsize is not None:
+                axes[i, i].set_xlabel(labels[i], fontsize=label_fontsize)
+            plt.setp(axes[i, i].xaxis.get_majorticklabels(), rotation=xticklabel_angle)
         if i < k - 1:
             plt.setp(axes[i, i].get_xticklabels(), visible=False)
         plt.setp(axes[i, i].get_yticklabels(), visible=False)
@@ -2298,11 +2374,12 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
                 plt.setp(axes[j, i].get_xticklabels(), visible=False)
             if i != 0:
                 plt.setp(axes[j, i].get_yticklabels(), visible=False)
-            if i == 0:
+            if i == 0 and label_fontsize is not None:
                 axes[j, i].set_ylabel(labels[j], fontsize=label_fontsize)
             if j == k - 1:
-                axes[j, i].set_xlabel(labels[i], fontsize=label_fontsize)
-                plt.setp(axes[j, i].xaxis.get_majorticklabels(), rotation=90)
+                if label_fontsize is not None:
+                    axes[j, i].set_xlabel(labels[i], fontsize=label_fontsize)
+                plt.setp(axes[j, i].xaxis.get_majorticklabels(), rotation=xticklabel_angle)
         if plot_chains:
             axes[-1, i].clear()
             if isinstance(sampler, emcee.EnsembleSampler):
@@ -2340,10 +2417,11 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
                 #     [axes[-1, i].axhline(y=pt, linewidth=3) for pt in points[i]]
                 # except TypeError:
                 #     axes[-1, i].axhline(y=points[i], linewidth=3)
-            if label_chain_y:
+            if label_chain_y and chain_label_fontsize is not None:
                 axes[-1, i].set_ylabel(labels[i], fontsize=chain_label_fontsize)
-            axes[-1, i].set_xlabel('step', fontsize=chain_label_fontsize)
-            plt.setp(axes[-1, i].xaxis.get_majorticklabels(), rotation=90)
+            if chain_label_fontsize is not None:
+                axes[-1, i].set_xlabel('step', fontsize=chain_label_fontsize)
+            plt.setp(axes[-1, i].xaxis.get_majorticklabels(), rotation=xticklabel_angle)
             for tick in axes[-1, i].get_yaxis().get_major_ticks():
                 tick.set_pad(chain_ytick_pad)
                 tick.label1 = tick._get_text1()
@@ -2355,7 +2433,7 @@ def plot_sampler(sampler, weights=None, cutoff_weight=None, labels=None, burn=0,
         if plot_chains and max_chain_ticks is not None:
             axes[k, i].yaxis.set_major_locator(plt.MaxNLocator(nbins=max_chain_ticks - 1))
             axes[k, i].xaxis.set_major_locator(plt.MaxNLocator(nbins=max_chain_ticks - 1))
-        if plot_chains and hide_chain_ylabels:
+        if plot_chains and hide_chain_yticklabels:
             plt.setp(axes[k, i].get_yticklabels(), visible=False)
     
     if suptitle is not None:
