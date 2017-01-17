@@ -2305,7 +2305,7 @@ def plot_sampler(
     for i in xrange(0, k):
         axes[i, i].clear()
         if plot_hist:
-            axes[i, i].hist(flat_trace[:, i], bins=bins, color=hist_color, weights=masked_weights, normed=True)
+            axes[i, i].hist(flat_trace[:, i], bins=bins, color=hist_color, weights=masked_weights, normed=True, histtype='stepfilled')
         if plot_samples:
             axes[i, i].plot(flat_trace[:, i], scipy.zeros_like(flat_trace[:, i]), ',', alpha=0.1)
         if points is not None:
@@ -2327,8 +2327,7 @@ def plot_sampler(
                     )
                     axes[i, i].set_xlim(xlim)
         if i == k - 1:
-            if label_fontsize is not None:
-                axes[i, i].set_xlabel(labels[i], fontsize=label_fontsize)
+            axes[i, i].set_xlabel(labels[i], fontsize=label_fontsize)
             plt.setp(axes[i, i].xaxis.get_majorticklabels(), rotation=xticklabel_angle)
         if i < k - 1:
             plt.setp(axes[i, i].get_xticklabels(), visible=False)
@@ -2374,11 +2373,10 @@ def plot_sampler(
                 plt.setp(axes[j, i].get_xticklabels(), visible=False)
             if i != 0:
                 plt.setp(axes[j, i].get_yticklabels(), visible=False)
-            if i == 0 and label_fontsize is not None:
+            if i == 0:
                 axes[j, i].set_ylabel(labels[j], fontsize=label_fontsize)
             if j == k - 1:
-                if label_fontsize is not None:
-                    axes[j, i].set_xlabel(labels[i], fontsize=label_fontsize)
+                axes[j, i].set_xlabel(labels[i], fontsize=label_fontsize)
                 plt.setp(axes[j, i].xaxis.get_majorticklabels(), rotation=xticklabel_angle)
         if plot_chains:
             axes[-1, i].clear()
@@ -2417,10 +2415,9 @@ def plot_sampler(
                 #     [axes[-1, i].axhline(y=pt, linewidth=3) for pt in points[i]]
                 # except TypeError:
                 #     axes[-1, i].axhline(y=points[i], linewidth=3)
-            if label_chain_y and chain_label_fontsize is not None:
+            if label_chain_y:
                 axes[-1, i].set_ylabel(labels[i], fontsize=chain_label_fontsize)
-            if chain_label_fontsize is not None:
-                axes[-1, i].set_xlabel('step', fontsize=chain_label_fontsize)
+            axes[-1, i].set_xlabel('step', fontsize=chain_label_fontsize)
             plt.setp(axes[-1, i].xaxis.get_majorticklabels(), rotation=xticklabel_angle)
             for tick in axes[-1, i].get_yaxis().get_major_ticks():
                 tick.set_pad(chain_ytick_pad)
