@@ -1,38 +1,41 @@
-# Copyright 2015 Mark Chilenski
+# Copyright 2019 Mark Chilenski
 # This program is distributed under the terms of the GNU General Purpose License (GPL).
 # Refer to http://www.gnu.org/licenses/gpl.txt
-# 
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""This file contains a demonstration of the basic functionality of :py:mod:`gptools`.
+"""This file contains a demonstration of the basic functionality of
+:py:mod:`gptools`.
 
 Extensive comments are provided throughout, but refer to the documentation at
 gptools.readthedocs.org for full details.
 
-The script takes a while to run. When it is complete, you should have a total of
-4 figures -- one with data and a mess of different fits, and three showing MCMC
-output.
+The script takes a while to run. When it is complete, you should have a total
+of 4 figures -- one with data and a mess of different fits, and three showing
+MCMC output.
 """
 
 import gptools
-import cPickle as pkl
+try:
+    import cPickle as pkl
+except ImportError:
+    import pickle as pkl
 import scipy
 import matplotlib.pyplot as plt
 plt.ion()
 
-
-### Load the test data:
+# Load the test data:
 # core_data contains density data as a function of r/a from the core of an
 # Alcator C-Mod H-mode.
 # These data are expected to be fit properly with a stationary covariance
@@ -46,15 +49,15 @@ with open('sample_data_core.pkl', 'rb') as f:
 with open('sample_data_edge.pkl', 'rb') as f:
     edge_data = pkl.load(f)
 
-### Make some figures to hold our results:
+# Make some figures to hold our results:
 f = plt.figure()
 a_val = f.add_subplot(2, 1, 1)
 a_val.errorbar(core_data['X'], core_data['y'], yerr=core_data['err_y'], label='core data', fmt='.')
 a_val.errorbar(edge_data['X'], edge_data['y'], yerr=edge_data['err_y'], label='edge data', fmt='.')
 a_grad = f.add_subplot(2, 1, 2)
 
-### Once your data are loaded from whatever their source is, you will perform
-### the following steps:
+# Once your data are loaded from whatever their source is, you will perform
+# the following steps:
 # 1. Create the covariance kernel that describes the spatial structure of the
 #    data, including a (hyper)prior that describes any prior knowledge you
 #    have regarding its hyperparameters.
@@ -66,7 +69,7 @@ a_grad = f.add_subplot(2, 1, 2)
 #    (MCMC) sampling.
 # 5. Make a prediction.
 
-### First, we must create a covariance kernel.
+# First, we must create a covariance kernel.
 # A wide variety of covariance kernels is supported, including various
 # algebraic mainpulations of the more fundamental kernels. We will use the most
 # basic -- the 1d stationary squared exponential (SE) covariance kernel -- to
@@ -88,23 +91,24 @@ a_grad = f.add_subplot(2, 1, 2)
 # data. It is usually sufficient to let it vary from 0 to about 5 or 10 times
 # the maximum value in your data. The covariance length scale dictates how
 # rapidly the data can change in space. For the present data, a good guess is
-# that it can vary from 0 to 5. If you were fitting multivariate data, you would
-# use the `num_dim` keyword to indicate how many dimensions there are. (The
-# default is 1.)
+# that it can vary from 0 to 5. If you were fitting multivariate data, you
+# would use the `num_dim` keyword to indicate how many dimensions there are.
+# (The default is 1.)
 k_SE = gptools.SquaredExponentialKernel(param_bounds=[(0, 20), (0, 5)])
 
 # A much more powerful approach is to specify a joint (hyper)prior distribution
-# for the hyperparameters. When :py:class:`JointPrior` instances are multiplied,
-# the two priors are taken as being independent prior distributions. So, we can
-# make a uniform prior on [0, 20] for the prefactor and a gamma prior with mode
-# 1 and standard-deivation 0.7 for the covariance length scale as follows:
+# for the hyperparameters. When :py:class:`JointPrior` instances are
+# multiplied, the two priors are taken as being independent prior
+# distributions. So, we can make a uniform prior on [0, 20] for the prefactor
+# and a gamma prior with mode 1 and standard-deivation 0.7 for the covariance
+# length scale as follows:
 hp = gptools.UniformJointPrior(0, 20) * gptools.GammaJointPriorAlt(1, 0.7)
 k_SE = gptools.SquaredExponentialKernel(hyperprior=hp)
 
-### Now, we can move on to creating the Gaussian process itself:
+# Now, we can move on to creating the Gaussian process itself:
 # When creating a Gaussian process, you must specify the covariance kernel to
-# use. Optionally, you may also specify a covariance kernel that you consider to
-# be a "noise" component. This allows you to represent correlated noise and
+# use. Optionally, you may also specify a covariance kernel that you consider
+# to be a "noise" component. This allows you to represent correlated noise and
 # acts in addition to the heteroscedastic, uncorrelated noise you can specify
 # when adding data to the Gaussian process. This formulation lets you choose
 # whether or not noise is included when making a prediction. (But note that the
@@ -122,12 +126,14 @@ gp_noise = gptools.GaussianProcess(k_SE, noise_k=k_noise)
 # object references.
 gp = gptools.GaussianProcess(
     gptools.SquaredExponentialKernel(
-        hyperprior=gptools.UniformJointPrior(0, 20) *
-                   gptools.GammaJointPriorAlt(1, 0.7)
+        hyperprior=(
+            gptools.UniformJointPrior(0, 20) *
+            gptools.GammaJointPriorAlt(1, 0.7)
+        )
     )
 )
 
-### Now we are ready to add some data to our Gaussian process:
+# Now we are ready to add some data to our Gaussian process:
 # Local measurements are very simple to add using :py:meth:`add_data`. `err_y`
 # is the standard deviation of the (assumed Gaussian) uncorrelated noise on
 # each data point. This noise can be heteroscedastic. If `err_y` is not given
@@ -146,22 +152,22 @@ gp.add_data(0, 0, n=1)
 gp_noise.add_data(core_data['X'], core_data['y'])
 gp_noise.add_data(0, 0, n=1)
 
-### Now we need to figure out values for the hyperparameters:
+# Now we need to figure out values for the hyperparameters:
 # There are two levels of sophistication supported. The most basic approach is
 # to find the maximum a posteriori (MAP) estimate -- the single set of values
 # for the hyperparameters which is most likely given the data. In many cases
 # this is acceptable. But, this will often underpredict the undertainty in the
 # fitted curve. So, if you care about uncertainties you may need to use Markov
-# chain Monte Carlo to marginalize over the hyperparameters. This is quite a bit
-# more time-consuming, but gives you a complete picture of your posterior
+# chain Monte Carlo to marginalize over the hyperparameters. This is quite a
+# bit more time-consuming, but gives you a complete picture of your posterior
 # distribution.
 
 # The MAP estimate conducts a very simple-minded global maximum search by
 # starting many local optimizers at locations distributed according to your
 # (hyper)prior distribution. This can be run in parallel, so if you have access
 # to a multicore machine, use it. The number of starts is dictated by the
-# `random_starts` keyword. By default one start per available processor is used.
-# If you have a small number of cores and/or are getting bad fits, try
+# `random_starts` keyword. By default one start per available processor is
+# used. If you have a small number of cores and/or are getting bad fits, try
 # increasing this number. (But note that it could be telling you that your
 # parameter space is poorly-behaved, and you should probably consider trying
 # MCMC!)
@@ -170,9 +176,9 @@ gp.optimize_hyperparameters(verbose=True)
 gp_noise.optimize_hyperparameters(verbose=True)
 
 # Following the optimization, the optimized values for the hyperparameters are
-# stored in gp.params. This is a somewhat complicated :py:class:`CombinedBounds`
-# object which lets you propagate changes back to the individual objects. View
-# the parameters as follows:
+# stored in gp.params. This is a somewhat complicated
+# :py:class:`CombinedBounds` object which lets you propagate changes back to
+# the individual objects. View the parameters as follows:
 print(gp.params[:])
 print(gp_noise.params[:])
 # You should have gotten something like:
@@ -185,8 +191,8 @@ print(gp_noise.params[:])
 # the covariance length scale, and that the fitted (homoscedastic) noise is
 # comparable to the mean noise in `core_data['err_y']`.
 
-### We'll come back to do the MCMC estimates in a bit -- first let's make some
-### predictions with the trained GP.
+# We'll come back to do the MCMC estimates in a bit -- first let's make some
+# predictions with the trained GP.
 # First, define a grid to evaluate on:
 X_star = scipy.linspace(0, 1.1, 400)
 # Now, we can make a prediction of the mean and standard deviation of the fit:
@@ -251,12 +257,14 @@ a_val.plot(X_star, y_samp, color='r', alpha=0.5)
 
 # When a noise kernel has been used, this can be used to make synthetic data,
 # including noise:
-y_synth = gp_noise.draw_sample(scipy.sort(core_data['X']), num_samp=10, noise=True)
+y_synth = gp_noise.draw_sample(
+    scipy.sort(core_data['X']), num_samp=10, noise=True
+)
 a_val.plot(scipy.sort(core_data['X']), y_synth, 'c.', alpha=0.5)
 # This also supports the `n` keyword, just like `predict` does.
 
-### The errorbars on the gradient are often underestimated by using a MAP
-### estimate -- let's do it right, using MCMC.
+# The errorbars on the gradient are often underestimated by using a MAP
+# estimate -- let's do it right, using MCMC.
 # This parallelizes quite nicely, so try to run it on a multicore machine if
 # that is available. The easiest way to get the posterior mean and standard
 # deviation of the profile is with the `use_MCMC` keyword to the `predict`
@@ -293,9 +301,9 @@ gptools.univariate_envelope_plot(
     ax=a_grad
 )
 
-# It is usually preferable to get the MCMC sampler tuned up and burned in first,
-# then to compute the profiles as a separate step. This is accomplished as
-# follows:
+# It is usually preferable to get the MCMC sampler tuned up and burned in
+# first, then to compute the profiles as a separate step. This is accomplished
+# as follows:
 sampler = gp_noise.sample_hyperparameter_posterior(
     nsamp=200,
     burn=100,
@@ -334,13 +342,13 @@ gptools.univariate_envelope_plot(
     ax=a_grad
 )
 
-# We can again repeat our trick of drawing random samples from the posterior for
-# the fitted curve. This is a two-step sampling process: first, samples of the
-# hyperparameters are drawn using MCMC. Then, for each value of the
+# We can again repeat our trick of drawing random samples from the posterior
+# for the fitted curve. This is a two-step sampling process: first, samples of
+# the hyperparameters are drawn using MCMC. Then, for each value of the
 # hyperparameters which we keep (i.e., after burning/thinning), we draw one or
-# more samples. Note that this cannot be done with `draw_sample`, as that method
-# assumes a single, fixed value for the hyperparmeters has been set. Instead, we
-# use `predict` in the following way:
+# more samples. Note that this cannot be done with `draw_sample`, as that
+# method assumes a single, fixed value for the hyperparmeters has been set.
+# Instead, we use `predict` in the following way:
 out = gp.predict(
     X_star,
     use_MCMC=True,
@@ -355,8 +363,8 @@ out = gp.predict(
 # is kept.
 a_val.plot(X_star, out['samp'], color='y', alpha=0.1)
 
-### When the edge data are incorporated, a stationary kernel such as the SE is
-### no longer appropriate:
+# When the edge data are incorporated, a stationary kernel such as the SE is
+# no longer appropriate:
 # Either the region of rapid change will drive the fit to short values, or the
 # gradual region will cause the rapid change to be oversmoothed.
 # :py:class:`GibbsKernel1dTanh` was designed to fit nonstationary data like
@@ -393,11 +401,11 @@ gptools.univariate_envelope_plot(
 # This could (and usually should!) be done with MCMC sampling exactly as shown
 # above.
 
-### Another way of obtaining nonstationarity is thorugh a mean function:
+# Another way of obtaining nonstationarity is thorugh a mean function:
 # In effect, this allows you to perform a Bayesian nonlinear parameteric
 # regression with a GP to fit the residuals. This is accomplished by passing a
-# :py:class:`MeanFunction` instance when creating the Gaussian process. For this
-# example, I will use the popular mtanh parameterization to fit the entire
+# :py:class:`MeanFunction` instance when creating the Gaussian process. For
+# this example, I will use the popular mtanh parameterization to fit the entire
 # density profile, with a SE kernel for he residuals.
 mu = gptools.MtanhMeanFunction1d()
 hp = gptools.UniformJointPrior(0, 20) * gptools.GammaJointPriorAlt(1, 0.7)
@@ -433,7 +441,7 @@ sampler = gp.sample_hyperparameter_posterior(
 )
 # Examination of the posterior distribution tells us that `b` (the pedestal
 # foot) is more or less unconstrained. Therefore, better prior information or
-# more data are required to make quantitative statements about that parameter --
+# more data are required to make quantitative statements about that parameter,
 # and this extra uncertainty needs to be included in the fit.
 # Evaluating the fit from the sampler proceeds exactly as described above:
 y_star, std_y_star = gp.predict(
