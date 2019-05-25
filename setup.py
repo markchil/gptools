@@ -25,7 +25,7 @@ setup(
     description='Gaussian process regression with derivative constraints and predictions.',
     long_description=open('README.rst', 'r').read(),
     cmdclass={'build_ext': build_ext},
-    ext_modules = [_matern],
+    ext_modules=[_matern],
     license='GPL',
     headers=['gptools/kernel/include/matern.h']
 )

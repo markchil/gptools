@@ -26,6 +26,7 @@ of 4 figures -- one with data and a mess of different fits, and three showing
 MCMC output.
 """
 
+import sys
 import gptools
 try:
     import cPickle as pkl
@@ -35,19 +36,24 @@ import scipy
 import matplotlib.pyplot as plt
 plt.ion()
 
+if sys.version_info[0] <= 2:
+    pkl_kwargs = {}
+else:
+    pkl_kwargs = {'encoding': 'latin1'}
+
 # Load the test data:
 # core_data contains density data as a function of r/a from the core of an
 # Alcator C-Mod H-mode.
 # These data are expected to be fit properly with a stationary covariance
 # kernel.
 with open('sample_data_core.pkl', 'rb') as f:
-    core_data = pkl.load(f)
+    core_data = pkl.load(f, **pkl_kwargs)
 # edge_data contains density data as a function of r/a from the edge of the
 # same Alcator C-Mod H-mode as core_data.
 # When these datasets are combined, a non-stationary covariance kernel becomes
 # necessary.
 with open('sample_data_edge.pkl', 'rb') as f:
-    edge_data = pkl.load(f)
+    edge_data = pkl.load(f, **pkl_kwargs)
 
 # Make some figures to hold our results:
 f = plt.figure()

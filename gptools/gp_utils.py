@@ -88,13 +88,13 @@ def parallel_compute_ll_matrix(gp, bounds, num_pts, num_proc=None):
     
     # Form arrays to evaluate parameters over:
     param_vals = []
-    for k in xrange(0, len(present_free_params)):
+    for k in range(0, len(present_free_params)):
         param_vals.append(scipy.linspace(bounds[k, 0], bounds[k, 1], num_pts[k]))
     
     pv_cases = list()
     gp_cases = list()
     num_pts_cases = list()
-    for k in xrange(0, len(param_vals[0])):
+    for k in range(0, len(param_vals[0])):
         specific_param_vals = list(param_vals)
         specific_param_vals[0] = param_vals[0][k]
         pv_cases.append(specific_param_vals)
@@ -183,7 +183,7 @@ def slice_plot(*args, **kwargs):
     a_main = f.add_subplot(gs[0, 0])
     a_cbar = f.add_subplot(gs[0, 1])
     a_sliders = []
-    for idx in xrange(0, num_axes - 2):
+    for idx in range(0, num_axes - 2):
         a_sliders.append(f.add_subplot(gs[idx+1, :]))
     
     title = f.suptitle("")
@@ -196,8 +196,8 @@ def slice_plot(*args, **kwargs):
         idxs = [int(slider.val) for slider in sliders]
         vals = [args[k + 3][idxs[k]] for k in range(0, num_axes - 2)]
         descriptions = tuple(itertools.chain.from_iterable(itertools.izip(names[2:], vals)))
-        fmt = "Slice" + (num_axes - 2) * ", %s: %f"
-        title.set_text(fmt % descriptions)
+        fmt = "Slice" + (num_axes - 2) * ", {:s}: {:f}"
+        title.set_text(fmt.format(descriptions))
         
         a_main.set_xlabel(names[1])
         a_main.set_ylabel(names[0])
@@ -216,7 +216,7 @@ def slice_plot(*args, **kwargs):
     
     idxs_0 = (num_axes - 2) * [0]
     sliders = []
-    for idx in xrange(0, num_axes - 2):
+    for idx in range(0, num_axes - 2):
         sliders.append(
             mplw.Slider(
                 a_sliders[idx],

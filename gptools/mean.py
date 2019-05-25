@@ -227,7 +227,7 @@ class MeanFunction(object):
                         new_params[idx] = bound[1]
             self.params[~self.fixed_params] = new_params
         else:
-            raise ValueError("Length of new_params must be %s!" % (len(self.free_params),))
+            raise ValueError("Length of new_params must be {:d}!".format(len(self.free_params)))
     
     @property
     def num_free_params(self):
@@ -500,6 +500,6 @@ class LinearMeanFunction(MeanFunction):
             kwargs['param_bounds'] = [(-1e3, 1e3)] * (num_dim + 1)
         super(LinearMeanFunction, self).__init__(
             linear,
-            param_names=['m%d' % (i,) for i in range(0, num_dim)] + ['b'],
+            param_names=['m{:d}'.format(i) for i in range(0, num_dim)] + ['b'],
             **kwargs
         )

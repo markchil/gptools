@@ -65,7 +65,7 @@ class RationalQuadraticKernel(ChainRuleKernel):
         If `fixed_params` is passed but `initial_params` is not.
     """
     def __init__(self, num_dim=1, **kwargs):
-        param_names = [r'\sigma_f', r'\alpha'] + ['l_%d' % (i + 1,) for i in range(0, num_dim)]
+        param_names = [r'\sigma_f', r'\alpha'] + ['l_{:d}'.format(i + 1) for i in range(0, num_dim)]
         super(RationalQuadraticKernel, self).__init__(num_dim=num_dim,
                                                       num_params=num_dim + 2,
                                                       param_names=param_names,

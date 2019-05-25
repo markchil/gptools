@@ -249,7 +249,7 @@ class WarpingFunction(object):
                         new_params[idx] = bound[1]
             self.params[~self.fixed_params] = new_params
         else:
-            raise ValueError("Length of new_params must be %s!" % (len(self.free_params),))
+            raise ValueError("Length of new_params must be {:s}!".format(len(self.free_params),))
     
     @property
     def num_free_params(self):
@@ -493,11 +493,11 @@ class WarpedKernel(Kernel):
             raise ValueError("Derivative orders greater than one are not supported!")
         wXi = scipy.zeros_like(Xi)
         wXj = scipy.zeros_like(Xj)
-        for d in xrange(0, self.num_dim):
+        for d in range(0, self.num_dim):
             wXi[:, d] = self.w(Xi[:, d], d, 0)
             wXj[:, d] = self.w(Xj[:, d], d, 0)
         out = self.k(wXi, wXj, ni, nj, hyper_deriv=hyper_deriv, symmetric=symmetric)
-        for d in xrange(0, self.num_dim):
+        for d in range(0, self.num_dim):
             first_deriv_mask_i = ni[:, d] == 1
             first_deriv_mask_j = nj[:, d] == 1
             out[first_deriv_mask_i] *= self.w(Xi[first_deriv_mask_i, d], d, 1)
@@ -628,7 +628,7 @@ class WarpedKernel(Kernel):
             self.k.set_hyperparams(new_params[:num_free_k])
             self.w.set_hyperparams(new_params[num_free_k:])
         else:
-            raise ValueError("Length of new_params must be %s!" % (len(self.free_params),))
+            raise ValueError("Length of new_params must be {:s}!".format(len(self.free_params),))
 
 class BetaWarpedKernel(WarpedKernel):
     r"""Class to warp any existing :py:class:`Kernel` with the beta CDF.
@@ -657,8 +657,8 @@ class BetaWarpedKernel(WarpedKernel):
     """
     def __init__(self, k, **w_kwargs):
         param_names = []
-        for d in xrange(0, k.num_dim):
-            param_names += ['\\alpha_%d' % (d,), '\\beta_%d' % (d,)]
+        for d in range(0, k.num_dim):
+            param_names += ['\\alpha_{:d}'.format(d,), '\\beta_{:d}'.format(d,)]
         if 'hyperprior' not in w_kwargs and 'param_bounds' not in w_kwargs:
             w_kwargs['hyperprior'] = LogNormalJointPrior(
                 [0, 0] * k.num_dim,
@@ -701,8 +701,8 @@ class LinearWarpedKernel(WarpedKernel):
         param_names = []
         initial_params = []
         param_bounds = []  # Set this to be narrow so the LL doesn't overflow.
-        for d in xrange(0, k.num_dim):
-            param_names += ['a_%d' % (d,), 'b_%d' % (d,)]
+        for d in range(0, k.num_dim):
+            param_names += ['a_{:d}'.format(d), 'b_{:d}'.format(d)]
             initial_params += [a[d], b[d]]
             param_bounds += [(a[d] - 1e-3, a[d] + 1e-3), (b[d] - 1e-3, b[d] + 1e-3)]
         w = WarpingFunction(
@@ -746,8 +746,8 @@ class ISplineWarpedKernel(WarpedKernel):
         initial_params = []
         param_bounds = []  # Set this to be narrow so the LL doesn't overflow.
         for d, ntv in enumerate(nt):
-            param_names += ['t_{%d,%d}' % (d, i + 1) for i in range(ntv)]
-            param_names += ['C_{%d,%d}' % (d, i + 1) for i in range(ntv + k_deg - 2)]
+            param_names += ['t_{{{:d},{:d}}}'.format(d, i + 1) for i in range(ntv)]
+            param_names += ['C_{{{:d},{:d}}}'.format(d, i + 1) for i in range(ntv + k_deg - 2)]
         w = WarpingFunction(
             ISplineWarp(nt, k=k_deg),
             num_dim=k.num_dim,

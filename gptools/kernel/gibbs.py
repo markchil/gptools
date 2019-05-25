@@ -894,9 +894,9 @@ class GibbsKernel1dExpGauss(GibbsKernel1d):
             num_params=3 * n_gaussians + 2,
             param_names=(
                 [r'\sigma_f', 'l_0'] +
-                [r'\mu_{%d}' % (i + 1,) for i in range(n_gaussians)] +
-                [r'\sigma_{%d}' % (i + 1,) for i in range(n_gaussians)] +
-                [r'\beta_{%d}' % (i + 1,) for i in range(n_gaussians)]
+                [r'\mu_{{{:d}}}'.format(i + 1) for i in range(n_gaussians)] +
+                [r'\sigma_{{{:d}}}'.format(i + 1) for i in range(n_gaussians)] +
+                [r'\beta_{{{:d}}}'.format(i + 1) for i in range(n_gaussians)]
             ),
             **kwargs
         )
@@ -985,8 +985,8 @@ class GibbsKernel1dBSpline(GibbsKernel1d):
             num_params=2 * nt + k - 1 + 1,
             param_names=(
                 [r'\sigma_f', ] +
-                [r't_{%d}' % (i + 1,) for i in range(nt)] +
-                [r'C_{%d}' % (i + 1,) for i in range(nt + k - 1)]
+                [r't_{{{:d}}}'.format(i + 1) for i in range(nt)] +
+                [r'C_{{{:d}}}'.format(i + 1) for i in range(nt + k - 1)]
             ),
             **kwargs
         )
@@ -1088,8 +1088,8 @@ class GibbsKernel1dGP(GibbsKernel1d):
             param_names=(
                 [r'\sigma_f', ] +
                 list(w.gp.free_param_names) +
-                [r'x_{%d}' % (i + 1,) for i in range(npts)] +
-                [r'y_{%d}' % (i + 1,) for i in range(npts)]
+                [r'x_{{{:d}}}'.format(i + 1) for i in range(npts)] +
+                [r'y_{{{:d}}}'.format(i + 1) for i in range(npts)]
             ),
             **kwargs
         )

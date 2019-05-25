@@ -100,7 +100,7 @@ def spev(t_int, C, deg, x, cov_C=None, M_spline=False, I_spline=False, n=0):
     
     # Zeroth order: constant function
     d = 0
-    for i in xrange(deg, deg + len(t_int) - 2 + 1):
+    for i in range(deg, deg + len(t_int) - 2 + 1):
         # The second condition contains a hack to make the basis functions
         # continuous at the right-hand edge.
         mask = (t[i] <= x) & (
@@ -109,8 +109,8 @@ def spev(t_int, C, deg, x, cov_C=None, M_spline=False, I_spline=False, n=0):
         B[d, i, mask] = 1.0 / (t[i + 1] - t[i]) if M_spline else 1.0
     
     # Loop over other orders:
-    for d in xrange(1, deg + 1):
-        for i in xrange(deg - d, deg + len(t_int) - 2 + 1):
+    for d in range(1, deg + 1):
+        for i in range(deg - d, deg + len(t_int) - 2 + 1):
             if t[i + d] != t[i]:
                 v = (x - t[i]) * B[d - 1, i, :]
                 if not M_spline:
@@ -129,8 +129,8 @@ def spev(t_int, C, deg, x, cov_C=None, M_spline=False, I_spline=False, n=0):
     # Now compute the I-splines, if needed:
     if I_spline:
         I = scipy.zeros_like(B)
-        for i in xrange(0, len(C)):
-            for m in xrange(i, len(C)):
+        for i in range(0, len(C)):
+            for m in range(i, len(C)):
                 I[:, i] += (t[m + deg + 1] - t[m]) * B[:, m] / (deg + 1.0)
         B = I
     

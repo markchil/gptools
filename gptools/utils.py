@@ -435,7 +435,7 @@ class UniformJointPrior(JointPrior):
         if p.ndim != 1:
             raise ValueError("p must be one-dimensional!")
         c = scipy.zeros(len(self.bounds))
-        for k in xrange(0, len(self.bounds)):
+        for k in range(0, len(self.bounds)):
             if p[k] <= self.bounds[k][0]:
                 c[k] = 0.0
             elif p[k] >= self.bounds[k][1]:
@@ -539,7 +539,7 @@ class CoreEdgeJointPrior(UniformJointPrior):
             out_shape.append(size)
         
         out = scipy.zeros(out_shape)
-        for j in xrange(0, len(self.bounds)):
+        for j in range(0, len(self.bounds)):
             if j != 2:
                 out[j, :] = numpy.random.uniform(low=self.bounds[j][0],
                                                  high=self.bounds[j][1],
@@ -1181,7 +1181,7 @@ class SortedUniformJointPrior(JointPrior):
         # New way, based on conditional marginals:
         out = scipy.zeros_like(q, dtype=float)
         out[0] = self.lb
-        for d in xrange(0, len(out)):
+        for d in range(0, len(out)):
             out[d] = (
                 (1.0 - (1.0 - q[d])**(1.0 / (self.num_var - d))) *
                 (self.ub - out[max(d - 1, 0)]) + out[max(d - 1, 0)]
@@ -1212,7 +1212,7 @@ class SortedUniformJointPrior(JointPrior):
         c = scipy.zeros(len(self.bounds))
         
         # Old way, based on sorted uniform variables:
-        # for k in xrange(0, len(self.bounds)):
+        # for k in range(0, len(self.bounds)):
         #     if p[k] <= self.bounds[k][0]:
         #         c[k] = 0.0
         #     elif p[k] >= self.bounds[k][1]:
@@ -1221,7 +1221,7 @@ class SortedUniformJointPrior(JointPrior):
         #         c[k] = (p[k] - self.bounds[k][0]) / (self.bounds[k][1] - self.bounds[k][0])
         
         # New way, based on conditional marginals:
-        for d in xrange(0, len(c)):
+        for d in range(0, len(c)):
             pdm1 = p[d - 1] if d > 0 else self.lb
             if p[d] <= pdm1:
                 c[d] = 0.0
@@ -1328,7 +1328,7 @@ def wrap_fmin_slsqp(fun, guess, opt_kwargs={}):
             elif con['type'] == 'ineq':
                 ieqcons += [con['fun'],]
             else:
-                raise ValueError("Invalid constraint type %s!" % (con['type'],))
+                raise ValueError("Invalid constraint type {:s}!".format(con['type']))
 
     if 'jac' in opt_kwargs:
         warnings.warn("Jacobian not supported for default solver SLSQP!",
@@ -1565,7 +1565,7 @@ def incomplete_bell_poly(n, k, x):
         return scipy.zeros(x.shape[0], dtype=float)
     else:
         result = scipy.zeros(x.shape[0], dtype=float)
-        for m in xrange(0, n - k + 1):
+        for m in range(0, n - k + 1):
             result += x[:, m] * scipy.special.binom(n - 1, m) * incomplete_bell_poly(n - (m + 1), k - 1, x)
         return result
 
@@ -1706,7 +1706,7 @@ def unique_rows(arr, return_index=False, return_inverse=False):
         srt_idx = sorted(range(len(rows)), key=rows.__getitem__)
         rows = scipy.asarray(rows)[srt_idx]
         row_cmp = [-1]
-        for k in xrange(1, len(srt_idx)):
+        for k in range(1, len(srt_idx)):
             row_cmp.append(rows[k-1].__cmp__(rows[k]))
         row_cmp = scipy.asarray(row_cmp)
         transition_idxs = scipy.where(row_cmp != 0)[0]
@@ -1812,7 +1812,7 @@ def compute_stats(vals, check_nan=False, robust=False, axis=1, plot_QQ=False, bi
             mean = scipy.stats.nanmedian(vals, axis=axis)
             # TODO: HANDLE AXIS PROPERLY!
             std = scipy.zeros(vals.shape[0], dtype=float)
-            for k in xrange(0, len(vals)):
+            for k in range(0, len(vals)):
                 ch = vals[k]
                 ok_idxs = ~scipy.isnan(ch)
                 if ok_idxs.any():
@@ -1850,7 +1850,7 @@ def compute_stats(vals, check_nan=False, robust=False, axis=1, plot_QQ=False, bi
             a_QQ.clear()
             a_hist.clear()
             idx = slider.val
-            title.set_text("%s, n=%d" % (name, idx))
+            title.set_text("{:s}, n={:d}".format(name, idx))
             
             nan_idxs = scipy.isnan(vals[idx, :])
             if not nan_idxs.all():
@@ -2007,7 +2007,7 @@ def summarize_sampler(sampler, weights=None, burn=0, ci=0.95, chain_mask=None):
                 weights = weights[burn:]
                 weights = weights.ravel()
     else:
-        raise ValueError("Unknown sampler class: %s" % (type(sampler),))
+        raise ValueError("Unknown sampler class: {:s}".format(type(sampler),))
     
     cibdry = 100.0 * (1.0 - ci) / 2.0
     if weights is None:
@@ -2240,9 +2240,9 @@ def plot_sampler(
         gs2.update(bottom=b2, top=t2, left=l, right=r, wspace=wspace, hspace=hspace)
     axes = []
     # j is the row, i is the column.
-    for j in xrange(0, k + int(plot_chains)):
+    for j in range(0, k + int(plot_chains)):
         row = []
-        for i in xrange(0, k):
+        for i in range(0, k):
             if i > j:
                 row.append(None)
             else:
@@ -2299,10 +2299,10 @@ def plot_sampler(
         else:
             masked_weights = weights
     else:
-        raise ValueError("Unknown sampler class: %s" % (type(sampler),))
-    
+        raise ValueError("Unknown sampler class: {:s}".format(type(sampler)))
+
     # j is the row, i is the column.
-    for i in xrange(0, k):
+    for i in range(0, k):
         axes[i, i].clear()
         if plot_hist:
             axes[i, i].hist(flat_trace[:, i], bins=bins, color=hist_color, weights=masked_weights, normed=True, histtype='stepfilled')
@@ -2332,7 +2332,7 @@ def plot_sampler(
         if i < k - 1:
             plt.setp(axes[i, i].get_xticklabels(), visible=False)
         plt.setp(axes[i, i].get_yticklabels(), visible=False)
-        for j in xrange(i + 1, k):
+        for j in range(i + 1, k):
             axes[j, i].clear()
             if plot_hist:
                 ct, x, y, im = axes[j, i].hist2d(
@@ -2423,7 +2423,7 @@ def plot_sampler(
                 tick.set_pad(chain_ytick_pad)
                 tick.label1 = tick._get_text1()
     
-    for i in xrange(0, k):
+    for i in range(0, k):
         if max_hist_ticks is not None:
             axes[k - 1, i].xaxis.set_major_locator(plt.MaxNLocator(nbins=max_hist_ticks - 1))
             axes[i, 0].yaxis.set_major_locator(plt.MaxNLocator(nbins=max_hist_ticks - 1))
@@ -2550,7 +2550,7 @@ def plot_sampler_fingerprint(
             flat_trace = flat_trace[mask, :]
             weights = weights[mask]
     else:
-        raise ValueError("Unknown sampler class: %s" % (type(sampler),))
+        raise ValueError("Unknown sampler class: {:s}".format(type(sampler)))
     
     if labels is None:
         labels = [''] * k
@@ -2702,8 +2702,8 @@ def plot_sampler_cov(
             flat_trace = flat_trace[mask, :]
             weights = weights[mask]
     else:
-        raise ValueError("Unknown sampler class: %s" % (type(sampler),))
-    
+        raise ValueError("Unknown sampler class: {:s}".format(type(sampler)))
+
     if labels is None:
         labels = [''] * k
     

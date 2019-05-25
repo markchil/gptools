@@ -66,7 +66,7 @@ class SquaredExponentialKernel(Kernel):
         If `fixed_params` is passed but `initial_params` is not.
     """
     def __init__(self, num_dim=1, **kwargs):
-        param_names = [r'\sigma_f'] + ['l_%d' % (i + 1,) for i in range(0, num_dim)]
+        param_names = [r'\sigma_f'] + ['l_{:d}'.format(i + 1,) for i in range(0, num_dim)]
         super(SquaredExponentialKernel, self).__init__(num_dim=num_dim,
                                                        num_params=num_dim + 1,
                                                        param_names=param_names,
@@ -122,7 +122,7 @@ class SquaredExponentialKernel(Kernel):
             if hyper_deriv is not None and hyper_deriv > 0:
                 t = (tau[:, hyper_deriv - 1])**2.0 / (self.params[hyper_deriv])**3.0
                 mask = n_combined[:, hyper_deriv - 1] > 0
-                t[mask] -= n_combined[mask, hyper_deriv - 1]  / self.params[hyper_deriv]
+                t[mask] -= n_combined[mask, hyper_deriv - 1] / self.params[hyper_deriv]
                 mask = mask & (tau[:, hyper_deriv - 1] != 0.0)
                 t[mask] -= (
                     scipy.sqrt(2.0) * n_combined[mask, hyper_deriv - 1] *
